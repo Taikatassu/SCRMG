@@ -23,7 +23,7 @@ public class Core_ShipController : MonoBehaviour {
     Vector3 lookTargetPosition;
     Transform shipHull;
     Transform shipTurret;
-    float shipTurretRotationSpeed = 5;
+    float shipTurretRotationSpeed = 10;
 
     private void Awake()
     {
@@ -51,19 +51,11 @@ public class Core_ShipController : MonoBehaviour {
         #endregion
 
         #region Turret rotation
-        // TODO: Fix shipTurret rotation and mousePosition raycasting
-
+        lookTargetPosition.y = shipTurret.position.y;
         Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-        float step = shipTurretRotationSpeed * Time.fixedDeltaTime;
-        Vector3 newDirection = Vector3.RotateTowards(transform.forward, lookDirection, step, 0.5f);
-        shipTurret.rotation = Quaternion.LookRotation(newDirection);
-
-        //lookTargetPosition.y = shipTurret.position.y;
-        //shipTurret.rotation = Quaternion.FromToRotation(shipTurret.position, lookTargetPosition);
-        
-        //Debug.Log("lookDirection: " + lookDirection);
-        //lookDirection.y = shipTurret.position.y;
-        //shipTurret.LookAt(lookDirection);
+        Quaternion newRotation = Quaternion.LookRotation(lookDirection);
+        shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newRotation, 
+            Time.fixedDeltaTime * shipTurretRotationSpeed);
         #endregion
     }
 

@@ -20,7 +20,7 @@ public class Core_Level01Info : MonoBehaviour {
     Image fullscreenBlackImage;
     Text matchBeginTimerText;
 
-    void Awake ()
+    void Awake()
     {
         toolbox = FindObjectOfType<Core_Toolbox>();
         gameManager = toolbox.GetComponent<Core_GameManager>();
@@ -48,9 +48,21 @@ public class Core_Level01Info : MonoBehaviour {
         uiManager.SetMatchBeginTimerText(matchBeginTimerText);
 
         gameManager.InitializeGame();
-        StartCoroutine(WaitForSceneLoadedAndStartMatchTimer(waitTimeBeforeStartingMatchBeginTimer, 
+        StartCoroutine(WaitForSceneLoadedAndStartMatchTimer(waitTimeBeforeStartingMatchBeginTimer,
             matchBeginTimerLength));
     }
+
+    //void Update()
+    //{
+    //    LayerMask mouseRayCollisionLayer = LayerMask.NameToLayer("MouseRayCollider");
+    //    Debug.Log("mouseCollisionLayer index: " + mouseRayCollisionLayer.value);
+    //    RaycastHit hit;
+    //    Debug.DrawRay(new Vector3(0, 20, 0), -Vector3.up * 40, Color.red);
+    //    if (Physics.Raycast(new Vector3(0, 20, 0), -Vector3.up, out hit, 40, mouseRayCollisionLayer))
+    //    {
+    //        Debug.Log("hit.point" + hit.point + " collider.layer: " + hit.collider.gameObject.layer);
+    //    }
+    //}
 
     IEnumerator WaitForSceneLoadedAndStartMatchTimer(float waitTime, int newMatchBeginTimerLength)
     {

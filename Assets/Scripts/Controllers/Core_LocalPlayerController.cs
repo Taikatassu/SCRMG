@@ -64,18 +64,16 @@ public class Core_LocalPlayerController : MonoBehaviour {
     {
         if (controllerIndex == index)
         {
-            // TODO: Fix mousePosition raycasting and shipTurret rotation
-            // The solution below does not work!!
-
-            //lookDirection = Camera.main.ScreenToWorldPoint(mousePosition);
-            //Ray ray = Camera.main.ScreenPointToRay(mousePosition);
             Vector3 mousePositionInWorld = Camera.main.ScreenToWorldPoint(mousePosition);
-            Debug.DrawRay(mousePositionInWorld, -Vector3.up * 10, Color.red);
+            Debug.DrawRay(mousePositionInWorld, -Vector3.up * 40, Color.red);
             RaycastHit hit;
-            if (Physics.Raycast(mousePositionInWorld, -Vector3.up, out hit, mouseRayDistance, mouseRayCollisionLayer))
+            if (Physics.Raycast(mousePositionInWorld, -Vector3.up, out hit))
             {
-                Debug.Log("hit.point" + hit.point);
-                playerShipController.SetLookTargetPosition(hit.point);
+                if (hit.collider.gameObject.layer == mouseRayCollisionLayer)
+                {
+                    Debug.Log("hit.point" + hit.point);
+                    playerShipController.SetLookTargetPosition(hit.point);
+                }
             }
         }
     }
