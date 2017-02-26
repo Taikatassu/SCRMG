@@ -145,6 +145,44 @@ public class Core_EventManager : MonoBehaviour
         }
     }
     #endregion
+
+    #region Mouse buttons
+    public event IntVoid OnMouseButtonLeftDown;
+    public void BroadcastMouseButtonLeftDown(int controllerIndex)
+    {
+        if(OnMouseButtonLeftDown != null)
+        {
+            OnMouseButtonLeftDown(controllerIndex);
+        }
+    }
+
+    public event IntVoid OnMouseButtonLeftUp;
+    public void BroadcastMouseButtonLeftUp(int controllerIndex)
+    {
+        if (OnMouseButtonLeftUp != null)
+        {
+            OnMouseButtonLeftUp(controllerIndex);
+        }
+    }
+
+    public event IntVoid OnMouseButtonRightDown;
+    public void BroadcastMouseButtonRightDown(int controllerIndex)
+    {
+        if (OnMouseButtonRightDown != null)
+        {
+            OnMouseButtonRightDown(controllerIndex);
+        }
+    }
+
+    public event IntVoid OnMouseButtonRightUp;
+    public void BroadcastMouseButtonRightUp(int controllerIndex)
+    {
+        if (OnMouseButtonRightUp != null)
+        {
+            OnMouseButtonRightUp(controllerIndex);
+        }
+    }
+    #endregion
     #endregion
 
     #region GameplayEvents

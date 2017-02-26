@@ -28,6 +28,10 @@ public class Core_LocalPlayerController : MonoBehaviour {
         em.OnMovementInput += OnMovementInput;
         em.OnMatchBeginTimerValue += OnMatchBeginTimerValue;
         em.OnMousePosition += OnMousePosition;
+        em.OnMouseButtonLeftDown += OnMouseButtonLeftDown;
+        em.OnMouseButtonLeftUp += OnMouseButtonLeftUp;
+        em.OnMouseButtonRightDown += OnMouseButtonRightDown;
+        em.OnMouseButtonRightUp += OnMouseButtonRightUp;
     }
 
     private void OnDisable()
@@ -35,10 +39,25 @@ public class Core_LocalPlayerController : MonoBehaviour {
         em.OnMovementInput -= OnMovementInput;
         em.OnMatchBeginTimerValue -= OnMatchBeginTimerValue;
         em.OnMousePosition -= OnMousePosition;
+        em.OnMouseButtonLeftDown -= OnMouseButtonLeftDown;
+        em.OnMouseButtonLeftUp -= OnMouseButtonLeftUp;
+        em.OnMouseButtonRightDown -= OnMouseButtonRightDown;
+        em.OnMouseButtonRightUp -= OnMouseButtonRightUp;
     }
     #endregion
 
     #region Subscribers
+    #region Game event subscribers
+    private void OnMatchBeginTimerValue(int currentTimerValue)
+    {
+        if (currentTimerValue == 0)
+        {
+            playerShipController.SetIsMoveable(true);
+            playerShipController.SetIsVulnerable(true);
+        }
+    }
+    #endregion
+
     #region Input subscribers
     private void OnMovementInput(int controllerIndex, Vector2 movementInputVector)
     {
@@ -51,31 +70,42 @@ public class Core_LocalPlayerController : MonoBehaviour {
         }
     }
 
-    private void OnMatchBeginTimerValue(int currentTimerValue)
-    {
-        if(currentTimerValue == 0)
-        {
-            playerShipController.SetIsMoveable(true);
-            playerShipController.SetIsVulnerable(true);
-        }
-    }
-
     private void OnMousePosition(int controllerIndex, Vector2 mousePosition)
     {
         if (controllerIndex == index)
         {
             Vector3 mousePositionInWorld = Camera.main.ScreenToWorldPoint(mousePosition);
-            Debug.DrawRay(mousePositionInWorld, -Vector3.up * 40, Color.red);
+            Debug.DrawRay(mousePositionInWorld, -Vector3.up * 10, Color.red);
             RaycastHit hit;
             if (Physics.Raycast(mousePositionInWorld, -Vector3.up, out hit))
             {
                 if (hit.collider.gameObject.layer == mouseRayCollisionLayer)
                 {
-                    Debug.Log("hit.point" + hit.point);
                     playerShipController.SetLookTargetPosition(hit.point);
                 }
             }
         }
+    }
+
+    private void OnMouseButtonLeftDown(int controllerIndex)
+    {
+        Debug.Log("OnMouseButtonLeftDown");
+        playerShipController.Shoot();
+    }
+
+    private void OnMouseButtonLeftUp(int controllerIndex)
+    {
+        Debug.Log("OnMouseButtonLeftUp");
+    }
+
+    private void OnMouseButtonRightDown(int controllerIndex)
+    {
+        Debug.Log("OnMouseButtonRightDown");
+    }
+
+    private void OnMouseButtonRightUp(int controllerIndex)
+    {
+        Debug.Log("OnMouseButtonRightUp");
     }
     #endregion
     #endregion

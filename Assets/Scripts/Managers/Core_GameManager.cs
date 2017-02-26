@@ -93,7 +93,7 @@ public class Core_GameManager : MonoBehaviour {
         {
             resetUsedShipColors = true;
         }
-
+        Debug.Log("Available ship color found");
         return shipColorOptions[r];
     }
     #endregion

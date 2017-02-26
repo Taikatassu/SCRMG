@@ -106,6 +106,29 @@ public class Core_InputManager : MonoBehaviour {
         mousePosition = Input.mousePosition;
         em.BroadcastMousePosition(keyboardAndMouseIndex, mousePosition);
         #endregion
+
+        #region Mouse buttons
+        if (Input.GetMouseButtonDown(0))
+        {
+            Debug.Log("InputManager: MouseButtonLeftDown");
+            em.BroadcastMouseButtonLeftDown(keyboardAndMouseIndex);
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            em.BroadcastMouseButtonLeftUp(keyboardAndMouseIndex);
+        }
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            em.BroadcastMouseButtonRightDown(keyboardAndMouseIndex);
+        }
+
+        if (Input.GetMouseButtonUp(1))
+        {
+            em.BroadcastMouseButtonRightDown(keyboardAndMouseIndex);
+        }
+        #endregion
     }
 
 

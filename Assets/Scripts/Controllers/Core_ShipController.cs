@@ -24,6 +24,7 @@ public class Core_ShipController : MonoBehaviour {
     Transform shipHull;
     Transform shipTurret;
     float shipTurretRotationSpeed = 10;
+    float shipHullRotationSpeed = 10;
 
     private void Awake()
     {
@@ -31,7 +32,6 @@ public class Core_ShipController : MonoBehaviour {
         em = toolbox.GetComponent<Core_EventManager>();
         rb = GetComponent<Rigidbody>();
         shipColorableParts = GetComponentsInChildren<Core_ShipColorablePartTag>();
-        Debug.Log("shipColorableParts.Length" + shipColorableParts.Length);
         shipHull = GetComponentInChildren<Core_ShipHullTag>().transform;
         shipTurret = GetComponentInChildren<Core_ShipTurretTag>().transform;
     }
@@ -40,23 +40,33 @@ public class Core_ShipController : MonoBehaviour {
     {
         #region Movement
         //TODO: Add lerp to movement?
-        if (isMovable)
+        if (isMovable && movementDirection != Vector3.zero)
         {
             rb.MovePosition(transform.position + movementDirection * movementSpeed * Time.fixedDeltaTime);
             if (movementDirection == Vector3.zero)
             {
                 rb.velocity = Vector3.zero;
             }
+            //Hull rotation
+            Quaternion newHullRotation = Quaternion.LookRotation(movementDirection);
+            shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
+                Time.fixedDeltaTime * shipHullRotationSpeed);
         }
         #endregion
 
         #region Turret rotation
         lookTargetPosition.y = shipTurret.position.y;
         Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-        Quaternion newRotation = Quaternion.LookRotation(lookDirection);
-        shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newRotation, 
+        Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+        shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
             Time.fixedDeltaTime * shipTurretRotationSpeed);
         #endregion
+    }
+
+    public void Shoot()
+    {
+        //Spawn bullet at shipTurret position & rotation
+        Debug.Log("Shooting");
     }
 
     public void GiveIndex(int newIndex)
@@ -95,7 +105,6 @@ public class Core_ShipController : MonoBehaviour {
 
     public void SetShipColor(Color newColor)
     {
-        Debug.Log("SetShipColor called");
         for (int i = 0; i < shipColorableParts.Length; i++)
         {
             shipColorableParts[i].GetComponent<Renderer>().material.color = newColor;
