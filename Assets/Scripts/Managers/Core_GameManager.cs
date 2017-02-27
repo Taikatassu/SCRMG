@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-//TODO: Rename class to GameManager??
 public class Core_GameManager : MonoBehaviour {
 
     Core_Toolbox toolbox;
@@ -33,8 +32,6 @@ public class Core_GameManager : MonoBehaviour {
     {
         /*TODO: Have server tell level manager how many ships to spawn, and which ship is whose
         *   - Add AIPlayerController or NetworkPlayerController to other ships
-        *   - Give other controllers unique indieces so AIPlayerManager / NetworkPlayerManager 
-        *       knows which is which
         */
         #region Instantiate ships
         for (int i = 0; i < numberOfShips; i++ )
@@ -42,17 +39,23 @@ public class Core_GameManager : MonoBehaviour {
             Transform spawnPoint = FindAvailableSpawnPoint();
             GameObject newShip = Instantiate(Resources.Load("Ship", typeof(GameObject)),
                 spawnPoint.position, spawnPoint.rotation) as GameObject;
-            Core_ShipController newShipController = newShip.GetComponent<Core_ShipController>();
-            newShipController.GiveIndex(i + 1);
-            newShipController.SetShipColor(FindNewShipColor());
+            Core_ShipController newShipController;
 
             if (i == 0)
             {
-                newShip.AddComponent<Core_LocalPlayerController>();
-                GameObject playerIndicator = Instantiate(Resources.Load("PlayerIndicator",
-                    typeof(GameObject)), newShip.transform.position, Quaternion.identity, 
-                    newShip.transform) as GameObject;
+                newShipController = 
+                    newShip.AddComponent<Core_LocalPlayerController>();
+                Instantiate(Resources.Load("PlayerIndicator", typeof(GameObject)), 
+                    newShip.transform.position, Quaternion.identity, newShip.transform);
             }
+            else //TODO: Add a check whether starting a AI or Online match, 
+                        //and add corresponding playerControllers to other ships
+            {
+                newShipController =
+                    newShip.AddComponent<Core_AIPlayerController>();
+            }
+            newShipController.GiveIndex(i + 1);
+            newShipController.SetShipColor(FindNewShipColor());
         }
         #endregion
     }
@@ -93,7 +96,6 @@ public class Core_GameManager : MonoBehaviour {
         {
             resetUsedShipColors = true;
         }
-        Debug.Log("Available ship color found");
         return shipColorOptions[r];
     }
     #endregion
@@ -134,7 +136,6 @@ public class Core_GameManager : MonoBehaviour {
     public void StartMatchBeginTimer(int timerLenghtInSeconds)
     {
         matchBeginTimer = timerLenghtInSeconds;
-        //TODO: Show timer visuals
         StartCoroutine(BroadcastAndDecreaseMatchBeginTimer(timerLenghtInSeconds));
     }
 
@@ -146,7 +147,6 @@ public class Core_GameManager : MonoBehaviour {
             yield return new WaitForSeconds(1);
             matchBeginTimer--;
             em.BroadcastMatchBeginTimerValue(matchBeginTimer);
-            //TODO: Update timer visuals
         }
     }
     #endregion

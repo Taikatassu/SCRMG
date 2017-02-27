@@ -23,6 +23,8 @@ public class Core_Level01Info : MonoBehaviour {
     void Awake()
     {
         toolbox = FindObjectOfType<Core_Toolbox>();
+        if (toolbox == null)
+            Debug.LogError("toolbox not found!!!");
         gameManager = toolbox.GetComponent<Core_GameManager>();
         uiManager = toolbox.GetComponent<Core_UIManager>();
         currentCanvas = GameObject.FindWithTag("Canvas");
@@ -42,8 +44,7 @@ public class Core_Level01Info : MonoBehaviour {
 
         gameManager.SetRespawnPoints(respawnPoints);
         gameManager.SetShipCount(numberOfShips);
-
-        uiManager.SetCurrentCanvas(currentCanvas);
+        
         uiManager.SetFullscreenBlackImage(fullscreenBlackImage);
         uiManager.SetMatchBeginTimerText(matchBeginTimerText);
 

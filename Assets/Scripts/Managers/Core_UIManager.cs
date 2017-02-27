@@ -14,7 +14,6 @@ public class Core_UIManager : MonoBehaviour {
     #region References & variables
     Core_Toolbox toolbox;
     Core_EventManager em;
-    GameObject currentCanvas;
     Image fullscreenBlackImage;
     Text matchBeginTimerText;
     bool matchBeginTimerVisible = false;
@@ -44,11 +43,6 @@ public class Core_UIManager : MonoBehaviour {
     #endregion
 
     #region UI Element setters
-    public void SetCurrentCanvas(GameObject newCurrentCanvas)
-    {
-        currentCanvas = newCurrentCanvas;
-    }
-
     public void SetFullscreenBlackImage(Image newFullscreenBlackImage)
     {
         fullscreenBlackImage = newFullscreenBlackImage;

@@ -2,24 +2,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Core_LocalPlayerController : MonoBehaviour {
-
-    Core_Toolbox toolbox;
-    Core_EventManager em;
+public class Core_LocalPlayerController : Core_ShipController {
+    
     Vector3 movementDirection;
     Vector3 lookDirection;
-    Core_ShipController playerShipController;
-    int index = 0;
     LayerMask mouseRayCollisionLayer;
-    float mouseRayDistance = 1000;
 
-    private void Awake()
+    protected override void Awake()
     {
-        toolbox = FindObjectOfType<Core_Toolbox>();
-        em = toolbox.GetComponent<Core_EventManager>();
-        playerShipController = GetComponent<Core_ShipController>();
-        index = playerShipController.GetIndex();
+        base.Awake();
         mouseRayCollisionLayer = LayerMask.NameToLayer("MouseRayCollider");
+        GetStats();
     }
 
     #region OnEnable & OnDisable
@@ -52,8 +45,10 @@ public class Core_LocalPlayerController : MonoBehaviour {
     {
         if (currentTimerValue == 0)
         {
-            playerShipController.SetIsMoveable(true);
-            playerShipController.SetIsVulnerable(true);
+            Resurrect();
+            SetIsMoveable(true);
+            SetIsVulnerable(true);
+            SetCanShoot(true);
         }
     }
     #endregion
@@ -66,7 +61,7 @@ public class Core_LocalPlayerController : MonoBehaviour {
             movementDirection.x = movementInputVector.x;
             movementDirection.z = movementInputVector.y;
             movementDirection.y = 0;
-            playerShipController.SetMovementDirection(movementDirection);
+            SetMovementDirection(movementDirection);
         }
     }
 
@@ -81,7 +76,7 @@ public class Core_LocalPlayerController : MonoBehaviour {
             {
                 if (hit.collider.gameObject.layer == mouseRayCollisionLayer)
                 {
-                    playerShipController.SetLookTargetPosition(hit.point);
+                    SetLookTargetPosition(hit.point);
                 }
             }
         }
@@ -89,23 +84,22 @@ public class Core_LocalPlayerController : MonoBehaviour {
 
     private void OnMouseButtonLeftDown(int controllerIndex)
     {
-        Debug.Log("OnMouseButtonLeftDown");
-        playerShipController.Shoot();
+        Shoot();
     }
 
     private void OnMouseButtonLeftUp(int controllerIndex)
     {
-        Debug.Log("OnMouseButtonLeftUp");
+        //Debug.Log("OnMouseButtonLeftUp");
     }
 
     private void OnMouseButtonRightDown(int controllerIndex)
     {
-        Debug.Log("OnMouseButtonRightDown");
+        //Debug.Log("OnMouseButtonRightDown");
     }
 
     private void OnMouseButtonRightUp(int controllerIndex)
     {
-        Debug.Log("OnMouseButtonRightUp");
+        //Debug.Log("OnMouseButtonRightUp");
     }
     #endregion
     #endregion

@@ -2,20 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Core_AIPlayerController : MonoBehaviour {
-
-    Core_Toolbox toolbox;
-    Core_EventManager em;
+public class Core_AIPlayerController : Core_ShipController {
+    
     Vector3 movementDirection;
-    Core_ShipController aiShipController;
-    int index = 0;
 
-    private void Awake()
+    protected override void Awake()
     {
-        toolbox = FindObjectOfType<Core_Toolbox>();
-        em = toolbox.GetComponent<Core_EventManager>();
-        aiShipController = GetComponent<Core_ShipController>();
-        index = aiShipController.GetIndex();
+        base.Awake();
+        GetStats();
     }
 
     #region OnEnable & OnDisable
@@ -35,8 +29,10 @@ public class Core_AIPlayerController : MonoBehaviour {
     {
         if(currentTimerValue == 0)
         {
-            aiShipController.SetIsMoveable(true);
-            aiShipController.SetIsVulnerable(true);
+            Resurrect();
+            SetIsMoveable(true);
+            SetIsVulnerable(true);
+            SetCanShoot(true);
         }
     }
     #endregion

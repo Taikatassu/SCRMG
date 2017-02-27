@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Core_InputManager : MonoBehaviour {
 
+    //TODO: Do not normalize movementVector if movementVector.magnitude == 1 already
+
     Core_Toolbox toolbox;
     Core_EventManager em;
     Vector2 movementInputVector;
@@ -110,7 +112,6 @@ public class Core_InputManager : MonoBehaviour {
         #region Mouse buttons
         if (Input.GetMouseButtonDown(0))
         {
-            Debug.Log("InputManager: MouseButtonLeftDown");
             em.BroadcastMouseButtonLeftDown(keyboardAndMouseIndex);
         }
 
