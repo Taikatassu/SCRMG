@@ -53,6 +53,12 @@ public class Core_Projectile : MonoBehaviour {
         myShipController = newShipController;
     }
 
+    public void SetProjectileColor(Color newColor)
+    {
+        //TODO: Change this if projectile hierarchy changes!
+        transform.GetChild(0).GetComponent<Renderer>().material.SetColor("_TintColor", newColor);
+    }
+
     private void OnTriggerEnter(Collider collider)
     {
         if (myShipController != null)

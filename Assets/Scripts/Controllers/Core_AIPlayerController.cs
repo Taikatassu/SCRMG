@@ -18,8 +18,9 @@ public class Core_AIPlayerController : Core_ShipController {
         em.OnMatchBeginTimerValue += OnMatchBeginTimerValue;
     }
 
-    private void OnDisable()
+    protected override void OnDisable()
     {
+        base.OnDisable();
         em.OnMatchBeginTimerValue -= OnMatchBeginTimerValue;
     }
     #endregion

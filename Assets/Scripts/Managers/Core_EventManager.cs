@@ -38,6 +38,15 @@ public class Core_EventManager : MonoBehaviour
             OnRequestSceneSingleLevel01();
         }
     }
+
+    public event IntVoid OnLoadingNewScene;
+    public void BroadcastLoadingNewScene(int sceneIndex)
+    {
+        if (OnLoadingNewScene != null)
+        {
+            OnLoadingNewScene(sceneIndex);
+        }
+    }
     #endregion
 
     #region Input events
@@ -192,6 +201,15 @@ public class Core_EventManager : MonoBehaviour
         if (OnMatchBeginTimerValue != null)
         {
             OnMatchBeginTimerValue(currentValue);
+        }
+    }
+
+    public event EmptyVoid OnGameRestart;
+    public void BroadcastGameRestart()
+    {
+        if (OnGameRestart != null)
+        {
+            OnGameRestart();
         }
     }
     #endregion

@@ -27,8 +27,9 @@ public class Core_LocalPlayerController : Core_ShipController {
         em.OnMouseButtonRightUp += OnMouseButtonRightUp;
     }
 
-    private void OnDisable()
+    protected override void OnDisable()
     {
+        base.OnDisable();
         em.OnMovementInput -= OnMovementInput;
         em.OnMatchBeginTimerValue -= OnMatchBeginTimerValue;
         em.OnMousePosition -= OnMousePosition;
@@ -45,6 +46,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     {
         if (currentTimerValue == 0)
         {
+            Debug.Log("currentTimerValue == 0");
             Resurrect();
             SetIsMoveable(true);
             SetIsVulnerable(true);
@@ -69,11 +71,16 @@ public class Core_LocalPlayerController : Core_ShipController {
     {
         if (controllerIndex == index)
         {
-            Vector3 mousePositionInWorld = Camera.main.ScreenToWorldPoint(mousePosition);
-            Debug.DrawRay(mousePositionInWorld, -Vector3.up * 10, Color.red);
+            //Vector3 mousePositionInWorld = Camera.main.ScreenToWorldPoint(mousePosition);
+            //Camera.main.ScreenToViewportPoint();
+            //Debug.DrawRay(mousePositionInWorld, -Vector3.up * 10, Color.red);
+            Ray ray = Camera.main.ScreenPointToRay(mousePosition);
+            //Debug.DrawRay(ray, Color.red);
+
             RaycastHit hit;
-            if (Physics.Raycast(mousePositionInWorld, -Vector3.up, out hit))
+            if (Physics.Raycast(ray, out hit))
             {
+                Debug.DrawRay(hit.point, Vector3.up * 20, Color.red);
                 if (hit.collider.gameObject.layer == mouseRayCollisionLayer)
                 {
                     SetLookTargetPosition(hit.point);

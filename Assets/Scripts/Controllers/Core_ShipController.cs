@@ -35,16 +35,18 @@ public class Core_ShipController : MonoBehaviour {
     GameObject healthBar;
     float healthBarMinValue = 0.01f;
     float healthBarMaxValue = 1;
+    Color myShipColor;
 
     //Values coming from GlobalVariableLibrary
     float movementSpeed = 0;
-    float maxHealth = 0;
+    protected float maxHealth = 0;
     float shipTurretRotationSpeed = 0;
     float shipHullRotationSpeed = 0;
     float bulletLaunchForce = 0;
     float shootCooldownTime = 0;
     float shootDamage = 0;
 
+    #region Initialization
     protected virtual void Awake()
     {
         toolbox = FindObjectOfType<Core_Toolbox>();
@@ -72,6 +74,13 @@ public class Core_ShipController : MonoBehaviour {
         Debug.Log("maxHealth: " + maxHealth);
     }
 
+    protected virtual void OnDisable()
+    {
+        DestroyAllProjectiles();
+    }
+    #endregion
+
+    #region Update & FixedUpdate
     protected virtual void Update()
     {
         ManageProjectileList();
@@ -88,6 +97,7 @@ public class Core_ShipController : MonoBehaviour {
             {
                 rb.velocity = Vector3.zero;
             }
+
             //Hull rotation
             Quaternion newHullRotation = Quaternion.LookRotation(movementDirection);
             shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
@@ -103,6 +113,7 @@ public class Core_ShipController : MonoBehaviour {
             Time.fixedDeltaTime * shipTurretRotationSpeed);
         #endregion
     }
+    #endregion
 
     #region Shooting & projectiles
     private void ManageProjectileList()
@@ -121,10 +132,23 @@ public class Core_ShipController : MonoBehaviour {
         }
     }
 
+    private void DestroyAllProjectiles()
+    {
+        int count = projectileList.Count;
+        if (count > 0)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                DestroyProjectile(projectileList[0]);
+            }
+        }
+    }
+
     private void DestroyProjectile(Core_Projectile projectile)
     {
         projectileList.Remove(projectile);
-        Destroy(projectile.gameObject);
+        if (projectile != null)
+            Destroy(projectile.gameObject);
     }
 
     public void OnProjectileTriggerEnter(Core_Projectile projectile, GameObject collidedObject)
@@ -163,6 +187,7 @@ public class Core_ShipController : MonoBehaviour {
             Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
             newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.BULLET);
             newBulletScript.SetShipController(this);
+            newBulletScript.SetProjectileColor(myShipColor);
             projectileList.Add(newBulletScript);
 
             StartCoroutine(ShootCooldown(shootCooldownTime));
@@ -205,6 +230,7 @@ public class Core_ShipController : MonoBehaviour {
 
     protected void SetIsMoveable(bool state)
     {
+        Debug.Log("IsMoveable");
         isMovable = state;
     }
 
@@ -220,9 +246,11 @@ public class Core_ShipController : MonoBehaviour {
 
     public void SetShipColor(Color newColor)
     {
+        myShipColor = newColor;
         for (int i = 0; i < shipColorableParts.Length; i++)
         {
-            shipColorableParts[i].GetComponent<Renderer>().material.color = newColor;
+            //shipColorableParts[i].GetComponent<Renderer>().material.color = newColor;
+            shipColorableParts[i].GetComponent<Renderer>().material.SetColor("_TintColor", myShipColor);
         }
     }
     #endregion
@@ -241,7 +269,6 @@ public class Core_ShipController : MonoBehaviour {
             }
             //Update UI
             UpdateHealthBar();
-            Debug.Log("I'm taking damage. Current hp: " + currentHealth);
         }
     }
 
@@ -260,7 +287,7 @@ public class Core_ShipController : MonoBehaviour {
     }
     #endregion
 
-    #region Die & Resurrect
+    #region Die, Resurrect & SpectatorMode
     private void Die()
     {
         Debug.Log("I'm dead.");
@@ -272,12 +299,15 @@ public class Core_ShipController : MonoBehaviour {
         /* TODO: Remove this and implement a way to disable ship mesh and leave the ship
          *      as a moveable object in game to allow spectating after death.
          */
-        gameObject.SetActive(false); 
+        gameObject.SetActive(false);
         //Start spectator mode if player
     }
 
     protected void Resurrect()
     {
+        // TODO: Currently Die-method destroys the object, so resurrect is unneccessary
+        //      Remove if still obsolete in the future (currently only used for setting isDead 
+        //      to true when initializing ships)
         Debug.Log("Resurrecting");
         //Reset all stats
         isDead = false;
@@ -286,11 +316,9 @@ public class Core_ShipController : MonoBehaviour {
     #endregion
 
     #region Worldspace UI
-
     private void UpdateHealthBar()
     {
         float healthBarFillAmount = 1 - (currentHealth / maxHealth);
-        Debug.Log("Updating healthbar. Fill amount: " + healthBarFillAmount);
         healthBar.GetComponent<Renderer>().material.SetFloat("_Cutoff",
             Mathf.Clamp(healthBarFillAmount, healthBarMinValue, healthBarMaxValue));
     }
