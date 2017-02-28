@@ -28,7 +28,7 @@ public class Core_MainMenuInfo : MonoBehaviour {
 
     private void GetStats()
     {
-        mySceneIndex = lib.sceneVariables.sceneIndexLevel01;
+        mySceneIndex = lib.sceneVariables.sceneIndexMainMenu;
     }
     #endregion
 

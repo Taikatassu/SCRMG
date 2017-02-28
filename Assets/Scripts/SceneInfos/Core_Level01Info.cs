@@ -12,12 +12,8 @@ public class Core_Level01Info : MonoBehaviour {
     Core_GameManager gameManager;
     Core_GlobalVariableLibrary lib;
     List<Transform> respawnPoints = new List<Transform>();
-    //UI Elements
-    Image fullscreenBlackImage;
-    Text matchBeginTimerText;
     //Variables coming from globalVariableLibrary
     int mySceneIndex = 0;
-    //float waitTimeBeforeStartingMatchBeginTimer = 0;
     #endregion
 
     #region Start
@@ -43,10 +39,6 @@ public class Core_Level01Info : MonoBehaviour {
         //Send respawnPoint list to GameManager and broadcast NewSceneLoaded
         gameManager.SetRespawnPoints(respawnPoints);
         em.BroadcastNewSceneLoaded(mySceneIndex);
-
-        //Wait a moment before starting actual match begin timer
-        //StartCoroutine(WaitForSceneLoadedAndStartMatchTimer(waitTimeBeforeStartingMatchBeginTimer));
-        gameManager.StartMatchBeginTimer();
     }
     #endregion
 

@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class Core_ApplicationManager : MonoBehaviour
 {
+
     #region References & variables
     //References
     public static Core_ApplicationManager instance;

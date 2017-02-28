@@ -6,6 +6,8 @@ public class Core_LocalPlayerController : Core_ShipController {
     
     LayerMask mouseRayCollisionLayer = -1;
 
+    #region Initialization
+    #region Awake & GetStats
     protected override void Awake()
     {
         base.Awake();
@@ -29,13 +31,12 @@ public class Core_LocalPlayerController : Core_ShipController {
         yield return new WaitForSeconds(time);
         TakeDamage(200);
     }
-
+    #endregion
 
     #region OnEnable & OnDisable
-    private void OnEnable()
+    protected override void OnEnable()
     {
-        em.OnGameRestart += OnGameRestart;
-        em.OnMatchBeginTimerValue += OnMatchBeginTimerValue;
+        base.OnEnable();
         em.OnMovementInput += OnMovementInput;
         em.OnMousePosition += OnMousePosition;
         em.OnMouseButtonLeftDown += OnMouseButtonLeftDown;
@@ -47,8 +48,6 @@ public class Core_LocalPlayerController : Core_ShipController {
     protected override void OnDisable()
     {
         base.OnDisable();
-        em.OnGameRestart -= OnGameRestart;
-        em.OnMatchBeginTimerValue -= OnMatchBeginTimerValue;
         em.OnMovementInput -= OnMovementInput;
         em.OnMousePosition -= OnMousePosition;
         em.OnMouseButtonLeftDown -= OnMouseButtonLeftDown;
@@ -57,30 +56,9 @@ public class Core_LocalPlayerController : Core_ShipController {
         em.OnMouseButtonRightUp -= OnMouseButtonRightUp;
     }
     #endregion
-
-    #region Subscribers
-    #region Game event subscribers
-    private void OnMatchBeginTimerValue(int currentTimerValue)
-    {
-        if (currentTimerValue == 0)
-        {
-            Debug.Log("currentTimerValue == 0");
-            //Resurrect(); //Replaced by below (AddHealth)
-            AddHealth(maxHealth);
-            SetIsMoveable(true);
-            SetIsVulnerable(true);
-            SetCanShoot(true);
-        }
-    }
-
-    private void OnGameRestart()
-    {
-        //TODO: Change if implementing a pool for ships instead of instantiating them
-        Destroy(gameObject);
-    }
     #endregion
 
-    #region Input subscribers
+    #region Subscribers
     private void OnMovementInput(int controllerIndex, Vector2 movementInputVector)
     {
         if (controllerIndex == index)
@@ -133,7 +111,6 @@ public class Core_LocalPlayerController : Core_ShipController {
     {
         //Debug.Log("OnMouseButtonRightUp");
     }
-    #endregion
     #endregion
 
 }

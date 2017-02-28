@@ -29,13 +29,19 @@ public class Core_ShipController : MonoBehaviour {
     List<Core_Projectile> projectileList = new List<Core_Projectile>();
 
     //Variables coming from within the script
-    protected int index = 0; //Set by gameManager when instantiating ships
-    float currentHealth = 0; //Set to full by calling Resurrect() when instantiated
+    protected int index = -1; //Set by gameManager when instantiating ships
+    float currentHealth = -1; //Set to full by calling Resurrect() when instantiated
+    float healthBarTargetValue = -1;
+    float healthBarStartValue = -1;
+    float healthBarLerpStartTime = -1;
+    int shootCooldownFrames = -1;
+    int shootCooldownFrameTimer = -1;
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
     bool isDead = false;
     bool shootOnCooldown = false;
+    bool updatingHealthBar = false;
 
     //Values coming from GlobalVariableLibrary
     string shipTag = "Ship";
@@ -49,14 +55,16 @@ public class Core_ShipController : MonoBehaviour {
     float shootDamage = -1;
     float healthBarMinValue = -1;
     float healthBarMaxValue = -1;
+    float healthBarLerpDuration = -1;
     #endregion
 
     #region Initialization
+    #region Awake
     protected virtual void Awake()
     {
         toolbox = FindObjectOfType<Core_Toolbox>();
-        lib = toolbox.GetComponentInChildren<Core_GlobalVariableLibrary>();
         em = toolbox.GetComponent<Core_EventManager>();
+        lib = toolbox.GetComponentInChildren<Core_GlobalVariableLibrary>();
         rb = GetComponent<Rigidbody>();
         shipColorableParts = GetComponentsInChildren<Core_ShipColorablePartTag>();
         shipHull = GetComponentInChildren<Core_ShipHullTag>().transform;
@@ -65,7 +73,9 @@ public class Core_ShipController : MonoBehaviour {
             transform;
         healthBar = GetComponentInChildren<Core_ShipHealthBarTag>().gameObject;
     }
+    #endregion
 
+    #region GetStats
     protected virtual void GetStats()
     {
         shipTag = lib.shipVariables.shipTag;
@@ -76,21 +86,68 @@ public class Core_ShipController : MonoBehaviour {
         shipHullRotationSpeed = lib.shipVariables.shipHullRotationSpeed;
         bulletLaunchForce = lib.shipVariables.bulletLaunchForce;
         shootCooldownTime = lib.shipVariables.shootCooldownTime;
+        shootCooldownFrames = Mathf.RoundToInt(shootCooldownTime / Time.fixedDeltaTime);
         shootDamage = lib.shipVariables.shootDamage;
         healthBarMinValue = lib.shipVariables.healthBarMinValue;
         healthBarMaxValue = lib.shipVariables.healthBarMaxValue;
+        healthBarLerpDuration = lib.shipVariables.healthBarLerpDuration;
+    }
+    #endregion
+
+    #region OnEnable & OnDisable
+    protected virtual void OnEnable()
+    {
+        em.OnGameRestart += OnGameRestart;
+        em.OnMatchStartTimerValue += OnMatchStartTimerValue;
     }
 
     protected virtual void OnDisable()
     {
         DestroyAllProjectiles();
+        em.OnGameRestart -= OnGameRestart;
+        em.OnMatchStartTimerValue -= OnMatchStartTimerValue;
     }
+    #endregion
+
+    #region Subscribers
+    private void OnMatchStartTimerValue(int currentTimerValue)
+    {
+        if (currentTimerValue == 0)
+        {
+            //Resurrect(); //Replaced by below (AddHealth)
+            AddHealth(maxHealth * 2);
+            SetIsMoveable(true);
+            SetIsVulnerable(true);
+            SetCanShoot(true);
+        }
+    }
+
+    private void OnGameRestart()
+    {
+        //TODO: Change if implementing a pool for ships instead of instantiating them
+        Destroy(gameObject);
+    }
+    #endregion
     #endregion
 
     #region Update & FixedUpdate
     protected virtual void Update()
     {
         ManageProjectileList();
+
+        if (updatingHealthBar)
+        {
+            float timeSinceStarted = Time.time - healthBarLerpStartTime;
+            float currentPercentage = timeSinceStarted / healthBarLerpDuration;
+            float currentValue = Mathf.Lerp(healthBarStartValue, healthBarTargetValue, 
+                currentPercentage);
+            healthBar.GetComponent<Renderer>().material.SetFloat("_Cutoff", currentValue);
+
+            if (currentPercentage >= 1.0f)
+            {
+                updatingHealthBar = false;
+            }
+        }
     }
 
     protected virtual void FixedUpdate()
@@ -119,6 +176,17 @@ public class Core_ShipController : MonoBehaviour {
         Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
         shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
             Time.fixedDeltaTime * shipTurretRotationSpeed);
+        #endregion
+
+        #region Shoot cooldown
+        if (shootOnCooldown)
+        {
+            shootCooldownFrameTimer--;
+            if (shootCooldownFrameTimer <= 0)
+            {
+                shootOnCooldown = false;
+            }
+        }
         #endregion
     }
     #endregion
@@ -197,23 +265,17 @@ public class Core_ShipController : MonoBehaviour {
             newBulletScript.SetShipController(this);
             newBulletScript.SetProjectileColor(myShipColor);
             projectileList.Add(newBulletScript);
-
-            StartCoroutine(ShootCooldown(shootCooldownTime));
+            //Set shoot on cooldown
+            shootCooldownFrameTimer = shootCooldownFrames;
+            shootOnCooldown = true;
         }
-    }
-
-    IEnumerator ShootCooldown(float time)
-    {
-        shootOnCooldown = true;
-        yield return new WaitForSeconds(time);
-        shootOnCooldown = false;
     }
     #endregion
 
     #region Index
     public void GiveIndex(int newIndex)
     {
-        if (index == 0)
+        if (index == -1)
         {
             index = newIndex;
         }
@@ -286,7 +348,7 @@ public class Core_ShipController : MonoBehaviour {
             currentHealth += amount;
             if (currentHealth > maxHealth)
             {
-                currentHealth = 0;
+                currentHealth = maxHealth;
             }
             //Update UI
             UpdateHealthBar();
@@ -322,10 +384,11 @@ public class Core_ShipController : MonoBehaviour {
     #region Worldspace UI
     private void UpdateHealthBar()
     {
-        // TODO: Add lerp
-        float healthBarFillAmount = 1 - (currentHealth / maxHealth);
-        healthBar.GetComponent<Renderer>().material.SetFloat("_Cutoff",
-            Mathf.Clamp(healthBarFillAmount, healthBarMinValue, healthBarMaxValue));
+        healthBarTargetValue = Mathf.Clamp((1 - (currentHealth / maxHealth)), 
+            healthBarMinValue, healthBarMaxValue);
+        healthBarStartValue = healthBar.GetComponent<Renderer>().material.GetFloat("_Cutoff");
+        healthBarLerpStartTime = Time.time;
+        updatingHealthBar = true;
     }
     #endregion
 

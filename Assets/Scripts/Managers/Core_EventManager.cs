@@ -236,12 +236,12 @@ public class Core_EventManager : MonoBehaviour
     #endregion
 
     #region GameplayEvents
-    public event IntVoid OnMatchBeginTimerValue;
-    public void BroadcastMatchBeginTimerValue(int currentValue)
+    public event IntVoid OnMatchStartTimerValue;
+    public void BroadcastMatchStartTimerValue(int currentValue)
     {
-        if (OnMatchBeginTimerValue != null)
+        if (OnMatchStartTimerValue != null)
         {
-            OnMatchBeginTimerValue(currentValue);
+            OnMatchStartTimerValue(currentValue);
         }
     }
 

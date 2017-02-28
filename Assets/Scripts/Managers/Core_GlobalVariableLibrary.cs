@@ -59,6 +59,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public List<Color> shipColorOptions = new List<Color>();
         public float healthBarMinValue = 0.01f;
         public float healthBarMaxValue = 1;
+        public float healthBarLerpDuration = 0.1f;
     }
 
     [System.Serializable]
@@ -67,7 +68,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public int sceneIndexMainMenu = 0;
         public int sceneIndexLevel01 = 1;
         public int numberOfShips = 4;
-        public int matchBeginTimerLength = 3;
+        public int matchStartTimerLength = 3;
         public float waitTimeBeforeStartingMatchBeginTimer = 0.5f;
         public float fadeFromBlackTime = 2;
     }

@@ -5,17 +5,21 @@ using UnityEngine.UI;
 
 public class Core_UIManager : MonoBehaviour {
 
-    /* TODO: Pause menu, Game over menu
-     *      "Resume", "Restart" "Return to main menu"
+    /* TODO: 
+     * - Game over menu
+     *      "Restart" "Return to main menu"
      *      Full gameloop with starting a match, restarting it, returning to main menu, and starting
      *      all over again
     *       
-    *  Enemy indicators showing enemy directions at the screen boarders
+    *  - Enemy indicators showing enemy directions at the screen boarders
+    *  
+    *  - Find out why BroadcastRequestSceneSingleLevel01 is called twice 
+    *       (and does it causes problems?)
     */
 
     #region References & variables
     public static Core_UIManager instance;
-
+    //References
     Core_Toolbox toolbox;
     Core_GlobalVariableLibrary lib;
     Core_EventManager em;
@@ -24,25 +28,25 @@ public class Core_UIManager : MonoBehaviour {
     //MainMenu UI
     GameObject mainMenuHolder;
     Button playButton;
-    int sceneIndexMainMenu = -1;
-    int sceneIndexLevel01 = -1;
 
     //InGame UI
     GameObject inGameUIHolder;
     GameObject pauseMenuHolder;
-    Image fullscreenBlackImage;
-    Text matchBeginTimerText;
+    Image loadingScreenImage;
+    Text matchStartTimerText;
     Button pauseMenuResumeButton;
     Button pauseMenuRestartButton;
     Button pauseMenuMainMenuButton;
-    bool matchBeginTimerVisible = false;
-    int matchBeginTimer = -1;
+    Color loadingScreenNewColor;
+    Color loadingScreenOriginalColor;
+    bool isFadingFromLoadingScreen = false;
+    int matchStartTimerValue = -1;
+    float loadingScreenFadeStartTime = -1;
     //Variables coming from globalVariableLibrary
-    float fadeFromBlackTime = -1;
+    float loadingScreenFadeTime = -1;
+    int sceneIndexMainMenu = -1;
+    int sceneIndexLevel01 = -1;
     #endregion
-        
-
-
 
     #region Initialization
     #region Awake
@@ -76,9 +80,9 @@ public class Core_UIManager : MonoBehaviour {
 
         playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>(true).
             GetComponent<Button>();
-        fullscreenBlackImage = inGameUIHolder.GetComponentInChildren<Core_FullscreenBlackImageTag>(true).
+        loadingScreenImage = inGameUIHolder.GetComponentInChildren<Core_FullscreenBlackImageTag>(true).
             GetComponent<Image>();
-        matchBeginTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
+        matchStartTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
             GetComponent<Text>();
         pauseMenuResumeButton = inGameUIHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
             GetComponent<Button>();
@@ -88,11 +92,11 @@ public class Core_UIManager : MonoBehaviour {
            GetComponent<Button>();
         #endregion
 
-        //matchBeginTimerText.gameObject.SetActive(false);
-
+        #region Initialize UI
         OpenMainMenuUI();
         ClosePauseMenu();
         CloseInGameUI();
+        #endregion
     }
     #endregion
 
@@ -101,28 +105,121 @@ public class Core_UIManager : MonoBehaviour {
     {
         sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
-        fadeFromBlackTime = lib.sceneVariables.fadeFromBlackTime;
+        loadingScreenFadeTime = lib.sceneVariables.fadeFromBlackTime;
     }
     #endregion
-
-    // TODO: Add tags for pause menu buttons
-    // Add functionality for pause menu buttons
 
     #region OnEnable & OnDisable
     private void OnEnable()
     {
-        em.OnMatchBeginTimerValue += OnMatchBeginTimerValue;
+        em.OnMatchStartTimerValue += OnMatchStartTimerValue;
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoading += OnNewSceneLoading;
+        em.OnNewSceneLoaded += OnNewSceneLoaded;
         em.OnEscapeButtonDown += OnEscapeButtonDown;
     }
 
     private void OnDisable()
     {
-        em.OnMatchBeginTimerValue -= OnMatchBeginTimerValue;
+        em.OnMatchStartTimerValue -= OnMatchStartTimerValue;
         em.OnGameRestart -= OnGameRestart;
         em.OnNewSceneLoading -= OnNewSceneLoading;
+        em.OnNewSceneLoaded -= OnNewSceneLoaded;
         em.OnEscapeButtonDown -= OnEscapeButtonDown;
+    }
+    #endregion
+
+    #region Subscribers
+    #region GameEvent subscribers
+    private void OnMatchStartTimerValue(int currentTimerValue)
+    {
+        UpdateMatchStartTimer(currentTimerValue);
+    }
+
+    private void OnGameRestart()
+    {
+        //Reset neccessary values
+        loadingScreenImage.gameObject.SetActive(true);
+        StartFadeFromLoadingScreen();
+    }
+
+    private void OnNewSceneLoading(int sceneIndex)
+    {
+        //TODO: Add checks for all future scenes
+        if (sceneIndex == sceneIndexMainMenu)
+        {
+            //Close InGameUI
+            ClosePauseMenu();
+            CloseInGameUI();
+        }
+        else if (sceneIndex == sceneIndexLevel01)
+        {
+            //Close main menu UI
+            CloseMainMenuUI();
+        }
+    }
+
+    private void OnNewSceneLoaded(int sceneIndex)
+    {
+        //TODO: Add checks for all future scenes
+        if (sceneIndex == sceneIndexMainMenu)
+        {
+            Debug.Log("OnNewSceneLoaded: MainMenu");
+            //Open MainMenuUI
+            OpenMainMenuUI();
+        }
+        else if (sceneIndex == sceneIndexLevel01)
+        {
+            Debug.Log("OnNewSceneLoaded: Level01");
+            //Open InGameUI
+            OpenInGameUI();
+            loadingScreenImage.gameObject.SetActive(true);
+            StartFadeFromLoadingScreen();
+            ClosePauseMenu();
+        }
+    }
+    #endregion
+
+    #region Input subscribers
+    private void OnEscapeButtonDown(int controllerIndex)
+    {
+        if (inGameUIHolder.activeSelf)
+        {
+            if (pauseMenuHolder.activeSelf)
+            {
+
+                ClosePauseMenu();
+            }
+            else
+            {
+                OpenPauseMenu();
+            }
+        }
+    }
+    #endregion
+    #endregion
+    #endregion
+
+    #region FixedUpdate
+    private void FixedUpdate()
+    {
+        #region LoadingScreen fade
+        if (isFadingFromLoadingScreen)
+        {
+            float timeSinceStarted = Time.time - loadingScreenFadeStartTime;
+            float percentageComplete = timeSinceStarted / loadingScreenFadeTime;
+
+            loadingScreenNewColor.a = Mathf.Lerp(1, 0, percentageComplete);
+            loadingScreenImage.color = loadingScreenNewColor;
+
+            if (percentageComplete >= 1.0f)
+            {
+                isFadingFromLoadingScreen = false;
+                loadingScreenImage.gameObject.SetActive(false);
+                loadingScreenImage.color = loadingScreenOriginalColor;
+            }
+        }
+        #endregion
     }
     #endregion
 
@@ -147,6 +244,7 @@ public class Core_UIManager : MonoBehaviour {
     #endregion
 
     #region InGame UI
+    #region Toggle UI Elements
     private void OpenInGameUI()
     {
         inGameUIHolder.SetActive(true);
@@ -159,10 +257,11 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OpenPauseMenu()
     {
+        //TODO: Implement game pausing if in singleplayer
         Debug.Log("PauseMenuOpened");
-        pauseMenuResumeButton.onClick.AddListener(OnPauseMenuResumeButtonPressed);
-        pauseMenuRestartButton.onClick.AddListener(OnPauseMenuRestartButtonPressed);
-        pauseMenuMainMenuButton.onClick.AddListener(OnPauseMenuMainMenuButtonPressed);
+        pauseMenuResumeButton.onClick.AddListener(PauseMenuResumeButtonPressed);
+        pauseMenuRestartButton.onClick.AddListener(PauseMenuRestartButtonPressed);
+        pauseMenuMainMenuButton.onClick.AddListener(PauseMenuMainMenuButtonPressed);
         pauseMenuHolder.SetActive(true);
     }
 
@@ -173,47 +272,45 @@ public class Core_UIManager : MonoBehaviour {
         pauseMenuMainMenuButton.onClick.RemoveAllListeners();
         pauseMenuHolder.SetActive(false);
     }
+    #endregion
 
-    private void UpdateMatchTimer(int newtimerValue)
+    #region Match timer & Loading screen fade
+    private void UpdateMatchStartTimer(int newTimerValue)
     {
-        matchBeginTimer = newtimerValue;
-        if (!matchBeginTimerVisible)
+        matchStartTimerValue = newTimerValue;
+        matchStartTimerText.text = matchStartTimerValue.ToString();
+        if (!matchStartTimerText.gameObject.activeSelf)
         {
-            //TODO: Set matchBeginTimer visible
-            matchBeginTimerText.gameObject.SetActive(true);
-            StartCoroutine(FadeFromBlack(fadeFromBlackTime));
+            matchStartTimerText.gameObject.SetActive(true);
         }
-
-        //TODO: Update matchBeginTimer value
-        matchBeginTimerText.text = matchBeginTimer.ToString();
-        if (matchBeginTimer == 0)
+        
+        if (matchStartTimerValue <= 0)
         {
-            matchBeginTimerText.gameObject.SetActive(false);
+            matchStartTimerText.gameObject.SetActive(false);
         }
     }
 
-    IEnumerator FadeFromBlack(float fadeTime)
+    private void StartFadeFromLoadingScreen()
     {
-        Color newColor = fullscreenBlackImage.color;
-        float originalAlpha = newColor.a;
-        for (float i = 0.0f; i < 1.0f; i += Time.deltaTime / fadeTime)
-        {
-            newColor.a = Mathf.Lerp(originalAlpha, 0, i);
-            fullscreenBlackImage.color = newColor;
-            yield return new WaitForEndOfFrame();
-        }
-        fullscreenBlackImage.gameObject.SetActive(false);
+        loadingScreenImage.gameObject.SetActive(true);
+        loadingScreenOriginalColor = loadingScreenImage.color;
+        loadingScreenOriginalColor.a = 1;
+        loadingScreenNewColor = loadingScreenOriginalColor;
+        isFadingFromLoadingScreen = true;
+        loadingScreenFadeStartTime = Time.time;
     }
+    #endregion
 
-    private void OnPauseMenuResumeButtonPressed()
+    #region PauseMenu buttons
+    private void PauseMenuResumeButtonPressed()
     {
         Debug.Log("Resume button pressed");
         //Close pauseMenu
         ClosePauseMenu();
-        //Resume game (if pause implemented and in effect)
+        //TODO: Resume game (if pause implemented and in effect)
     }
 
-    private void OnPauseMenuRestartButtonPressed()
+    private void PauseMenuRestartButtonPressed()
     {
         Debug.Log("Restart button pressed");
         //Close pauseMenu
@@ -222,7 +319,7 @@ public class Core_UIManager : MonoBehaviour {
         em.BroadcastGameRestart();
     }
 
-    private void OnPauseMenuMainMenuButtonPressed()
+    private void PauseMenuMainMenuButtonPressed()
     {
         Debug.Log("ReturnToMainMenu button pressed");
         //Close pauseMenu (happens when loading main menu)
@@ -233,58 +330,6 @@ public class Core_UIManager : MonoBehaviour {
     }
     #endregion
     #endregion
-
-    #region Subscribers
-    private void OnMatchBeginTimerValue(int currentTimerValue)
-    {
-        UpdateMatchTimer(currentTimerValue);
-    }
-
-    private void OnGameRestart()
-    {
-        //Reset all
-        //fullscreenBlackImage.gameObject.SetActive(true);
-        //matchBeginTimerText.gameObject.SetActive(false);
-    }
-
-    private void OnNewSceneLoading(int sceneIndex)
-    {
-        //TODO: Change part of 
-        //TODO: Add checks for all future scenes
-        if (sceneIndex == sceneIndexMainMenu)
-        {
-            //Close InGameUI
-            ClosePauseMenu();
-            CloseInGameUI();
-            //Open MainMenuUI
-            OpenMainMenuUI();
-        }
-        else if (sceneIndex == sceneIndexLevel01)
-        {
-            //Close main menu UI
-            CloseMainMenuUI();
-            //Open InGameUI
-            fullscreenBlackImage.gameObject.SetActive(true);
-            OpenInGameUI();
-            ClosePauseMenu();
-        }
-    }
-
-    private void OnEscapeButtonDown(int controllerIndex)
-    {
-        if (inGameUIHolder.activeSelf)
-        {
-            if (pauseMenuHolder.activeSelf){
-
-                ClosePauseMenu();
-            }
-            else
-            {
-                OpenPauseMenu();
-            }
-        }
-        
-    }
     #endregion
-    #endregion
+
 }

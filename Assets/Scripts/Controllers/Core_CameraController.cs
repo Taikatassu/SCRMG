@@ -11,25 +11,21 @@ public class Core_CameraController : MonoBehaviour {
 
     Core_Toolbox toolbox;
     Core_EventManager em;
-
     Transform target;
     Transform cameraParent;
 
     Vector3 wantedPosition;
-    float followDistance = 0;
-    float followHeight = 20.0f;
-
-    float spectatingHeight = 45;
-    Vector3 spectatingRotation = new Vector3(90, 0, 0);
-    float lerpTime = 1;
-    Vector3 originalPosition;
     Vector3 spectatePosition;
-    float timeStartedLerping;
-    
+    Vector3 spectatingRotation = new Vector3(90, 0, 0);
+    //Vector3 originalPosition;
     bool spectateMode = false;
     bool movingToSpectate = false;
-
     int myShipIndex = 0;
+    float spectatingHeight = 45;
+    float followDistance = 0;
+    float followHeight = 20.0f;
+    //float lerpTime = 1;
+    //float timeStartedLerping;
 
     void Awake()
     {
@@ -89,8 +85,8 @@ public class Core_CameraController : MonoBehaviour {
         spectateMode = true;
         movingToSpectate = true;
 
-        timeStartedLerping = Time.time;
-        originalPosition = cameraParent.position;
+        //timeStartedLerping = Time.time;
+        //originalPosition = cameraParent.position;
         spectatePosition = new Vector3(0, spectatingHeight, 0);    
     }
 

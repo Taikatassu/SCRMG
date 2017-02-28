@@ -26,13 +26,15 @@ public class Core_GameManager : MonoBehaviour {
     List<int> usedShipColors = new List<int>();
     bool resetUsedSpawnPointsList = false;
     bool resetUsedShipColors = false;
-    bool resetMatchTimer = false;
-    int matchBeginTimer = 0;
+    bool matchStartTimerRunning = false;
+    int fixedUpdateLoopCounter = 0;
+    int fixedUpdateLoopsPerSecond = 0;
+    int matchStartTimerValue = 0;
 
     //Variables coming from globalVariableLibrary
     List<Color> shipColorOptions = new List<Color>();
     int numberOfShips; //Can also be set with the public "SetNumberOfShips()"-function
-    int matchBeginTimerLength = -1;
+    int matchStartTimerLength = -1;
     int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
     #endregion
@@ -58,19 +60,13 @@ public class Core_GameManager : MonoBehaviour {
         toolbox = FindObjectOfType<Core_Toolbox>();
         em = toolbox.GetComponent<Core_EventManager>();
         lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
-        //shipColorOptions.Add(Color.magenta);
-        //shipColorOptions.Add(Color.cyan);
-        //shipColorOptions.Add(Color.yellow);
-        //shipColorOptions.Add(Color.green);
-        //shipColorOptions.Add(Color.black);
-        //shipColorOptions.Add(Color.white);
         GetStats();
     }
 
     private void GetStats()
     {
         shipColorOptions = lib.shipVariables.shipColorOptions;
-        matchBeginTimerLength = lib.sceneVariables.matchBeginTimerLength;
+        matchStartTimerLength = lib.sceneVariables.matchStartTimerLength;
         numberOfShips = lib.sceneVariables.numberOfShips;
         sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
@@ -93,11 +89,11 @@ public class Core_GameManager : MonoBehaviour {
     #region Subscribers
     private void OnNewSceneLoaded(int sceneIndex)
     {
-        Debug.Log("GameManager: OnNewSceneLoaded with index: " + sceneIndex);
         //TODO: Remember to implement check for all future scenes
         if (sceneIndex == sceneIndexLevel01)
         {
             InitializeGame();
+            StartMatchStartTimer();
         }
     }
 
@@ -107,16 +103,15 @@ public class Core_GameManager : MonoBehaviour {
         //Reset all
         //Destroy player
         //Respawn everything
-        resetMatchTimer = true;
         resetUsedShipColors = true;
         resetUsedSpawnPointsList = true;
         InitializeGame();
-        StartMatchBeginTimer();
+        StartMatchStartTimer();
     }
     #endregion
     #endregion
 
-    #region InitializeGame
+    #region Match initialization
     public void InitializeGame()
     {
         /*TODO: Have server tell level manager how many ships to spawn, and which ship is whose
@@ -233,31 +228,38 @@ public class Core_GameManager : MonoBehaviour {
     //}
     #endregion
 
-    #region Match beginning
-    public void StartMatchBeginTimer()
+    #region FixedUpdate
+    private void FixedUpdate()
     {
-        StartCoroutine(BroadcastAndDecreaseMatchBeginTimer(matchBeginTimerLength));
-    }
-
-    IEnumerator BroadcastAndDecreaseMatchBeginTimer(int timerLength)
-    {
-        // TODO: Fix this timer's functionality
-        // Find a way to stop this timer instantly and completely when the game is restarted
-        matchBeginTimer = timerLength;
-        em.BroadcastMatchBeginTimerValue(matchBeginTimer);
-        for (int i = 0; i < timerLength; i++)
+        #region MatchStartTimer
+        if (matchStartTimerRunning)
         {
-            Debug.Log("in for-loop. i: " + i);
-            yield return new WaitForSeconds(1);
-            if (!resetMatchTimer)
+            fixedUpdateLoopCounter++;
+            if (fixedUpdateLoopCounter >= fixedUpdateLoopsPerSecond)
             {
-                matchBeginTimer--;
-                if (matchBeginTimer >= 0)
-                    em.BroadcastMatchBeginTimerValue(matchBeginTimer);
+                matchStartTimerValue--;
+                em.BroadcastMatchStartTimerValue(matchStartTimerValue);
+                if (matchStartTimerValue <= 0)
+                {
+                    matchStartTimerRunning = false;
+                }
+                fixedUpdateLoopCounter = 0;
             }
         }
-        resetMatchTimer = false;
+        #endregion
     }
+    #endregion
+
+    #region MatchStartTimer initialization
+    public void StartMatchStartTimer()
+    {
+        //StartCoroutine(BroadcastAndDecreaseMatchStartTimer(matchStartTimerLength));
+        matchStartTimerRunning = true;
+        fixedUpdateLoopsPerSecond = Mathf.RoundToInt(1 / Time.fixedDeltaTime);
+        matchStartTimerValue = matchStartTimerLength;
+        fixedUpdateLoopCounter = 0;
+        em.BroadcastMatchStartTimerValue(matchStartTimerValue);
+    }  
     #endregion
 
 }
