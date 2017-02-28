@@ -12,39 +12,44 @@ public class Core_ShipController : MonoBehaviour {
      * Spectator mode
     */
 
+    #region References & variables
+    //References
     protected Core_Toolbox toolbox;
     protected Core_GlobalVariableLibrary lib;
     protected Core_EventManager em;
     protected Rigidbody rb;
-    Vector3 movementDirection;
-    Core_ShipColorablePartTag[] shipColorableParts;
-    Vector3 lookTargetPosition;
+    protected Vector3 movementDirection;
+    protected Vector3 lookTargetPosition;
     Transform shipHull;
     Transform shipTurret;
     Transform turretOutputMarker;
+    GameObject healthBar;
+    Color myShipColor;
+    Core_ShipColorablePartTag[] shipColorableParts;
     List<Core_Projectile> projectileList = new List<Core_Projectile>();
-    protected int index = 0;
-    float currentHealth = 0;
+
+    //Variables coming from within the script
+    protected int index = 0; //Set by gameManager when instantiating ships
+    float currentHealth = 0; //Set to full by calling Resurrect() when instantiated
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
     bool isDead = false;
     bool shootOnCooldown = false;
-    string shipTag = "Ship";
-    string environmentTag = "Environment";
-    GameObject healthBar;
-    float healthBarMinValue = 0.01f;
-    float healthBarMaxValue = 1;
-    Color myShipColor;
 
     //Values coming from GlobalVariableLibrary
-    float movementSpeed = 0;
-    protected float maxHealth = 0;
-    float shipTurretRotationSpeed = 0;
-    float shipHullRotationSpeed = 0;
-    float bulletLaunchForce = 0;
-    float shootCooldownTime = 0;
-    float shootDamage = 0;
+    string shipTag = "Ship";
+    string environmentTag = "Environment";
+    float movementSpeed = -1;
+    protected float maxHealth = -1;
+    float shipTurretRotationSpeed = -1;
+    float shipHullRotationSpeed = -1;
+    float bulletLaunchForce = -1;
+    float shootCooldownTime = -1;
+    float shootDamage = -1;
+    float healthBarMinValue = -1;
+    float healthBarMaxValue = -1;
+    #endregion
 
     #region Initialization
     protected virtual void Awake()
@@ -63,7 +68,8 @@ public class Core_ShipController : MonoBehaviour {
 
     protected virtual void GetStats()
     {
-        Debug.Log("Getting stats");
+        shipTag = lib.shipVariables.shipTag;
+        environmentTag = lib.shipVariables.environmentTag;
         movementSpeed = lib.shipVariables.movementSpeed;
         maxHealth = lib.shipVariables.maxHealth;
         shipTurretRotationSpeed = lib.shipVariables.shipTurretRotationSpeed;
@@ -71,7 +77,8 @@ public class Core_ShipController : MonoBehaviour {
         bulletLaunchForce = lib.shipVariables.bulletLaunchForce;
         shootCooldownTime = lib.shipVariables.shootCooldownTime;
         shootDamage = lib.shipVariables.shootDamage;
-        Debug.Log("maxHealth: " + maxHealth);
+        healthBarMinValue = lib.shipVariables.healthBarMinValue;
+        healthBarMaxValue = lib.shipVariables.healthBarMaxValue;
     }
 
     protected virtual void OnDisable()
@@ -88,6 +95,7 @@ public class Core_ShipController : MonoBehaviour {
 
     protected virtual void FixedUpdate()
     {
+
         #region Movement
         //TODO: Add lerp to movement?
         if (isMovable && movementDirection != Vector3.zero)
@@ -218,10 +226,10 @@ public class Core_ShipController : MonoBehaviour {
     #endregion
 
     #region SetVariables
-    protected void SetMovementDirection(Vector3 newMovementDirection)
-    {
-        movementDirection = newMovementDirection;
-    }
+    //protected void SetMovementDirection(Vector3 newMovementDirection)
+    //{
+    //    movementDirection = newMovementDirection;
+    //}
 
     protected void SetLookTargetPosition(Vector3 newLookTargetPosition)
     {
@@ -230,7 +238,6 @@ public class Core_ShipController : MonoBehaviour {
 
     protected void SetIsMoveable(bool state)
     {
-        Debug.Log("IsMoveable");
         isMovable = state;
     }
 
@@ -290,34 +297,32 @@ public class Core_ShipController : MonoBehaviour {
     #region Die, Resurrect & SpectatorMode
     private void Die()
     {
-        Debug.Log("I'm dead.");
         isDead = true;
         isVulnerable = false;
         isMovable = false;
         canShoot = false;
         //Broadcast ship death
-        /* TODO: Remove this and implement a way to disable ship mesh and leave the ship
-         *      as a moveable object in game to allow spectating after death.
-         */
-        gameObject.SetActive(false);
         //Start spectator mode if player
+        em.BroadcastShipDead(index);
+        Destroy(gameObject);
     }
 
-    protected void Resurrect()
-    {
-        // TODO: Currently Die-method destroys the object, so resurrect is unneccessary
-        //      Remove if still obsolete in the future (currently only used for setting isDead 
-        //      to true when initializing ships)
-        Debug.Log("Resurrecting");
-        //Reset all stats
-        isDead = false;
-        AddHealth(maxHealth);
-    }
+    //protected void Resurrect()
+    //{
+    //    // TODO: Currently Die-method destroys the object, so resurrect is unneccessary
+    //    //      Remove if still obsolete in the future (currently only used for setting isDead 
+    //    //      to true when initializing ships)
+    //    Debug.Log("Resurrecting");
+    //    //Reset all stats
+    //    isDead = false;
+    //    AddHealth(maxHealth);
+    //}
     #endregion
 
     #region Worldspace UI
     private void UpdateHealthBar()
     {
+        // TODO: Add lerp
         float healthBarFillAmount = 1 - (currentHealth / maxHealth);
         healthBar.GetComponent<Renderer>().material.SetFloat("_Cutoff",
             Mathf.Clamp(healthBarFillAmount, healthBarMinValue, healthBarMaxValue));
@@ -325,9 +330,9 @@ public class Core_ShipController : MonoBehaviour {
     #endregion
 
     #region Collision detection
-    private void OnCollisionEnter()
-    {
-        Debug.Log("OnCollisionEnter");
-    }
+    //private void OnCollisionEnter()
+    //{
+    //    Debug.Log("OnCollisionEnter");
+    //}
     #endregion
 }

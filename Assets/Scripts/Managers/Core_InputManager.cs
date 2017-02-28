@@ -4,22 +4,54 @@ using UnityEngine;
 
 public class Core_InputManager : MonoBehaviour {
 
-    //TODO: Do not normalize movementVector if movementVector.magnitude == 1 already
+    #region References & variables
+    //References
+    public static Core_InputManager instance;
 
     Core_Toolbox toolbox;
     Core_EventManager em;
+    Core_GlobalVariableLibrary lib;
+    //Variables coming from within the script
     Vector2 movementInputVector;
+    Vector2 mousePosition;
     bool movementInputType = true;
     bool movementZeroSent = false;
-    int keyboardAndMouseIndex = 1;
-    Vector2 mousePosition;
+    //Variables coming from GlobalVariableLibrary
+    int keyboardAndMouseIndex = -1;
+    #endregion
 
-	void Awake () {
+    #region Initialization
+    void Awake ()
+    {
+        #region Singletonization
+        if (instance == null)
+        {
+            instance = this;
+        }
+
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        DontDestroyOnLoad(gameObject);
+        #endregion
+
         toolbox = FindObjectOfType<Core_Toolbox>();
         em = toolbox.GetComponent<Core_EventManager>();
+        lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
+        GetStats();
 	}
-	
-	void Update () {
+
+    private void GetStats()
+    {
+        keyboardAndMouseIndex = lib.inputVariables.keyboardAndMouseIndex;
+    }
+    #endregion
+
+    #region Update
+    void Update () {
 
         #region KeyCode inputs
         if (!movementInputType)
@@ -88,7 +120,11 @@ public class Core_InputManager : MonoBehaviour {
                 movementInputVector.x += 1;
             }
 
-            movementInputVector.Normalize();
+            //If movement vector's magnitude is not already 1
+            if (movementInputVector.x != 0 || movementInputVector.y != 0)
+            {
+                movementInputVector.Normalize();
+            }
 
             if (movementInputVector != Vector2.zero)
             {
@@ -102,6 +138,18 @@ public class Core_InputManager : MonoBehaviour {
             }
             #endregion
         }
+
+        #region Keys
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            em.BroadcastEscapeButtonDown(keyboardAndMouseIndex);
+        }
+
+        if (Input.GetKeyUp(KeyCode.Escape))
+        {
+            em.BroadcastEscapeButtonUp(keyboardAndMouseIndex);
+        }
+        #endregion
         #endregion
 
         #region Mouse movement
@@ -131,10 +179,6 @@ public class Core_InputManager : MonoBehaviour {
         }
         #endregion
     }
-
-
-
-
-
+    #endregion
 
 }

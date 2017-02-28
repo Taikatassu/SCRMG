@@ -8,6 +8,7 @@ public class Core_Toolbox : MonoBehaviour
 
     void Awake()
     {
+        #region Singletonization
         if (instance == null)
         {
             instance = this;
@@ -16,9 +17,10 @@ public class Core_Toolbox : MonoBehaviour
         else if (instance != this)
         {
             Destroy(gameObject);
+            return;
         }
 
         DontDestroyOnLoad(gameObject);
-        
+        #endregion
     }
 }

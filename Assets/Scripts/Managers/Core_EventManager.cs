@@ -8,17 +8,20 @@ public class Core_EventManager : MonoBehaviour
     public static Core_EventManager instance;
     private void Awake()
     {
+        #region Singletonization
         if (instance == null)
         {
             instance = this;
         }
-        
+
         else if (instance != this)
         {
             Destroy(gameObject);
+            return;
         }
-        
+
         DontDestroyOnLoad(gameObject);
+        #endregion
     }
     #endregion
 
@@ -30,6 +33,15 @@ public class Core_EventManager : MonoBehaviour
 
     #region Events
     #region Scene events
+    public event EmptyVoid OnRequestSceneSingleMainMenu;
+    public void BroadcastRequestSceneSingleMainMenu()
+    {
+        if (OnRequestSceneSingleMainMenu != null)
+        {
+            OnRequestSceneSingleMainMenu();
+        }
+    }
+
     public event EmptyVoid OnRequestSceneSingleLevel01;
     public void BroadcastRequestSceneSingleLevel01()
     {
@@ -39,12 +51,21 @@ public class Core_EventManager : MonoBehaviour
         }
     }
 
-    public event IntVoid OnLoadingNewScene;
-    public void BroadcastLoadingNewScene(int sceneIndex)
+    public event IntVoid OnNewSceneLoading; //Notice difference to the event BELOW!!
+    public void BroadcastNewSceneLoading(int sceneIndex)
     {
-        if (OnLoadingNewScene != null)
+        if (OnNewSceneLoading != null)
         {
-            OnLoadingNewScene(sceneIndex);
+            OnNewSceneLoading(sceneIndex);
+        }
+    }
+
+    public event IntVoid OnNewSceneLoaded; //Notice difference to the event ABOVE!!
+    public void BroadcastNewSceneLoaded(int sceneIndex)
+    {
+        if (OnNewSceneLoaded != null)
+        {
+            OnNewSceneLoaded(sceneIndex);
         }
     }
     #endregion
@@ -192,6 +213,26 @@ public class Core_EventManager : MonoBehaviour
         }
     }
     #endregion
+
+    #region Keys
+    public event IntVoid OnEscapeButtonDown;
+    public void BroadcastEscapeButtonDown(int controllerIndex)
+    {
+        if(OnEscapeButtonDown != null)
+        {
+            OnEscapeButtonDown(controllerIndex);
+        }
+    }
+
+    public event IntVoid OnEscapeButtonUp;
+    public void BroadcastEscapeButtonUp(int controllerIndex)
+    {
+        if (OnEscapeButtonUp != null)
+        {
+            OnEscapeButtonUp(controllerIndex);
+        }
+    }
+    #endregion
     #endregion
 
     #region GameplayEvents
@@ -210,6 +251,15 @@ public class Core_EventManager : MonoBehaviour
         if (OnGameRestart != null)
         {
             OnGameRestart();
+        }
+    }
+
+    public event IntVoid OnShipDead;
+    public void BroadcastShipDead(int shipIndex)
+    {
+        if(OnShipDead != null)
+        {
+            OnShipDead(shipIndex);
         }
     }
     #endregion

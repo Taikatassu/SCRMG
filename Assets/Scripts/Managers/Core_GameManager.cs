@@ -15,6 +15,8 @@ public class Core_GameManager : MonoBehaviour {
 
     #region References & variables
     //References
+    public static Core_GameManager instance; 
+
     Core_Toolbox toolbox;
     Core_EventManager em;
     Core_GlobalVariableLibrary lib;
@@ -24,16 +26,35 @@ public class Core_GameManager : MonoBehaviour {
     List<int> usedShipColors = new List<int>();
     bool resetUsedSpawnPointsList = false;
     bool resetUsedShipColors = false;
-    int numberOfShips;
+    bool resetMatchTimer = false;
+    int matchBeginTimer = 0;
 
     //Variables coming from globalVariableLibrary
     List<Color> shipColorOptions = new List<Color>();
-    int matchBeginTimer = 0;
+    int numberOfShips; //Can also be set with the public "SetNumberOfShips()"-function
+    int matchBeginTimerLength = -1;
+    int sceneIndexMainMenu = -1;
+    int sceneIndexLevel01 = -1;
     #endregion
 
     #region Initialization
     void Awake ()
     {
+        #region Singletonization
+        if (instance == null)
+        {
+            instance = this;
+        }
+
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        DontDestroyOnLoad(gameObject);
+        #endregion
+
         toolbox = FindObjectOfType<Core_Toolbox>();
         em = toolbox.GetComponent<Core_EventManager>();
         lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
@@ -49,28 +70,48 @@ public class Core_GameManager : MonoBehaviour {
     private void GetStats()
     {
         shipColorOptions = lib.shipVariables.shipColorOptions;
-        matchBeginTimer = lib.sceneVariables.matchBeginTimer;
+        matchBeginTimerLength = lib.sceneVariables.matchBeginTimerLength;
+        numberOfShips = lib.sceneVariables.numberOfShips;
+        sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
+        sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
     }
 
     #region OnEnable & OnDisable
     private void OnEnable()
     {
         em.OnGameRestart += OnGameRestart;
+        em.OnNewSceneLoaded += OnNewSceneLoaded;
     }
 
     private void OnDisable()
     {
         em.OnGameRestart -= OnGameRestart;
+        em.OnNewSceneLoaded -= OnNewSceneLoaded;
     }
     #endregion
 
     #region Subscribers
+    private void OnNewSceneLoaded(int sceneIndex)
+    {
+        Debug.Log("GameManager: OnNewSceneLoaded with index: " + sceneIndex);
+        //TODO: Remember to implement check for all future scenes
+        if (sceneIndex == sceneIndexLevel01)
+        {
+            InitializeGame();
+        }
+    }
+
     private void OnGameRestart()
     {
+        Debug.Log("GameManager: OnGameRestart");
         //Reset all
         //Destroy player
         //Respawn everything
+        resetMatchTimer = true;
+        resetUsedShipColors = true;
+        resetUsedSpawnPointsList = true;
         InitializeGame();
+        StartMatchBeginTimer();
     }
     #endregion
     #endregion
@@ -103,8 +144,9 @@ public class Core_GameManager : MonoBehaviour {
 
                 GameObject newPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
                     typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
-                newPlayerCamera.GetComponentInChildren<Core_CameraController>().
-                    SetTarget(newShip.transform);
+                Core_CameraController newCameraScript = newPlayerCamera.GetComponentInChildren<Core_CameraController>();
+                newCameraScript.SetTarget(newShip.transform);
+                newCameraScript.SetMyShipIndex(i + 1);
             }
             else //TODO: Add a check whether starting a AI or Online match, 
                         //and add corresponding playerControllers to other ships
@@ -122,13 +164,12 @@ public class Core_GameManager : MonoBehaviour {
     #region SetVariables
     public void SetRespawnPoints(List<Transform> newRespawnPoints)
     {
-        Debug.Log("SetRespawnPoints");
         respawnPoints = newRespawnPoints;
     }
 
-    public void SetShipCount(int newNumberOfShips)
+    public void SetNumberOfShips(int newNumberOfShips)
     {
-        Debug.Log("SetShipCount");
+        Debug.Log("SetNumberOfShips");
         numberOfShips = newNumberOfShips;
     }
     #endregion
@@ -195,18 +236,27 @@ public class Core_GameManager : MonoBehaviour {
     #region Match beginning
     public void StartMatchBeginTimer()
     {
-        StartCoroutine(BroadcastAndDecreaseMatchBeginTimer(matchBeginTimer));
+        StartCoroutine(BroadcastAndDecreaseMatchBeginTimer(matchBeginTimerLength));
     }
 
-    IEnumerator BroadcastAndDecreaseMatchBeginTimer(int count)
+    IEnumerator BroadcastAndDecreaseMatchBeginTimer(int timerLength)
     {
+        // TODO: Fix this timer's functionality
+        // Find a way to stop this timer instantly and completely when the game is restarted
+        matchBeginTimer = timerLength;
         em.BroadcastMatchBeginTimerValue(matchBeginTimer);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < timerLength; i++)
         {
+            Debug.Log("in for-loop. i: " + i);
             yield return new WaitForSeconds(1);
-            matchBeginTimer--;
-            em.BroadcastMatchBeginTimerValue(matchBeginTimer);
+            if (!resetMatchTimer)
+            {
+                matchBeginTimer--;
+                if (matchBeginTimer >= 0)
+                    em.BroadcastMatchBeginTimerValue(matchBeginTimer);
+            }
         }
+        resetMatchTimer = false;
     }
     #endregion
 

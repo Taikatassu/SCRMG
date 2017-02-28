@@ -4,22 +4,39 @@ using UnityEngine;
 
 public class Core_LocalPlayerController : Core_ShipController {
     
-    Vector3 movementDirection;
-    Vector3 lookDirection;
-    LayerMask mouseRayCollisionLayer;
+    LayerMask mouseRayCollisionLayer = -1;
 
     protected override void Awake()
     {
         base.Awake();
         mouseRayCollisionLayer = LayerMask.NameToLayer("MouseRayCollider");
         GetStats();
+
+        //For testing only
+        //StartCoroutine(WaitToDie(5));
     }
+
+    protected override void GetStats()
+    {
+        base.GetStats();
+        mouseRayCollisionLayer = LayerMask.NameToLayer(lib.shipVariables.
+            mouseRayCollisionLayerName);
+    }
+
+    //For testing only
+    IEnumerator WaitToDie(float time)
+    {
+        yield return new WaitForSeconds(time);
+        TakeDamage(200);
+    }
+
 
     #region OnEnable & OnDisable
     private void OnEnable()
     {
-        em.OnMovementInput += OnMovementInput;
+        em.OnGameRestart += OnGameRestart;
         em.OnMatchBeginTimerValue += OnMatchBeginTimerValue;
+        em.OnMovementInput += OnMovementInput;
         em.OnMousePosition += OnMousePosition;
         em.OnMouseButtonLeftDown += OnMouseButtonLeftDown;
         em.OnMouseButtonLeftUp += OnMouseButtonLeftUp;
@@ -30,8 +47,9 @@ public class Core_LocalPlayerController : Core_ShipController {
     protected override void OnDisable()
     {
         base.OnDisable();
-        em.OnMovementInput -= OnMovementInput;
+        em.OnGameRestart -= OnGameRestart;
         em.OnMatchBeginTimerValue -= OnMatchBeginTimerValue;
+        em.OnMovementInput -= OnMovementInput;
         em.OnMousePosition -= OnMousePosition;
         em.OnMouseButtonLeftDown -= OnMouseButtonLeftDown;
         em.OnMouseButtonLeftUp -= OnMouseButtonLeftUp;
@@ -47,11 +65,18 @@ public class Core_LocalPlayerController : Core_ShipController {
         if (currentTimerValue == 0)
         {
             Debug.Log("currentTimerValue == 0");
-            Resurrect();
+            //Resurrect(); //Replaced by below (AddHealth)
+            AddHealth(maxHealth);
             SetIsMoveable(true);
             SetIsVulnerable(true);
             SetCanShoot(true);
         }
+    }
+
+    private void OnGameRestart()
+    {
+        //TODO: Change if implementing a pool for ships instead of instantiating them
+        Destroy(gameObject);
     }
     #endregion
 
@@ -63,9 +88,9 @@ public class Core_LocalPlayerController : Core_ShipController {
             movementDirection.x = movementInputVector.x;
             movementDirection.z = movementInputVector.y;
             movementDirection.y = 0;
-            SetMovementDirection(movementDirection);
+            //SetMovementDirection(movementDirection);
         }
-    }
+    } 
 
     private void OnMousePosition(int controllerIndex, Vector2 mousePosition)
     {

@@ -8,25 +8,26 @@ public class Core_Level01Info : MonoBehaviour {
     #region References & Variables
     //References
     Core_Toolbox toolbox;
+    Core_EventManager em;
     Core_GameManager gameManager;
     Core_GlobalVariableLibrary lib;
     List<Transform> respawnPoints = new List<Transform>();
     //UI Elements
-    GameObject currentCanvas;
     Image fullscreenBlackImage;
     Text matchBeginTimerText;
     //Variables coming from globalVariableLibrary
-    int numberOfShips = 0;
-    float waitTimeBeforeStartingMatchBeginTimer = 0;
+    int mySceneIndex = 0;
+    //float waitTimeBeforeStartingMatchBeginTimer = 0;
     #endregion
 
-    #region OnEnable
-    void OnEnable()
+    #region Start
+    void Start()
     {
         //Find references
         toolbox = FindObjectOfType<Core_Toolbox>();
         if (toolbox == null)
             Debug.LogError("toolbox not found!!!");
+        em = toolbox.GetComponent<Core_EventManager>();
         gameManager = toolbox.GetComponent<Core_GameManager>();
         Transform respawnPointHolder = transform.
             GetComponentInChildren<Core_RespawnPointHolderTag>().transform;
@@ -36,32 +37,23 @@ public class Core_Level01Info : MonoBehaviour {
         }
 
         //Find globalVariableLibrary and get variables from it
-        lib = toolbox.GetComponentInChildren<Core_GlobalVariableLibrary>();
+        lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         GetStats();
 
-        //Send info to managers
+        //Send respawnPoint list to GameManager and broadcast NewSceneLoaded
         gameManager.SetRespawnPoints(respawnPoints);
-        gameManager.SetShipCount(numberOfShips);      
-        gameManager.InitializeGame();
+        em.BroadcastNewSceneLoaded(mySceneIndex);
 
         //Wait a moment before starting actual match begin timer
-        StartCoroutine(WaitForSceneLoadedAndStartMatchTimer(waitTimeBeforeStartingMatchBeginTimer));
+        //StartCoroutine(WaitForSceneLoadedAndStartMatchTimer(waitTimeBeforeStartingMatchBeginTimer));
+        gameManager.StartMatchBeginTimer();
     }
     #endregion
 
     #region GetStats
     private void GetStats()
     {
-        numberOfShips = lib.sceneVariables.numberOfShips;
-        waitTimeBeforeStartingMatchBeginTimer = lib.sceneVariables.waitTimeBeforeStartingMatchBeginTimer;
-    }
-    #endregion
-
-    #region WaitForSceneLoadedAndStartMatchTimer
-    IEnumerator WaitForSceneLoadedAndStartMatchTimer(float waitTime)
-    {
-        yield return new WaitForSeconds(waitTime);
-        gameManager.StartMatchBeginTimer();
+        mySceneIndex = lib.sceneVariables.sceneIndexLevel01;
     }
     #endregion
 }

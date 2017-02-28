@@ -14,6 +14,8 @@ public class Core_UIManager : MonoBehaviour {
     */
 
     #region References & variables
+    public static Core_UIManager instance;
+
     Core_Toolbox toolbox;
     Core_GlobalVariableLibrary lib;
     Core_EventManager em;
@@ -22,41 +24,71 @@ public class Core_UIManager : MonoBehaviour {
     //MainMenu UI
     GameObject mainMenuHolder;
     Button playButton;
-    int mainMenuIndex = 0;
-    int level01Index = 0;
+    int sceneIndexMainMenu = -1;
+    int sceneIndexLevel01 = -1;
 
     //InGame UI
     GameObject inGameUIHolder;
     GameObject pauseMenuHolder;
     Image fullscreenBlackImage;
     Text matchBeginTimerText;
+    Button pauseMenuResumeButton;
+    Button pauseMenuRestartButton;
+    Button pauseMenuMainMenuButton;
     bool matchBeginTimerVisible = false;
-    int matchBeginTimer = 0;
+    int matchBeginTimer = -1;
     //Variables coming from globalVariableLibrary
-    float fadeFromBlackTime = 0;
+    float fadeFromBlackTime = -1;
     #endregion
+        
+
+
 
     #region Initialization
     #region Awake
     void Awake ()
     {
+        #region Singletonization
+        if (instance == null)
+        {
+            instance = this;
+        }
+
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        DontDestroyOnLoad(gameObject);
+        #endregion
+
+        #region Getting references
         toolbox = FindObjectOfType<Core_Toolbox>();
         em = toolbox.GetComponent<Core_EventManager>();
         lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         GetStats();
 
         canvas = GameObject.FindWithTag("Canvas");
-        mainMenuHolder = canvas.GetComponentInChildren<Core_MainMenuHolderTag>().gameObject;
-        inGameUIHolder = canvas.GetComponentInChildren<Core_InGameUIHolderTag>().gameObject;
-        pauseMenuHolder = inGameUIHolder.GetComponentInChildren<Core_PauseMenuHolderTag>().gameObject;
+        mainMenuHolder = canvas.GetComponentInChildren<Core_MainMenuHolderTag>(true).gameObject;
+        inGameUIHolder = canvas.GetComponentInChildren<Core_InGameUIHolderTag>(true).gameObject;
+        pauseMenuHolder = inGameUIHolder.GetComponentInChildren<Core_PauseMenuHolderTag>(true).gameObject;
 
-        playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>().
+        playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>(true).
             GetComponent<Button>();
-        fullscreenBlackImage = inGameUIHolder.GetComponentInChildren<Core_FullscreenBlackImageTag>().
+        fullscreenBlackImage = inGameUIHolder.GetComponentInChildren<Core_FullscreenBlackImageTag>(true).
             GetComponent<Image>();
-        matchBeginTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>().
+        matchBeginTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
             GetComponent<Text>();
-        matchBeginTimerText.gameObject.SetActive(false);
+        pauseMenuResumeButton = inGameUIHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
+            GetComponent<Button>();
+        pauseMenuRestartButton = inGameUIHolder.GetComponentInChildren<Core_PauseMenuRestartButtonTag>().
+           GetComponent<Button>();
+        pauseMenuMainMenuButton = inGameUIHolder.GetComponentInChildren<Core_PauseMenuMainMenuButtonTag>().
+           GetComponent<Button>();
+        #endregion
+
+        //matchBeginTimerText.gameObject.SetActive(false);
 
         OpenMainMenuUI();
         ClosePauseMenu();
@@ -67,84 +99,31 @@ public class Core_UIManager : MonoBehaviour {
     #region GetStats
     private void GetStats()
     {
-        mainMenuIndex = lib.sceneVariables.mainMenuIndex;
-        level01Index = lib.sceneVariables.level01Index;
+        sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
+        sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
         fadeFromBlackTime = lib.sceneVariables.fadeFromBlackTime;
     }
     #endregion
+
+    // TODO: Add tags for pause menu buttons
+    // Add functionality for pause menu buttons
 
     #region OnEnable & OnDisable
     private void OnEnable()
     {
         em.OnMatchBeginTimerValue += OnMatchBeginTimerValue;
         em.OnGameRestart += OnGameRestart;
-        em.OnLoadingNewScene += OnLoadingNewScene;
+        em.OnNewSceneLoading += OnNewSceneLoading;
+        em.OnEscapeButtonDown += OnEscapeButtonDown;
     }
 
     private void OnDisable()
     {
         em.OnMatchBeginTimerValue -= OnMatchBeginTimerValue;
         em.OnGameRestart -= OnGameRestart;
-        em.OnLoadingNewScene -= OnLoadingNewScene;
+        em.OnNewSceneLoading -= OnNewSceneLoading;
+        em.OnEscapeButtonDown -= OnEscapeButtonDown;
     }
-    #endregion
-
-    #region UI Element setters
-    //MainMenu UI
-    public void SetPlayButton(Button newPlayButton)
-    {
-        playButton = newPlayButton;
-    }
-
-    //InGame UI
-    public void SetFullscreenBlackImage(Image newFullscreenBlackImage)
-    {
-        fullscreenBlackImage = newFullscreenBlackImage;
-        fullscreenBlackImage.gameObject.SetActive(true);
-    }
-
-    public void SetMatchBeginTimerText(Text newMatchBeginTimerText)
-    {
-        matchBeginTimerText = newMatchBeginTimerText;
-        matchBeginTimerText.gameObject.SetActive(false);
-    }
-    #endregion
-
-    #region Subscribers
-    private void OnMatchBeginTimerValue(int currentTimerValue)
-    {
-        UpdateMatchTimer(currentTimerValue);
-    }
-
-    private void OnGameRestart()
-    {
-        //Reset all
-        //fullscreenBlackImage.gameObject.SetActive(true);
-        matchBeginTimerText.gameObject.SetActive(false);
-    }
-
-    private void OnLoadingNewScene(int sceneIndex)
-    {
-        Debug.Log("Loading scene with index: " + sceneIndex);
-        //TODO: Add checks for all future scenes
-        if (sceneIndex == mainMenuIndex)
-        {
-            //Close InGameUI
-            ClosePauseMenu();
-            CloseInGameUI();
-            //Open MainMenuUI
-            OpenMainMenuUI();
-        }
-        else if (sceneIndex == level01Index)
-        {
-            //Close main menu UI
-            CloseMainMenuUI();
-            //Open InGameUI
-            OpenInGameUI();
-            ClosePauseMenu();
-        }
-    }
-    #endregion
     #endregion
 
     #region UI functions
@@ -163,8 +142,6 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OnPlayButtonPressed()
     {
-        Debug.Log("PlayButton press detected");
-        em.BroadcastLoadingNewScene(level01Index);
         em.BroadcastRequestSceneSingleLevel01();
     }
     #endregion
@@ -182,11 +159,18 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OpenPauseMenu()
     {
+        Debug.Log("PauseMenuOpened");
+        pauseMenuResumeButton.onClick.AddListener(OnPauseMenuResumeButtonPressed);
+        pauseMenuRestartButton.onClick.AddListener(OnPauseMenuRestartButtonPressed);
+        pauseMenuMainMenuButton.onClick.AddListener(OnPauseMenuMainMenuButtonPressed);
         pauseMenuHolder.SetActive(true);
     }
 
     private void ClosePauseMenu()
     {
+        pauseMenuResumeButton.onClick.RemoveAllListeners();
+        pauseMenuRestartButton.onClick.RemoveAllListeners();
+        pauseMenuMainMenuButton.onClick.RemoveAllListeners();
         pauseMenuHolder.SetActive(false);
     }
 
@@ -207,7 +191,7 @@ public class Core_UIManager : MonoBehaviour {
             matchBeginTimerText.gameObject.SetActive(false);
         }
     }
-    
+
     IEnumerator FadeFromBlack(float fadeTime)
     {
         Color newColor = fullscreenBlackImage.color;
@@ -220,7 +204,87 @@ public class Core_UIManager : MonoBehaviour {
         }
         fullscreenBlackImage.gameObject.SetActive(false);
     }
+
+    private void OnPauseMenuResumeButtonPressed()
+    {
+        Debug.Log("Resume button pressed");
+        //Close pauseMenu
+        ClosePauseMenu();
+        //Resume game (if pause implemented and in effect)
+    }
+
+    private void OnPauseMenuRestartButtonPressed()
+    {
+        Debug.Log("Restart button pressed");
+        //Close pauseMenu
+        ClosePauseMenu();
+        //Restart game
+        em.BroadcastGameRestart();
+    }
+
+    private void OnPauseMenuMainMenuButtonPressed()
+    {
+        Debug.Log("ReturnToMainMenu button pressed");
+        //Close pauseMenu (happens when loading main menu)
+        //Close InGameUI (happens when loading main menu)
+        //Load mainMenuScene
+        em.BroadcastRequestSceneSingleMainMenu();
+        //Open mainMenuUI (happens when loading main menu)
+    }
     #endregion
     #endregion
 
+    #region Subscribers
+    private void OnMatchBeginTimerValue(int currentTimerValue)
+    {
+        UpdateMatchTimer(currentTimerValue);
+    }
+
+    private void OnGameRestart()
+    {
+        //Reset all
+        //fullscreenBlackImage.gameObject.SetActive(true);
+        //matchBeginTimerText.gameObject.SetActive(false);
+    }
+
+    private void OnNewSceneLoading(int sceneIndex)
+    {
+        //TODO: Change part of 
+        //TODO: Add checks for all future scenes
+        if (sceneIndex == sceneIndexMainMenu)
+        {
+            //Close InGameUI
+            ClosePauseMenu();
+            CloseInGameUI();
+            //Open MainMenuUI
+            OpenMainMenuUI();
+        }
+        else if (sceneIndex == sceneIndexLevel01)
+        {
+            //Close main menu UI
+            CloseMainMenuUI();
+            //Open InGameUI
+            fullscreenBlackImage.gameObject.SetActive(true);
+            OpenInGameUI();
+            ClosePauseMenu();
+        }
+    }
+
+    private void OnEscapeButtonDown(int controllerIndex)
+    {
+        if (inGameUIHolder.activeSelf)
+        {
+            if (pauseMenuHolder.activeSelf){
+
+                ClosePauseMenu();
+            }
+            else
+            {
+                OpenPauseMenu();
+            }
+        }
+        
+    }
+    #endregion
+    #endregion
 }
