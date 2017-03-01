@@ -100,7 +100,6 @@ public class Core_CameraController : MonoBehaviour {
 
     private void OnGameRestart()
     {
-        Debug.Log("CameraController: OnGameRestart");
         Destroy(cameraParent.gameObject);
     }
 }

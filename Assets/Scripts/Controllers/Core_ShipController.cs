@@ -36,12 +36,17 @@ public class Core_ShipController : MonoBehaviour {
     float healthBarLerpStartTime = -1;
     int shootCooldownFrames = -1;
     int shootCooldownFrameTimer = -1;
+    public int currentGameModeIndex = -1;
+    int gameModeSingleplayerIndex = -1;
+    int gameModeNetworkMultiplayerIndex = -1;
+    int gameModeLocalMultiplayerIndex = -1;
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
     bool isDead = false;
     bool shootOnCooldown = false;
     bool updatingHealthBar = false;
+    bool matchStarted = false;
 
     //Values coming from GlobalVariableLibrary
     string shipTag = "Ship";
@@ -91,6 +96,9 @@ public class Core_ShipController : MonoBehaviour {
         healthBarMinValue = lib.shipVariables.healthBarMinValue;
         healthBarMaxValue = lib.shipVariables.healthBarMaxValue;
         healthBarLerpDuration = lib.shipVariables.healthBarLerpDuration;
+        gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
+        gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
+        gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
     }
     #endregion
 
@@ -99,6 +107,9 @@ public class Core_ShipController : MonoBehaviour {
     {
         em.OnGameRestart += OnGameRestart;
         em.OnMatchStartTimerValue += OnMatchStartTimerValue;
+        em.OnGameEnd += OnGameEnd;
+        em.OnPauseOn += OnPauseOn;
+        em.OnPauseOff += OnPauseOff;
     }
 
     protected virtual void OnDisable()
@@ -106,16 +117,22 @@ public class Core_ShipController : MonoBehaviour {
         DestroyAllProjectiles();
         em.OnGameRestart -= OnGameRestart;
         em.OnMatchStartTimerValue -= OnMatchStartTimerValue;
+        em.OnGameEnd -= OnGameEnd;
+        em.OnPauseOn -= OnPauseOn;
+        em.OnPauseOff -= OnPauseOff;
     }
     #endregion
 
     #region Subscribers
     private void OnMatchStartTimerValue(int currentTimerValue)
     {
-        if (currentTimerValue == 0)
+        if (currentTimerValue == 1)
         {
-            //Resurrect(); //Replaced by below (AddHealth)
             AddHealth(maxHealth * 2);
+        }
+        else if (currentTimerValue == 0)
+        {
+            matchStarted = true;
             SetIsMoveable(true);
             SetIsVulnerable(true);
             SetCanShoot(true);
@@ -125,7 +142,61 @@ public class Core_ShipController : MonoBehaviour {
     private void OnGameRestart()
     {
         //TODO: Change if implementing a pool for ships instead of instantiating them
+        matchStarted = false;
         Destroy(gameObject);
+    }
+
+    private void OnGameEnd(int winnerIndex)
+    {
+        SetIsVulnerable(false);
+        SetIsMoveable(false);
+    }
+
+    public void SetGameMode(int newGameModeIndex)
+    {
+        currentGameModeIndex = newGameModeIndex;
+    }
+
+    private void OnPauseOn()
+    {
+        if (currentGameModeIndex == gameModeSingleplayerIndex)
+        {
+            if (matchStarted)
+            {
+                SetIsMoveable(false);
+                SetIsVulnerable(false);
+                SetCanShoot(false);
+            }
+        }
+        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in NetMP gameMode
+        }
+        else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in LocMP gameMode
+        }
+    }
+
+    private void OnPauseOff()
+    {
+        if (currentGameModeIndex == gameModeSingleplayerIndex)
+        {
+            if (matchStarted)
+            {
+                SetIsMoveable(true);
+                SetIsVulnerable(true);
+                SetCanShoot(true);
+            }
+        }
+        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in NetMP gameMode
+        }
+        else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in LocMP gameMode
+        }
     }
     #endregion
     #endregion
@@ -281,18 +352,13 @@ public class Core_ShipController : MonoBehaviour {
         }
     }
 
-    //public int GetIndex()
-    //{
-    //    return index;
-    //}
+    public int GetIndex()
+    {
+        return index;
+    }
     #endregion
 
     #region SetVariables
-    //protected void SetMovementDirection(Vector3 newMovementDirection)
-    //{
-    //    movementDirection = newMovementDirection;
-    //}
-
     protected void SetLookTargetPosition(Vector3 newLookTargetPosition)
     {
         lookTargetPosition = newLookTargetPosition;
@@ -316,11 +382,14 @@ public class Core_ShipController : MonoBehaviour {
     public void SetShipColor(Color newColor)
     {
         myShipColor = newColor;
+
+        //Set shipColorableParts color
         for (int i = 0; i < shipColorableParts.Length; i++)
         {
-            //shipColorableParts[i].GetComponent<Renderer>().material.color = newColor;
             shipColorableParts[i].GetComponent<Renderer>().material.SetColor("_TintColor", myShipColor);
         }
+        //Set circularHealthBarColor
+        healthBar.GetComponent<Renderer>().material.SetColor("_EmissionColor", myShipColor);
     }
     #endregion
 
@@ -356,7 +425,7 @@ public class Core_ShipController : MonoBehaviour {
     }
     #endregion
 
-    #region Die, Resurrect & SpectatorMode
+    #region Die, Resurrect
     private void Die()
     {
         isDead = true;

@@ -24,18 +24,23 @@ public class Core_GameManager : MonoBehaviour {
     //Variables coming from within the script
     List<int> usedSpawnPoints = new List<int>();
     List<int> usedShipColors = new List<int>();
+    List<int> currentlyAliveShipIndices = new List<int>();
     bool resetUsedSpawnPointsList = false;
     bool resetUsedShipColors = false;
     bool matchStartTimerRunning = false;
-    int fixedUpdateLoopCounter = 0;
-    int fixedUpdateLoopsPerSecond = 0;
-    int matchStartTimerValue = 0;
+    int fixedUpdateLoopCounter = -1;
+    int fixedUpdateLoopsPerSecond = -1;
+    int matchStartTimerValue = -1;
+    int currentGameModeIndex = -1;
 
     //Variables coming from globalVariableLibrary
     List<Color> shipColorOptions = new List<Color>();
+    int gameModeSingleplayerIndex = -1;
+    int gameModeNetworkMultiplayerIndex = -1;
+    int gameModeLocalMultiplayerIndex = -1;
     int numberOfShips; //Can also be set with the public "SetNumberOfShips()"-function
     int matchStartTimerLength = -1;
-    int sceneIndexMainMenu = -1;
+    //int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
     #endregion
 
@@ -65,10 +70,13 @@ public class Core_GameManager : MonoBehaviour {
 
     private void GetStats()
     {
+        gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
+        gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
+        gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
         shipColorOptions = lib.shipVariables.shipColorOptions;
         matchStartTimerLength = lib.sceneVariables.matchStartTimerLength;
         numberOfShips = lib.sceneVariables.numberOfShips;
-        sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
+        //sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
     }
 
@@ -77,12 +85,16 @@ public class Core_GameManager : MonoBehaviour {
     {
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoaded += OnNewSceneLoaded;
+        em.OnShipDead += OnShipDead;
+        em.OnSetGameMode += OnSetGameMode;
     }
 
     private void OnDisable()
     {
         em.OnGameRestart -= OnGameRestart;
         em.OnNewSceneLoaded -= OnNewSceneLoaded;
+        em.OnShipDead -= OnShipDead;
+        em.OnSetGameMode -= OnSetGameMode;
     }
     #endregion
 
@@ -92,6 +104,8 @@ public class Core_GameManager : MonoBehaviour {
         //TODO: Remember to implement check for all future scenes
         if (sceneIndex == sceneIndexLevel01)
         {
+            resetUsedShipColors = true;
+            resetUsedSpawnPointsList = true;
             InitializeGame();
             StartMatchStartTimer();
         }
@@ -99,7 +113,6 @@ public class Core_GameManager : MonoBehaviour {
 
     private void OnGameRestart()
     {
-        Debug.Log("GameManager: OnGameRestart");
         //Reset all
         //Destroy player
         //Respawn everything
@@ -108,16 +121,35 @@ public class Core_GameManager : MonoBehaviour {
         InitializeGame();
         StartMatchStartTimer();
     }
+
+    private void OnShipDead(int shipIndex)
+    {
+        if (currentlyAliveShipIndices.Count > 1)
+        {
+            currentlyAliveShipIndices.Remove(shipIndex);
+            
+            if (currentlyAliveShipIndices.Count == 1)
+            {
+                em.BroadcastGameEnd(currentlyAliveShipIndices[0]);               
+            }
+        }
+    }
+
+    private void OnSetGameMode(int newGameModeIndex)
+    {
+        currentGameModeIndex = newGameModeIndex;
+    }
     #endregion
     #endregion
 
     #region Match initialization
-    public void InitializeGame()
+    private void InitializeGame()
     {
         /*TODO: Have server tell level manager how many ships to spawn, and which ship is whose
         *   - Add AIPlayerController or NetworkPlayerController to other ships
         */
         #region Instantiate ships
+        currentlyAliveShipIndices.Clear();
         for (int i = 0; i < numberOfShips; i++ )
         {
             Transform spawnPoint = FindAvailableSpawnPoint();
@@ -126,31 +158,95 @@ public class Core_GameManager : MonoBehaviour {
             Core_ShipController newShipController;
             Color newShipColor = FindNewShipColor();
 
-            if (i == 0)
+            if (currentGameModeIndex == gameModeSingleplayerIndex)
             {
-                newShipController = 
-                    newShip.AddComponent<Core_LocalPlayerController>();
-                GameObject newPlayerIndicator = Instantiate(Resources.Load("PlayerIndicator", 
-                    typeof(GameObject)), newShip.transform.position, Quaternion.identity, 
+                #region Singleplayer ship instantiating
+                if (i == 0)
+                {
+                    newShipController =
+                        newShip.AddComponent<Core_LocalPlayerController>();
+                    GameObject newPlayerIndicator = Instantiate(Resources.Load("PlayerIndicator",
+                        typeof(GameObject)), newShip.transform.position, Quaternion.identity,
+                        newShip.transform) as GameObject;
+                    //Set playerIndicator color
+                    ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
+                    pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
+                    GameObject newPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
+                        typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
+                    Core_CameraController newCameraScript = newPlayerCamera.GetComponentInChildren<Core_CameraController>();
+                    newCameraScript.SetTarget(newShip.transform);
+                    newCameraScript.SetMyShipIndex(i + 1);
+                }
+                else
+                {
+                    newShipController =
+                        newShip.AddComponent<Core_AIPlayerController>();
+                }
+                //Set currentGameMode in shipController
+                newShipController.SetGameMode(currentGameModeIndex);
+                //Give ship an index and color
+                newShipController.GiveIndex(i + 1);
+                newShipController.SetShipColor(newShipColor);
+                #endregion
+            }
+            else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+            {
+                #region NetworkMultiplayer ship instantiating
+                if (i == 0)
+                {
+                    newShipController =
+                           newShip.AddComponent<Core_LocalPlayerController>();
+                    GameObject newPlayerIndicator = Instantiate(Resources.Load("PlayerIndicator",
+                        typeof(GameObject)), newShip.transform.position, Quaternion.identity,
+                        newShip.transform) as GameObject;
+                    //Set playerIndicator color
+                    ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
+                    pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
+                    GameObject newPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
+                        typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
+                    Core_CameraController newCameraScript = newPlayerCamera.GetComponentInChildren<Core_CameraController>();
+                    newCameraScript.SetTarget(newShip.transform);
+                    newCameraScript.SetMyShipIndex(i + 1);
+                }
+                else
+                {
+                    newShipController =
+                        newShip.AddComponent<Core_NetworkPlayerController>();
+                }
+                //Set currentGameMode in shipController
+                newShipController.SetGameMode(currentGameModeIndex);
+                //Give ship an index and color
+                newShipController.GiveIndex(i + 1);
+                newShipController.SetShipColor(newShipColor);
+                #endregion
+            }
+            else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
+            {
+                #region LocalMultiplayer ship instantiating [WIP]
+                //TODO: Below is completely WIP
+                newShipController =
+                        newShip.AddComponent<Core_LocalPlayerController>();
+                GameObject newPlayerIndicator = Instantiate(Resources.Load("PlayerIndicator",
+                    typeof(GameObject)), newShip.transform.position, Quaternion.identity,
                     newShip.transform) as GameObject;
-
+                //Set playerIndicator color
                 ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
                 pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
-
                 GameObject newPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
                     typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
                 Core_CameraController newCameraScript = newPlayerCamera.GetComponentInChildren<Core_CameraController>();
                 newCameraScript.SetTarget(newShip.transform);
                 newCameraScript.SetMyShipIndex(i + 1);
+
+                //Set currentGameMode in shipController
+                newShipController.SetGameMode(currentGameModeIndex);
+                //Give ship an index and color
+                newShipController.GiveIndex(i + 1);
+                newShipController.SetShipColor(newShipColor);
+                #endregion
             }
-            else //TODO: Add a check whether starting a AI or Online match, 
-                        //and add corresponding playerControllers to other ships
-            {
-                newShipController =
-                    newShip.AddComponent<Core_AIPlayerController>();
-            }
-            newShipController.GiveIndex(i + 1);
-            newShipController.SetShipColor(newShipColor);
+
+            currentlyAliveShipIndices.Add(i + 1);
         }
         #endregion
     }
@@ -185,10 +281,9 @@ public class Core_GameManager : MonoBehaviour {
             r = Random.Range(0, shipColorOptions.Count);
         }
         usedShipColors.Add(r);
-
+        
         if (usedShipColors.Count == shipColorOptions.Count)
         {
-            Debug.Log("All available color used, resetting list");
             resetUsedShipColors = true;
         }
         

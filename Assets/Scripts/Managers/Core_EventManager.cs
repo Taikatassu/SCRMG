@@ -29,9 +29,21 @@ public class Core_EventManager : MonoBehaviour
     public delegate void EmptyVoid();
     public delegate void IntVector2Void(int integer, Vector2 vec2);
     public delegate void IntVoid(int integer);
+    public delegate void GameObjectVoid(GameObject gameObject);
     #endregion
 
     #region Events
+    #region Settings events
+    public event IntVoid OnSetGameMode;
+    public void BroadcastSetGameMode(int gameModeIndex)
+    {
+        if(OnSetGameMode != null)
+        {
+            OnSetGameMode(gameModeIndex);
+        }
+    }
+    #endregion
+
     #region Scene events
     public event EmptyVoid OnRequestSceneSingleMainMenu;
     public void BroadcastRequestSceneSingleMainMenu()
@@ -260,6 +272,33 @@ public class Core_EventManager : MonoBehaviour
         if(OnShipDead != null)
         {
             OnShipDead(shipIndex);
+        }
+    }
+
+    public event IntVoid OnGameEnd;
+    public void BroadcastGameEnd(int winnerIndex)
+    {
+        if (OnGameEnd != null)
+        {
+            OnGameEnd(winnerIndex);
+        }
+    }
+
+    public event EmptyVoid OnPauseOn;
+    public void BroadcastPauseOn()
+    {
+        if (OnPauseOn != null)
+        {
+            OnPauseOn();
+        }
+    }
+
+    public event EmptyVoid OnPauseOff;
+    public void BroadcastPauseOff()
+    {
+        if (OnPauseOff != null)
+        {
+            OnPauseOff();
         }
     }
     #endregion

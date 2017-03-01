@@ -4,13 +4,5 @@ using UnityEngine;
 
 public class Core_PauseMenuResumeButtonTag : MonoBehaviour {
 
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
+    // Used as a tag for PauseMenuResumeButton
 }

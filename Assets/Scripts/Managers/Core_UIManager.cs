@@ -13,17 +13,21 @@ public class Core_UIManager : MonoBehaviour {
     *       
     *  - Enemy indicators showing enemy directions at the screen boarders
     *  
-    *  - Find out why BroadcastRequestSceneSingleLevel01 is called twice 
-    *       (and does it causes problems?)
+    *  - Find a way to have the game stay paused (ship immoveable and invulnerable) in a case where
+    *       pause menu is opened during matchStartTimer and left open
+    *       --> When timer is zero, game is effectively unpaused
+    *       - A separate isPaused bool that's state is checked when ever unpausing the game?
+    *       - A check in Update loop to constantly check pause state?
     */
 
     #region References & variables
     public static Core_UIManager instance;
-    //References
+    
     Core_Toolbox toolbox;
     Core_GlobalVariableLibrary lib;
     Core_EventManager em;
     GameObject canvas;
+    string canvasTag;
 
     //MainMenu UI
     GameObject mainMenuHolder;
@@ -32,20 +36,30 @@ public class Core_UIManager : MonoBehaviour {
     //InGame UI
     GameObject inGameUIHolder;
     GameObject pauseMenuHolder;
+    GameObject gameEndMenuHolder;
     Image loadingScreenImage;
     Text matchStartTimerText;
+    Text gameEndMenuText;
     Button pauseMenuResumeButton;
     Button pauseMenuRestartButton;
     Button pauseMenuMainMenuButton;
+    Button gameEndMenuRestartButton;
+    Button gameEndMenuMainMenuButton;
     Color loadingScreenNewColor;
     Color loadingScreenOriginalColor;
     bool isFadingFromLoadingScreen = false;
     int matchStartTimerValue = -1;
     float loadingScreenFadeStartTime = -1;
+    int currentGameModeIndex = -1;
     //Variables coming from globalVariableLibrary
+    int gameModeSingleplayerIndex = -1;
+    int gameModeNetworkMultiplayerIndex = -1;
+    int gameModeLocalMultiplayerIndex = -1;
     float loadingScreenFadeTime = -1;
     int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
+    string winText;
+    string lossText;
     #endregion
 
     #region Initialization
@@ -73,27 +87,35 @@ public class Core_UIManager : MonoBehaviour {
         lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         GetStats();
 
-        canvas = GameObject.FindWithTag("Canvas");
+        canvas = GameObject.FindWithTag(canvasTag);
         mainMenuHolder = canvas.GetComponentInChildren<Core_MainMenuHolderTag>(true).gameObject;
         inGameUIHolder = canvas.GetComponentInChildren<Core_InGameUIHolderTag>(true).gameObject;
         pauseMenuHolder = inGameUIHolder.GetComponentInChildren<Core_PauseMenuHolderTag>(true).gameObject;
+        gameEndMenuHolder = inGameUIHolder.GetComponentInChildren<Core_GameEndMenuHolderTag>(true).gameObject;
 
         playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>(true).
             GetComponent<Button>();
-        loadingScreenImage = inGameUIHolder.GetComponentInChildren<Core_FullscreenBlackImageTag>(true).
+
+        loadingScreenImage = inGameUIHolder.GetComponentInChildren<Core_LoadingScreenImageTag>(true).
             GetComponent<Image>();
         matchStartTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
             GetComponent<Text>();
-        pauseMenuResumeButton = inGameUIHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
+
+        pauseMenuResumeButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
             GetComponent<Button>();
-        pauseMenuRestartButton = inGameUIHolder.GetComponentInChildren<Core_PauseMenuRestartButtonTag>().
-           GetComponent<Button>();
-        pauseMenuMainMenuButton = inGameUIHolder.GetComponentInChildren<Core_PauseMenuMainMenuButtonTag>().
-           GetComponent<Button>();
+        pauseMenuRestartButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuRestartButtonTag>().
+            GetComponent<Button>();
+        pauseMenuMainMenuButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuMainMenuButtonTag>().
+            GetComponent<Button>();
+
+        gameEndMenuText = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuTextTag>().GetComponent<Text>();
+        gameEndMenuRestartButton = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuRestartButtonTag>().
+            GetComponent<Button>();
+        gameEndMenuMainMenuButton = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuMainMenuButtonTag>().
+            GetComponent<Button>();
         #endregion
 
         #region Initialize UI
-        OpenMainMenuUI();
         ClosePauseMenu();
         CloseInGameUI();
         #endregion
@@ -103,9 +125,15 @@ public class Core_UIManager : MonoBehaviour {
     #region GetStats
     private void GetStats()
     {
+        gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
+        gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
+        gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
         sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
-        loadingScreenFadeTime = lib.sceneVariables.fadeFromBlackTime;
+        loadingScreenFadeTime = lib.uiVariables.fadeFromBlackTime;
+        canvasTag = lib.uiVariables.canvasTag;
+        winText = lib.uiVariables.winText;
+        lossText = lib.uiVariables.lossText;
     }
     #endregion
 
@@ -117,6 +145,8 @@ public class Core_UIManager : MonoBehaviour {
         em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnNewSceneLoaded += OnNewSceneLoaded;
         em.OnEscapeButtonDown += OnEscapeButtonDown;
+        em.OnSetGameMode += OnSetGameMode;
+        em.OnGameEnd += OnGameEnd;
     }
 
     private void OnDisable()
@@ -126,6 +156,8 @@ public class Core_UIManager : MonoBehaviour {
         em.OnNewSceneLoading -= OnNewSceneLoading;
         em.OnNewSceneLoaded -= OnNewSceneLoaded;
         em.OnEscapeButtonDown -= OnEscapeButtonDown;
+        em.OnSetGameMode -= OnSetGameMode;
+        em.OnGameEnd -= OnGameEnd;
     }
     #endregion
 
@@ -149,6 +181,7 @@ public class Core_UIManager : MonoBehaviour {
         if (sceneIndex == sceneIndexMainMenu)
         {
             //Close InGameUI
+            CloseGameEndMenu();
             ClosePauseMenu();
             CloseInGameUI();
         }
@@ -164,18 +197,51 @@ public class Core_UIManager : MonoBehaviour {
         //TODO: Add checks for all future scenes
         if (sceneIndex == sceneIndexMainMenu)
         {
-            Debug.Log("OnNewSceneLoaded: MainMenu");
             //Open MainMenuUI
             OpenMainMenuUI();
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
-            Debug.Log("OnNewSceneLoaded: Level01");
             //Open InGameUI
             OpenInGameUI();
+
             loadingScreenImage.gameObject.SetActive(true);
             StartFadeFromLoadingScreen();
             ClosePauseMenu();
+            CloseGameEndMenu();
+        }
+    }
+
+    private void OnSetGameMode(int newGameModeIndex)
+    {
+        currentGameModeIndex = newGameModeIndex;
+    }
+
+    private void OnGameEnd(int newWinnerIndex)
+    {
+        if (currentGameModeIndex == gameModeSingleplayerIndex)
+        {
+            if (newWinnerIndex == 1)
+            {
+                gameEndMenuText.text = winText;
+            }
+            else
+            {
+                gameEndMenuText.text = lossText;
+            }
+            OpenGameEndMenu();
+        }
+        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            // TODO: Check if last ship alive is localPlayer and change text accordingly
+            gameEndMenuText.text = "NetMp GameEnd";
+            OpenGameEndMenu();
+        }
+        else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
+        {
+            // TODO: Check who is the last ship alive and change text accordingly
+            gameEndMenuText.text = "LocMP GameEnd";
+            OpenGameEndMenu();
         }
     }
     #endregion
@@ -183,7 +249,7 @@ public class Core_UIManager : MonoBehaviour {
     #region Input subscribers
     private void OnEscapeButtonDown(int controllerIndex)
     {
-        if (inGameUIHolder.activeSelf)
+        if (inGameUIHolder.activeSelf && !gameEndMenuHolder.activeSelf)
         {
             if (pauseMenuHolder.activeSelf)
             {
@@ -239,6 +305,7 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OnPlayButtonPressed()
     {
+        em.BroadcastSetGameMode(gameModeSingleplayerIndex);
         em.BroadcastRequestSceneSingleLevel01();
     }
     #endregion
@@ -258,11 +325,11 @@ public class Core_UIManager : MonoBehaviour {
     private void OpenPauseMenu()
     {
         //TODO: Implement game pausing if in singleplayer
-        Debug.Log("PauseMenuOpened");
         pauseMenuResumeButton.onClick.AddListener(PauseMenuResumeButtonPressed);
         pauseMenuRestartButton.onClick.AddListener(PauseMenuRestartButtonPressed);
         pauseMenuMainMenuButton.onClick.AddListener(PauseMenuMainMenuButtonPressed);
         pauseMenuHolder.SetActive(true);
+        em.BroadcastPauseOn();
     }
 
     private void ClosePauseMenu()
@@ -271,6 +338,25 @@ public class Core_UIManager : MonoBehaviour {
         pauseMenuRestartButton.onClick.RemoveAllListeners();
         pauseMenuMainMenuButton.onClick.RemoveAllListeners();
         pauseMenuHolder.SetActive(false);
+        em.BroadcastPauseOff();
+    }
+
+    private void OpenGameEndMenu()
+    {
+        ClosePauseMenu();
+        gameEndMenuRestartButton.onClick.AddListener(GameEndMenuRestartButtonPressed);
+        gameEndMenuMainMenuButton.onClick.AddListener(GameEndMenuMainMenuButtonPressed);
+        gameEndMenuHolder.SetActive(true);
+        em.BroadcastPauseOn();
+    }
+
+    private void CloseGameEndMenu()
+    {
+        gameEndMenuText.text = "GAME END MENU";
+        gameEndMenuRestartButton.onClick.RemoveAllListeners();
+        gameEndMenuMainMenuButton.onClick.RemoveAllListeners();
+        gameEndMenuHolder.SetActive(false);
+        em.BroadcastPauseOff();
     }
     #endregion
 
@@ -323,6 +409,27 @@ public class Core_UIManager : MonoBehaviour {
     {
         Debug.Log("ReturnToMainMenu button pressed");
         //Close pauseMenu (happens when loading main menu)
+        //Close InGameUI (happens when loading main menu)
+        //Load mainMenuScene
+        em.BroadcastRequestSceneSingleMainMenu();
+        //Open mainMenuUI (happens when loading main menu)
+    }
+    #endregion
+
+    #region GameEndMenu buttons
+    private void GameEndMenuRestartButtonPressed()
+    {
+        Debug.Log("Restart button pressed");
+        //Close gameEndMenu
+        CloseGameEndMenu();
+        //Restart game
+        em.BroadcastGameRestart();
+    }
+
+    private void GameEndMenuMainMenuButtonPressed()
+    {
+        Debug.Log("ReturnToMainMenu button pressed");
+        //Close gameEndMenu (happens when loading main menu)
         //Close InGameUI (happens when loading main menu)
         //Load mainMenuScene
         em.BroadcastRequestSceneSingleMainMenu();
