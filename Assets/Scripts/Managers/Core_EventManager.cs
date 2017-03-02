@@ -301,6 +301,15 @@ public class Core_EventManager : MonoBehaviour
             OnPauseOff();
         }
     }
+
+    public event GameObjectVoid OnShipReference;
+    public void BroadcastShipReference(GameObject newShip)
+    {
+        if(OnShipReference != null)
+        {
+            OnShipReference(newShip);
+        }
+    }
     #endregion
     #endregion
 

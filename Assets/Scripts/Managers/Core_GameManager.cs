@@ -4,13 +4,8 @@ using UnityEngine;
 
 public class Core_GameManager : MonoBehaviour {
 
-    /* TODO: Game loop!
-     *      Victory and loss state -> match end -> restart or return to main menu
-     *      
-     * Pause menu
-     *      If in singleplayer, pause game
-     *      If in multiplayer, display "in pause menu" icon above the player's head
-     *      Options: "Resume", "Restart" and "Return to main menu"
+    /* TODO:
+     * - Different gameMode implementations
      */
 
     #region References & variables
@@ -245,7 +240,7 @@ public class Core_GameManager : MonoBehaviour {
                 newShipController.SetShipColor(newShipColor);
                 #endregion
             }
-
+            em.BroadcastShipReference(newShip);
             currentlyAliveShipIndices.Add(i + 1);
         }
         #endregion

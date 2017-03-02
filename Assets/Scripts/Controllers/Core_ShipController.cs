@@ -9,7 +9,6 @@ public class Core_ShipController : MonoBehaviour {
      *      -When game is started, ONE player controller is assigned to ONE ship 
      *      -Other ships are controlled by AI or through network by other players
      *      
-     * Spectator mode
     */
 
     #region References & variables
@@ -343,7 +342,7 @@ public class Core_ShipController : MonoBehaviour {
     }
     #endregion
 
-    #region Index
+    #region SetVariables
     public void GiveIndex(int newIndex)
     {
         if (index == -1)
@@ -352,13 +351,6 @@ public class Core_ShipController : MonoBehaviour {
         }
     }
 
-    public int GetIndex()
-    {
-        return index;
-    }
-    #endregion
-
-    #region SetVariables
     protected void SetLookTargetPosition(Vector3 newLookTargetPosition)
     {
         lookTargetPosition = newLookTargetPosition;
@@ -390,6 +382,18 @@ public class Core_ShipController : MonoBehaviour {
         }
         //Set circularHealthBarColor
         healthBar.GetComponent<Renderer>().material.SetColor("_EmissionColor", myShipColor);
+    }
+    #endregion
+
+    #region GetVariables
+    public int GetIndex()
+    {
+        return index;
+    }
+
+    public Color GetShipColor()
+    {
+        return myShipColor;
     }
     #endregion
 

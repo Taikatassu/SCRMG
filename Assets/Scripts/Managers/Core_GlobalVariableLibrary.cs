@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// TODO: Implmen GlobalVariableLibrary usage to all scripts with eligible variables
+// TODO: Check that all scripts use GlobalVariableLibrary for
+//          their suitable variables
 
 public class Core_GlobalVariableLibrary : MonoBehaviour {
 
