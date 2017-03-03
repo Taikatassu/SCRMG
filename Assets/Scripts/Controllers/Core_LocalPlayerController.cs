@@ -51,6 +51,7 @@ public class Core_LocalPlayerController : Core_ShipController {
         em.OnMouseButtonRightDown += OnMouseButtonRightDown;
         em.OnMouseButtonRightUp += OnMouseButtonRightUp;
         em.OnShootButtonPressed += OnShootButtonPressed;
+        em.OnVirtualJoystickValueChange += OnVirtualJoystickValueChange;
     }
 
     protected override void OnDisable()
@@ -64,6 +65,7 @@ public class Core_LocalPlayerController : Core_ShipController {
         em.OnMouseButtonRightDown -= OnMouseButtonRightDown;
         em.OnMouseButtonRightUp -= OnMouseButtonRightUp;
         em.OnShootButtonPressed -= OnShootButtonPressed;
+        em.OnVirtualJoystickValueChange -= OnVirtualJoystickValueChange;
     }
     #endregion
     #endregion
@@ -184,6 +186,13 @@ public class Core_LocalPlayerController : Core_ShipController {
     private void OnShootButtonPressed()
     {
         Shoot();
+    }
+
+    private void OnVirtualJoystickValueChange(Vector2 newValue)
+    {
+        movementDirection.x = newValue.x;
+        movementDirection.z = newValue.y;
+        movementDirection.y = 0;
     }
     #endregion
 

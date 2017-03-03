@@ -37,7 +37,7 @@ public class Core_GameManager : MonoBehaviour {
     int gameModeLocalMultiplayerIndex = -1;
     int numberOfShips; //Can also be set with the public "SetNumberOfShips()"-function
     int matchStartTimerLength = -1;
-    int sceneIndexMainMenu = -1;
+    //int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
     #endregion
 
@@ -76,7 +76,7 @@ public class Core_GameManager : MonoBehaviour {
         shipColorOptions = lib.shipVariables.shipColorOptions;
         matchStartTimerLength = lib.sceneVariables.matchStartTimerLength;
         numberOfShips = lib.sceneVariables.numberOfShips;
-        sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
+        //sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
     }
     #endregion

@@ -27,8 +27,9 @@ public class Core_EventManager : MonoBehaviour
 
     #region Delegates
     public delegate void EmptyVoid();
-    public delegate void IntVector2Void(int integer, Vector2 vec2);
     public delegate void IntVoid(int integer);
+    public delegate void Vector2Void(Vector2 vec2);
+    public delegate void IntVector2Void(int integer, Vector2 vec2);
     public delegate void GameObjectVoid(GameObject gameObject);
     #endregion
 
@@ -256,12 +257,12 @@ public class Core_EventManager : MonoBehaviour
         }
     }
 
-    public event EmptyVoid OnHUDJoystickButtonReleased;
-    public void BroadcastHUDJoystickButtonReleased()
+    public event Vector2Void OnVirtualJoystickValueChange;
+    public void BroadcastVirtualJoystickValueChange(Vector2 newValue)
     {
-        if(OnHUDJoystickButtonReleased != null)
+        if (OnVirtualJoystickValueChange != null)
         {
-            OnHUDJoystickButtonReleased();
+            OnVirtualJoystickValueChange(newValue);
         }
     }
     #endregion

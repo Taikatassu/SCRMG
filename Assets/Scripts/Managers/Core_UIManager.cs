@@ -26,6 +26,7 @@ public class Core_UIManager : MonoBehaviour {
     //MainMenu UI
     GameObject mainMenuHolder;
     Button playButton;
+    Button exitButton;
 
     //InGame UI
     GameObject inGameUIHolder;
@@ -33,7 +34,7 @@ public class Core_UIManager : MonoBehaviour {
     GameObject gameEndMenuHolder;
     GameObject hudHolder;
     GameObject hudOfflineImage;
-    GameObject hudJoystick;
+    GameObject hudVirtualJoystick;
     Transform offscreenIndicatorHolder;
     Image loadingScreenImage;
     Text matchStartTimerText;
@@ -45,7 +46,6 @@ public class Core_UIManager : MonoBehaviour {
     Button pauseMenuMainMenuButton;
     Button gameEndMenuRestartButton;
     Button gameEndMenuMainMenuButton;
-    Button hudJoystickButton;
     Color loadingScreenNewColor;
     Color loadingScreenOriginalColor;
     List<Transform> offscreenIndicatorPool = new List<Transform>();
@@ -66,8 +66,6 @@ public class Core_UIManager : MonoBehaviour {
     string winText;
     string lossText;
     bool debugMode;
-    bool hudOpen = false;
-    bool hudJoystickButtonDown = false;
     #endregion
 
     #region Initialization
@@ -104,6 +102,8 @@ public class Core_UIManager : MonoBehaviour {
 
         playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>(true).
             GetComponent<Button>();
+        exitButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuExitButtonTag>(true).
+            GetComponent<Button>();
         loadingScreenImage = inGameUIHolder.GetComponentInChildren<Core_LoadingScreenImageTag>(true).
             GetComponent<Image>();
         matchStartTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
@@ -116,9 +116,7 @@ public class Core_UIManager : MonoBehaviour {
             GetComponent<Button>();
         hudShootButton = hudHolder.GetComponentInChildren<Core_HUDShootButtonTag>(true).
             GetComponent<Button>();
-        hudJoystickButton = hudHolder.GetComponentInChildren<Core_HUDJoystickManager>(true).
-            GetComponent<Button>();
-        hudJoystick = hudJoystickButton.gameObject;
+        hudVirtualJoystick = hudHolder.GetComponentInChildren<Core_VirtualJoystick>(true).gameObject;
         hudOfflineImage = hudHolder.GetComponentInChildren<Core_HUDOffilneImageTag>(true).gameObject;
 
         pauseMenuResumeButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
@@ -169,7 +167,6 @@ public class Core_UIManager : MonoBehaviour {
         em.OnSetGameMode += OnSetGameMode;
         em.OnGameEnd += OnGameEnd;
         em.OnShipReference += OnShipReference;
-        em.OnHUDJoystickButtonReleased += OnHUDJoystickButtonReleased;
     }
 
     private void OnDisable()
@@ -182,7 +179,6 @@ public class Core_UIManager : MonoBehaviour {
         em.OnSetGameMode -= OnSetGameMode;
         em.OnGameEnd -= OnGameEnd;
         em.OnShipReference -= OnShipReference;
-        em.OnHUDJoystickButtonReleased -= OnHUDJoystickButtonReleased;
     }
     #endregion
 
@@ -316,9 +312,19 @@ public class Core_UIManager : MonoBehaviour {
         }
     }
 
-    private void OnHUDJoystickButtonReleased()
+    private void OnVirtualJoystickPressed()
     {
-        hudJoystickButtonDown = false;
+
+    }
+
+    private  void OnVirtualJoystickReleased()
+    {
+
+    }
+
+    private void OnVirtualJoystickValueChange()
+    {
+
     }
     #endregion
     #endregion
@@ -360,12 +366,18 @@ public class Core_UIManager : MonoBehaviour {
     private void OpenMainMenuUI()
     {
         playButton.onClick.AddListener(OnPlayButtonPressed);
+        playButton.gameObject.SetActive(true);
+        exitButton.onClick.AddListener(OnExitButtonPressed);
+        exitButton.gameObject.SetActive(true);
         mainMenuHolder.SetActive(true);
     }
 
     private void CloseMainMenuUI()
     {
+        playButton.gameObject.SetActive(false);
         playButton.onClick.RemoveAllListeners();
+        exitButton.gameObject.SetActive(false);
+        exitButton.onClick.RemoveAllListeners();
         mainMenuHolder.SetActive(false);
     }
 
@@ -373,6 +385,11 @@ public class Core_UIManager : MonoBehaviour {
     {
         em.BroadcastSetGameMode(gameModeSingleplayerIndex);
         em.BroadcastRequestSceneSingleLevel01();
+    }
+
+    private void OnExitButtonPressed()
+    {
+        Application.Quit();
     }
     #endregion
 
@@ -439,26 +456,22 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OpenHUD()
     {
-        hudOpen = true;
         hudHolder.SetActive(true);
         hudPauseMenuButton.onClick.AddListener(HUDPauseMenuButtonPressed);
         hudPauseMenuButton.gameObject.SetActive(true);
         hudShootButton.onClick.AddListener(HUDShootButtonPressed);
         hudShootButton.gameObject.SetActive(true);
-        hudJoystickButton.onClick.AddListener(HUDJoystickButtonPressed);
-        hudJoystick.SetActive(true);
+        hudVirtualJoystick.SetActive(true);
     }
 
     private void CloseHUD()
     {
-        hudOpen = false;
         hudHolder.SetActive(false);
         hudPauseMenuButton.gameObject.SetActive(false);
         hudPauseMenuButton.onClick.RemoveAllListeners();
         hudShootButton.gameObject.SetActive(false);
         hudShootButton.onClick.RemoveAllListeners();
-        hudJoystickButton.onClick.RemoveAllListeners();
-        hudJoystick.SetActive(false);
+        hudVirtualJoystick.SetActive(false);
     }
 
     private void HUDOffline()
@@ -533,11 +546,6 @@ public class Core_UIManager : MonoBehaviour {
     private void HUDShootButtonPressed()
     {
         em.BroadcastShootButtonPressed();
-    }
-
-    private void HUDJoystickButtonPressed()
-    {
-        hudJoystickButtonDown = true;
     }
     #endregion
 
