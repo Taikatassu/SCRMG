@@ -30,10 +30,12 @@ public class Core_UIManager : MonoBehaviour {
     GameObject inGameUIHolder;
     GameObject pauseMenuHolder;
     GameObject gameEndMenuHolder;
+    GameObject hudHolder;
     Transform offscreenIndicatorHolder;
     Image loadingScreenImage;
     Text matchStartTimerText;
     Text gameEndMenuText;
+    Button hudPauseMenuButton;
     Button pauseMenuResumeButton;
     Button pauseMenuRestartButton;
     Button pauseMenuMainMenuButton;
@@ -90,10 +92,10 @@ public class Core_UIManager : MonoBehaviour {
         inGameUIHolder = canvas.GetComponentInChildren<Core_InGameUIHolderTag>(true).gameObject;
         pauseMenuHolder = inGameUIHolder.GetComponentInChildren<Core_PauseMenuHolderTag>(true).gameObject;
         gameEndMenuHolder = inGameUIHolder.GetComponentInChildren<Core_GameEndMenuHolderTag>(true).gameObject;
+        hudHolder = inGameUIHolder.GetComponentInChildren<Core_HUDHolderTag>(true).gameObject;
 
         playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>(true).
             GetComponent<Button>();
-
         loadingScreenImage = inGameUIHolder.GetComponentInChildren<Core_LoadingScreenImageTag>(true).
             GetComponent<Image>();
         matchStartTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
@@ -101,6 +103,9 @@ public class Core_UIManager : MonoBehaviour {
 
         offscreenIndicatorHolder = inGameUIHolder.GetComponentInChildren<Core_OffscreenIndicatorHolderTag>(true).
             transform;
+
+        hudPauseMenuButton = hudHolder.GetComponentInChildren<Core_HUDPauseMenuButtonTag>(true).
+            GetComponent<Button>();
 
         pauseMenuResumeButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
             GetComponent<Button>();
@@ -353,11 +358,13 @@ public class Core_UIManager : MonoBehaviour {
     private void OpenInGameUI()
     {
         inGameUIHolder.SetActive(true);
+        //OpenHUD();
         offscreenIndicatorHolder.gameObject.SetActive(true);
     }
 
     private void CloseInGameUI()
     {
+        //CloseHUD();
         inGameUIHolder.SetActive(false);
         ResetOffscreenTargetFollowing();
         DestroyOffscreenIndicators();
@@ -366,6 +373,7 @@ public class Core_UIManager : MonoBehaviour {
     private void OpenPauseMenu()
     {
         //TODO: Implement game pausing if in singleplayer
+        //CloseHUD();
         pauseMenuResumeButton.onClick.AddListener(PauseMenuResumeButtonPressed);
         pauseMenuRestartButton.onClick.AddListener(PauseMenuRestartButtonPressed);
         pauseMenuMainMenuButton.onClick.AddListener(PauseMenuMainMenuButtonPressed);
@@ -375,6 +383,7 @@ public class Core_UIManager : MonoBehaviour {
 
     private void ClosePauseMenu()
     {
+        //OpenHUD();
         pauseMenuResumeButton.onClick.RemoveAllListeners();
         pauseMenuRestartButton.onClick.RemoveAllListeners();
         pauseMenuMainMenuButton.onClick.RemoveAllListeners();
@@ -384,6 +393,7 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OpenGameEndMenu()
     {
+        //CloseHUD();
         ClosePauseMenu();
         gameEndMenuRestartButton.onClick.AddListener(GameEndMenuRestartButtonPressed);
         gameEndMenuMainMenuButton.onClick.AddListener(GameEndMenuMainMenuButtonPressed);
@@ -393,12 +403,30 @@ public class Core_UIManager : MonoBehaviour {
 
     private void CloseGameEndMenu()
     {
+        //OpenHUD();
         gameEndMenuText.text = "GAME END MENU";
         gameEndMenuRestartButton.onClick.RemoveAllListeners();
         gameEndMenuMainMenuButton.onClick.RemoveAllListeners();
         gameEndMenuHolder.SetActive(false);
         em.BroadcastPauseOff();
     }
+
+    //TODO: Find out why getting null reference error if using HUD
+
+    //private void OpenHUD()
+    //{
+
+    //    hudHolder.SetActive(true);
+    //    hudPauseMenuButton.onClick.AddListener(HUDPauseMenuButtonPressed);
+    //    hudPauseMenuButton.gameObject.SetActive(true);
+    //}
+
+    //private void CloseHUD()
+    //{
+    //    hudHolder.SetActive(false);
+    //    hudPauseMenuButton.gameObject.SetActive(false);
+    //    hudPauseMenuButton.onClick.RemoveAllListeners();
+    //}
     #endregion
 
     #region PauseMenu buttons
@@ -450,6 +478,13 @@ public class Core_UIManager : MonoBehaviour {
         //Load mainMenuScene
         em.BroadcastRequestSceneSingleMainMenu();
         //Open mainMenuUI (happens when loading main menu)
+    }
+    #endregion
+
+    #region HUD buttons
+    private void HUDPauseMenuButtonPressed()
+    {
+        OpenPauseMenu();
     }
     #endregion
 
