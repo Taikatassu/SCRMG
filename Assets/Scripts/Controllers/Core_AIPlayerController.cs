@@ -17,7 +17,6 @@ public class Core_AIPlayerController : Core_ShipController {
     {
         base.Awake();
         GetStats();
-        Debug.Log("AIPlayerController awake");
     }
     #endregion
 

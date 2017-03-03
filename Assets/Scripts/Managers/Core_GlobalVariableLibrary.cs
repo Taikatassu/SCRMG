@@ -54,11 +54,13 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public int gameModeSingleplayerIndex = 0;
         public int gameModeNetworkMultiplayerIndex = 1;
         public int gameModeLocalMultiplayerIndex = 2;
+        public bool debugMode = true;
     }
 
     [System.Serializable]
     public class Ship_Variables
     {
+        // TODO: Add ship camera variables to GlobalVariableLibrary
         public List<Color> shipColorOptions = new List<Color>();
         public string shipTag = "Ship";
         public string environmentTag = "Environment";

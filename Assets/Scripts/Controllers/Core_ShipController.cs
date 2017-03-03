@@ -45,7 +45,7 @@ public class Core_ShipController : MonoBehaviour {
     bool isDead = false;
     bool shootOnCooldown = false;
     bool updatingHealthBar = false;
-    bool matchStarted = false;
+    protected bool matchStarted = false;
 
     //Values coming from GlobalVariableLibrary
     string shipTag = "Ship";
@@ -142,7 +142,7 @@ public class Core_ShipController : MonoBehaviour {
     {
         //TODO: Change if implementing a pool for ships instead of instantiating them
         matchStarted = false;
-        Destroy(gameObject);
+        //Destroy(gameObject); //Done by GameManager
     }
 
     private void OnGameEnd(int winnerIndex)

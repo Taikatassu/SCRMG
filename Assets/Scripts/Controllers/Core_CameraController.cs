@@ -23,7 +23,7 @@ public class Core_CameraController : MonoBehaviour {
     int myShipIndex = 0;
     float spectatingHeight = 45;
     float followDistance = 0;
-    float followHeight = 20.0f;
+    float followHeight = 15.0f;
     //float lerpTime = 1;
     //float timeStartedLerping;
 
@@ -40,13 +40,11 @@ public class Core_CameraController : MonoBehaviour {
     private void OnEnable()
     {
         em.OnShipDead += OnShipDead;
-        em.OnGameRestart += OnGameRestart;
     }
 
     private void OnDisable()
     {
         em.OnShipDead -= OnShipDead;
-        em.OnGameRestart -= OnGameRestart;
     }
 	
 	void LateUpdate () {
@@ -96,10 +94,5 @@ public class Core_CameraController : MonoBehaviour {
         {
             SetSpectateMode(true);
         }
-    }
-
-    private void OnGameRestart()
-    {
-        Destroy(cameraParent.gameObject);
     }
 }

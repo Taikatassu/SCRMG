@@ -16,6 +16,8 @@ public class Core_GameManager : MonoBehaviour {
     Core_EventManager em;
     Core_GlobalVariableLibrary lib;
     List<Transform> respawnPoints = new List<Transform>();
+    List<GameObject> currentlyAliveShips = new List<GameObject>();
+    GameObject currentPlayerCamera;
     //Variables coming from within the script
     List<int> usedSpawnPoints = new List<int>();
     List<int> usedShipColors = new List<int>();
@@ -35,11 +37,12 @@ public class Core_GameManager : MonoBehaviour {
     int gameModeLocalMultiplayerIndex = -1;
     int numberOfShips; //Can also be set with the public "SetNumberOfShips()"-function
     int matchStartTimerLength = -1;
-    //int sceneIndexMainMenu = -1;
+    int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
     #endregion
 
     #region Initialization
+    #region Awake
     void Awake ()
     {
         #region Singletonization
@@ -62,7 +65,9 @@ public class Core_GameManager : MonoBehaviour {
         lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         GetStats();
     }
+    #endregion
 
+    #region GetStats
     private void GetStats()
     {
         gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
@@ -71,15 +76,17 @@ public class Core_GameManager : MonoBehaviour {
         shipColorOptions = lib.shipVariables.shipColorOptions;
         matchStartTimerLength = lib.sceneVariables.matchStartTimerLength;
         numberOfShips = lib.sceneVariables.numberOfShips;
-        //sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
+        sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
     }
+    #endregion
 
     #region OnEnable & OnDisable
     private void OnEnable()
     {
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoaded += OnNewSceneLoaded;
+        //em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnShipDead += OnShipDead;
         em.OnSetGameMode += OnSetGameMode;
     }
@@ -88,17 +95,30 @@ public class Core_GameManager : MonoBehaviour {
     {
         em.OnGameRestart -= OnGameRestart;
         em.OnNewSceneLoaded -= OnNewSceneLoaded;
+        //em.OnNewSceneLoading -= OnNewSceneLoading;
         em.OnShipDead -= OnShipDead;
         em.OnSetGameMode -= OnSetGameMode;
     }
     #endregion
+    #endregion
 
     #region Subscribers
+    // TODO: Remove if deemed permanently obsolete
+    //private void OnNewSceneLoading(int sceneIndex)
+    //{
+    //    //TODO: Remember to implement check for all future scenes
+    //    if (sceneIndex == sceneIndexMainMenu)
+    //    {
+    //        //DestroyAllShipsAndCamera();
+    //    }
+    //}
+
     private void OnNewSceneLoaded(int sceneIndex)
     {
         //TODO: Remember to implement check for all future scenes
         if (sceneIndex == sceneIndexLevel01)
         {
+            DestroyAllShipsAndCamera();
             resetUsedShipColors = true;
             resetUsedSpawnPointsList = true;
             InitializeGame();
@@ -108,11 +128,12 @@ public class Core_GameManager : MonoBehaviour {
 
     private void OnGameRestart()
     {
+        Debug.Log("GameManager: OnGameRestart");
+        DestroyAllShipsAndCamera();
         //Reset all
-        //Destroy player
-        //Respawn everything
         resetUsedShipColors = true;
         resetUsedSpawnPointsList = true;
+        //Respawn everything
         InitializeGame();
         StartMatchStartTimer();
     }
@@ -122,10 +143,10 @@ public class Core_GameManager : MonoBehaviour {
         if (currentlyAliveShipIndices.Count > 1)
         {
             currentlyAliveShipIndices.Remove(shipIndex);
-            
+
             if (currentlyAliveShipIndices.Count == 1)
             {
-                em.BroadcastGameEnd(currentlyAliveShipIndices[0]);               
+                em.BroadcastGameEnd(currentlyAliveShipIndices[0]);
             }
         }
     }
@@ -135,9 +156,32 @@ public class Core_GameManager : MonoBehaviour {
         currentGameModeIndex = newGameModeIndex;
     }
     #endregion
-    #endregion
 
     #region Match initialization
+    private void DestroyAllShipsAndCamera()
+    {
+        if (currentlyAliveShips.Count > 0)
+        {
+            //Ensure all ships are destroyed
+            for (int i = 0; i < currentlyAliveShips.Count; i++)
+            {
+                if (currentlyAliveShips[0] != null)
+                {
+                    Destroy(currentlyAliveShips[0]);
+                }
+                currentlyAliveShips.RemoveAt(0);
+                i--;
+
+            }
+        }
+        currentlyAliveShips.Clear();
+
+        if (currentPlayerCamera != null)
+        {
+            Destroy(currentPlayerCamera);
+        }
+    }
+
     private void InitializeGame()
     {
         /*TODO: Have server tell level manager how many ships to spawn, and which ship is whose
@@ -166,11 +210,11 @@ public class Core_GameManager : MonoBehaviour {
                     //Set playerIndicator color
                     ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
                     pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
-                    GameObject newPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
+                    currentPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
                         typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
-                    Core_CameraController newCameraScript = newPlayerCamera.GetComponentInChildren<Core_CameraController>();
-                    newCameraScript.SetTarget(newShip.transform);
-                    newCameraScript.SetMyShipIndex(i + 1);
+                    Core_CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<Core_CameraController>();
+                    currentCameraScript.SetTarget(newShip.transform);
+                    currentCameraScript.SetMyShipIndex(i + 1);
                 }
                 else
                 {
@@ -242,6 +286,7 @@ public class Core_GameManager : MonoBehaviour {
             }
             em.BroadcastShipReference(newShip);
             currentlyAliveShipIndices.Add(i + 1);
+            currentlyAliveShips.Add(newShip);
         }
         #endregion
     }

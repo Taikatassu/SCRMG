@@ -245,6 +245,26 @@ public class Core_EventManager : MonoBehaviour
         }
     }
     #endregion
+
+    #region UI Buttons
+    public event EmptyVoid OnShootButtonPressed;
+    public void BroadcastShootButtonPressed()
+    {
+        if (OnShootButtonPressed != null)
+        {
+            OnShootButtonPressed();
+        }
+    }
+
+    public event EmptyVoid OnHUDJoystickButtonReleased;
+    public void BroadcastHUDJoystickButtonReleased()
+    {
+        if(OnHUDJoystickButtonReleased != null)
+        {
+            OnHUDJoystickButtonReleased();
+        }
+    }
+    #endregion
     #endregion
 
     #region GameplayEvents
@@ -260,6 +280,7 @@ public class Core_EventManager : MonoBehaviour
     public event EmptyVoid OnGameRestart;
     public void BroadcastGameRestart()
     {
+        Debug.Log("EventManager: BroadcastGameRestart");
         if (OnGameRestart != null)
         {
             OnGameRestart();

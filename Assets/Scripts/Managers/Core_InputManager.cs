@@ -56,6 +56,7 @@ public class Core_InputManager : MonoBehaviour {
         #region KeyCode inputs
         if (!movementInputType)
         {
+            // TODO: Remove is deemed permanently obsolete
             #region WASD
             if (Input.GetKeyDown(KeyCode.W))
             {
