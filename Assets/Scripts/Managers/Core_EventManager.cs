@@ -257,12 +257,30 @@ public class Core_EventManager : MonoBehaviour
         }
     }
 
-    public event Vector2Void OnVirtualJoystickValueChange;
-    public void BroadcastVirtualJoystickValueChange(Vector2 newValue)
+    public event IntVoid OnVirtualJoystickPressed;
+    public void BroadcastVirtualJoystickPressed(int joystickIndex)
+    {
+        if (OnVirtualJoystickPressed != null)
+        {
+            OnVirtualJoystickPressed(joystickIndex);
+        }
+    }
+
+    public event IntVoid OnVirtualJoystickReleased;
+    public void BroadcastVirtualJoystickReleased(int joystickIndex)
+    {
+        if (OnVirtualJoystickReleased != null)
+        {
+            OnVirtualJoystickReleased(joystickIndex);
+        }
+    }
+
+    public event IntVector2Void OnVirtualJoystickValueChange;
+    public void BroadcastVirtualJoystickValueChange(int joystickIndex, Vector2 newValue)
     {
         if (OnVirtualJoystickValueChange != null)
         {
-            OnVirtualJoystickValueChange(newValue);
+            OnVirtualJoystickValueChange(joystickIndex, newValue);
         }
     }
     #endregion

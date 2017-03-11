@@ -4,6 +4,11 @@ using UnityEngine;
 
 public class Core_Projectile : MonoBehaviour {
 
+    //TODO: Add projectile pausing 
+    //      Subscribe to pause-broadcast
+    //      When paused store current velocity, set velocity to zero
+    //      Restore old velocity when un-paused
+
     public enum EProjectileType { DEFAULT, BULLET }
     private EProjectileType projectileType = EProjectileType.DEFAULT;
     private float spawnTime = 0;

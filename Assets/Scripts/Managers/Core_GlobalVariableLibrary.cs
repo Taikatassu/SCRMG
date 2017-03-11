@@ -32,6 +32,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
     public Ship_Variables shipVariables;
     public Scene_Variables sceneVariables;
     public UI_Variables uiVariables;
+    public AI_Variables aiVariables;
 
     public Core_GlobalVariableLibrary()
     {
@@ -40,6 +41,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         shipVariables = new Ship_Variables();
         sceneVariables = new Scene_Variables();
         uiVariables = new UI_Variables();
+        aiVariables = new AI_Variables();
     }
 
     [System.Serializable]
@@ -94,5 +96,15 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public string winText = "Victory!";
         public string lossText = "Defeat";
         public float fadeFromBlackTime = 2;
+    }
+
+    [System.Serializable]
+    public class AI_Variables
+    {
+        //public float preferredMinDistanceToTarget = 5;
+        public float closestTargetTimerDuration = 1;
+        public float changeDirectionTimerDuration = 4;
+        public float directionChangeLerpDuration = 1f;
+        public float shootingRange = 15;
     }
 }

@@ -284,10 +284,19 @@ public class Core_GameManager : MonoBehaviour {
                 newShipController.SetShipColor(newShipColor);
                 #endregion
             }
-            em.BroadcastShipReference(newShip);
             currentlyAliveShipIndices.Add(i + 1);
             currentlyAliveShips.Add(newShip);
         }
+
+        foreach(GameObject ship in currentlyAliveShips)
+        {
+            em.BroadcastShipReference(ship);
+        }
+
+        //for (int j = 0; j < currentlyAliveShips.Count; j++)
+        //{
+        //    em.BroadcastShipReference(currentlyAliveShips[j]);
+        //}
         #endregion
     }
     #endregion

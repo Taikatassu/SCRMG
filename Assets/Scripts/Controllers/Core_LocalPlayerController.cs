@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Core_LocalPlayerController : Core_ShipController {
-
-    Transform playerTarget;
+    
     Transform closestTarget;
     List<Transform> shipList = new List<Transform>();
     LayerMask mouseRayCollisionLayer = -1;
     bool debugMode = false;
-    int counter = 0;
+    bool shootingJoystickDown = false;
 
     #region Initialization
     #region Awake & GetStats
@@ -50,7 +49,8 @@ public class Core_LocalPlayerController : Core_ShipController {
         em.OnMouseButtonLeftUp += OnMouseButtonLeftUp;
         em.OnMouseButtonRightDown += OnMouseButtonRightDown;
         em.OnMouseButtonRightUp += OnMouseButtonRightUp;
-        em.OnShootButtonPressed += OnShootButtonPressed;
+        em.OnVirtualJoystickPressed += OnVirtualJoystickPressed;
+        em.OnVirtualJoystickReleased += OnVirtualJoystickReleased;
         em.OnVirtualJoystickValueChange += OnVirtualJoystickValueChange;
     }
 
@@ -64,7 +64,8 @@ public class Core_LocalPlayerController : Core_ShipController {
         em.OnMouseButtonLeftUp -= OnMouseButtonLeftUp;
         em.OnMouseButtonRightDown -= OnMouseButtonRightDown;
         em.OnMouseButtonRightUp -= OnMouseButtonRightUp;
-        em.OnShootButtonPressed -= OnShootButtonPressed;
+        em.OnVirtualJoystickPressed -= OnVirtualJoystickPressed;
+        em.OnVirtualJoystickReleased -= OnVirtualJoystickReleased;
         em.OnVirtualJoystickValueChange -= OnVirtualJoystickValueChange;
     }
     #endregion
@@ -73,42 +74,46 @@ public class Core_LocalPlayerController : Core_ShipController {
     #region Update
     protected override void Update()
     {
-        if (!debugMode)
+        #region [NOT CURRENTLY IN USE] AutoAim
+        //if (!debugMode)
+        //{
+        //    if (matchStarted)
+        //    {
+        //        if (shipList.Count > 0)
+        //        {
+        //            for (int i = 0; i < shipList.Count; i++)
+        //            {
+        //                if (shipList[i] == null)
+        //                {
+        //                    shipList.RemoveAt(i);
+        //                    i--;
+        //                }
+        //                else if (closestTarget == null)
+        //                {
+        //                    closestTarget = shipList[i];
+        //                }
+        //                else
+        //                {
+        //                    if (DistanceToObject(shipList[i].position) < DistanceToObject(closestTarget.position))
+        //                    {
+        //                        closestTarget = shipList[i];
+        //                    }
+        //                }
+        //            }
+        //            if (closestTarget != null)
+        //            {
+        //                SetLookTargetPosition(closestTarget.position);
+        //            }
+        //        }
+
+        //    }
+        //}
+        #endregion
+
+        if (shootingJoystickDown)
         {
-            if (matchStarted)
-            {
-                if (shipList.Count > 0)
-                {
-                    for (int i = 0; i < shipList.Count; i++)
-                    {
-                        if (shipList[i] == null)
-                        {
-                            shipList.RemoveAt(i);
-                            i--;
-                        }
-                        else if (closestTarget == null)
-                        {
-                            closestTarget = shipList[i];
-                            Debug.Log("closestTarget was null, set to shipList element " + i);
-                        }
-                        else
-                        {
-                            if (DistanceToObject(shipList[i].position) < DistanceToObject(closestTarget.position))
-                            {
-                                Debug.Log("New closest target found!");
-                                closestTarget = shipList[i];
-                            }
-                        }
-                    }
-                    if (closestTarget != null)
-                    {
-                        SetLookTargetPosition(closestTarget.position);
-                    }
-                }
-
-            }
+            Shoot();
         }
-
 
         base.Update();
     }
@@ -130,7 +135,6 @@ public class Core_LocalPlayerController : Core_ShipController {
                 movementDirection.x = movementInputVector.x;
                 movementDirection.z = movementInputVector.y;
                 movementDirection.y = 0;
-                //SetMovementDirection(movementDirection);
             }
         }
     } 
@@ -183,16 +187,41 @@ public class Core_LocalPlayerController : Core_ShipController {
         //Debug.Log("OnMouseButtonRightUp");
     }
 
-    private void OnShootButtonPressed()
+    private void OnVirtualJoystickPressed(int joystickIndex)
     {
-        Shoot();
+        //TODO: Get shooting joystickIndex from GVL and implement a check in case 
+        //          of a setting where player can swap functionality of the sticks from side to side
+        if (joystickIndex == 2)
+        {
+            shootingJoystickDown = true;
+            rotatingTurret = true;
+        }
     }
 
-    private void OnVirtualJoystickValueChange(Vector2 newValue)
+    private void OnVirtualJoystickReleased(int joystickIndex)
     {
-        movementDirection.x = newValue.x;
-        movementDirection.z = newValue.y;
-        movementDirection.y = 0;
+        //TODO: See OnVirtualJoystickPressed comment
+        if (joystickIndex == 2)
+        {
+            shootingJoystickDown = false;
+            rotatingTurret = false;
+        }
+    }
+
+    private void OnVirtualJoystickValueChange(int joystickIndex, Vector2 newValue)
+    {
+        //TODO: See OnVirtualJoystickPressed comment
+        if (joystickIndex == 1)
+        {
+            movementDirection.x = newValue.x;
+            movementDirection.z = newValue.y;
+            movementDirection.y = 0;
+        }
+        else if (joystickIndex == 2)
+        {
+            // Move turret
+            SetLookTargetPosition(transform.position + new Vector3(newValue.x, 0, newValue.y));
+        }
     }
     #endregion
 
@@ -202,7 +231,6 @@ public class Core_LocalPlayerController : Core_ShipController {
         if(newShip != gameObject)
         {
             shipList.Add(newShip.transform);
-            Debug.Log("Ship reference got: " + ++counter);
         }
     }
     #endregion

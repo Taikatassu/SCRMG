@@ -45,6 +45,7 @@ public class Core_ShipController : MonoBehaviour {
     bool isDead = false;
     bool shootOnCooldown = false;
     bool updatingHealthBar = false;
+    protected bool rotatingTurret = false;
     protected bool matchStarted = false;
 
     //Values coming from GlobalVariableLibrary
@@ -241,11 +242,14 @@ public class Core_ShipController : MonoBehaviour {
         #endregion
 
         #region Turret rotation
-        lookTargetPosition.y = shipTurret.position.y;
-        Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-        Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
-        shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
-            Time.fixedDeltaTime * shipTurretRotationSpeed);
+        if (rotatingTurret) //TODO: remove this on pc version
+        {
+            lookTargetPosition.y = shipTurret.position.y;
+            Vector3 lookDirection = lookTargetPosition - shipTurret.position;
+            Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+            shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                Time.fixedDeltaTime * shipTurretRotationSpeed);
+        }
         #endregion
 
         #region Shoot cooldown

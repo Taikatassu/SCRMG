@@ -34,13 +34,15 @@ public class Core_UIManager : MonoBehaviour {
     GameObject gameEndMenuHolder;
     GameObject hudHolder;
     GameObject hudOfflineImage;
-    GameObject hudVirtualJoystick;
+    GameObject hudLeftPanel;
+    GameObject hudRightPanel;
+    GameObject hudVirtualJoystickOne;
+    GameObject hudVirtualJoystickTwo;
     Transform offscreenIndicatorHolder;
     Image loadingScreenImage;
     Text matchStartTimerText;
     Text gameEndMenuText;
     Button hudPauseMenuButton;
-    Button hudShootButton;
     Button pauseMenuResumeButton;
     Button pauseMenuRestartButton;
     Button pauseMenuMainMenuButton;
@@ -93,6 +95,7 @@ public class Core_UIManager : MonoBehaviour {
         lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         GetStats();
 
+        //Canvas and UI region holders
         canvas = GameObject.FindWithTag(canvasTag);
         mainMenuHolder = canvas.GetComponentInChildren<Core_MainMenuHolderTag>(true).gameObject;
         inGameUIHolder = canvas.GetComponentInChildren<Core_InGameUIHolderTag>(true).gameObject;
@@ -100,25 +103,35 @@ public class Core_UIManager : MonoBehaviour {
         gameEndMenuHolder = inGameUIHolder.GetComponentInChildren<Core_GameEndMenuHolderTag>(true).gameObject;
         hudHolder = inGameUIHolder.GetComponentInChildren<Core_HUDHolderTag>(true).gameObject;
 
+        //Main menu buttons
         playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>(true).
             GetComponent<Button>();
         exitButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuExitButtonTag>(true).
             GetComponent<Button>();
+
+        //Match beginning visuals
         loadingScreenImage = inGameUIHolder.GetComponentInChildren<Core_LoadingScreenImageTag>(true).
             GetComponent<Image>();
         matchStartTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
             GetComponent<Text>();
-
+        //Target indicators
         offscreenIndicatorHolder = inGameUIHolder.GetComponentInChildren<Core_OffscreenIndicatorHolderTag>(true).
             transform;
 
+        //HUD
+        hudLeftPanel = hudHolder.GetComponentInChildren<Core_HUDLeftPanel>(true).gameObject;
+        hudRightPanel = hudHolder.GetComponentInChildren<Core_HUDRightPanel>(true).gameObject;
         hudPauseMenuButton = hudHolder.GetComponentInChildren<Core_HUDPauseMenuButtonTag>(true).
             GetComponent<Button>();
-        hudShootButton = hudHolder.GetComponentInChildren<Core_HUDShootButtonTag>(true).
-            GetComponent<Button>();
-        hudVirtualJoystick = hudHolder.GetComponentInChildren<Core_VirtualJoystick>(true).gameObject;
+        Core_VirtualJoystick joystickScriptOne = hudLeftPanel.GetComponentInChildren<Core_VirtualJoystick>(true);
+        joystickScriptOne.SetIndex(1);
+        hudVirtualJoystickOne = joystickScriptOne.gameObject;
+        Core_VirtualJoystick joystickScriptTwo = hudRightPanel.GetComponentInChildren<Core_VirtualJoystick>(true);
+        joystickScriptTwo.SetIndex(2);
+        hudVirtualJoystickTwo = joystickScriptTwo.gameObject;
         hudOfflineImage = hudHolder.GetComponentInChildren<Core_HUDOffilneImageTag>(true).gameObject;
 
+        //PauseMenu
         pauseMenuResumeButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
             GetComponent<Button>();
         pauseMenuRestartButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuRestartButtonTag>().
@@ -126,6 +139,7 @@ public class Core_UIManager : MonoBehaviour {
         pauseMenuMainMenuButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuMainMenuButtonTag>().
             GetComponent<Button>();
 
+        //GameEndMenu
         gameEndMenuText = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuTextTag>().GetComponent<Text>();
         gameEndMenuRestartButton = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuRestartButtonTag>().
             GetComponent<Button>();
@@ -190,7 +204,6 @@ public class Core_UIManager : MonoBehaviour {
 
         if (currentTimerValue == 0)
         {
-            Debug.Log("followingOffscreenTargets = true");
             followingOffscreenTargets = true;
         }
     }
@@ -310,21 +323,6 @@ public class Core_UIManager : MonoBehaviour {
                 }
             }
         }
-    }
-
-    private void OnVirtualJoystickPressed()
-    {
-
-    }
-
-    private  void OnVirtualJoystickReleased()
-    {
-
-    }
-
-    private void OnVirtualJoystickValueChange()
-    {
-
     }
     #endregion
     #endregion
@@ -452,16 +450,13 @@ public class Core_UIManager : MonoBehaviour {
         em.BroadcastPauseOff();
     }
 
-    //TODO: Find out why getting null reference error if using HUD
-
     private void OpenHUD()
     {
         hudHolder.SetActive(true);
         hudPauseMenuButton.onClick.AddListener(HUDPauseMenuButtonPressed);
         hudPauseMenuButton.gameObject.SetActive(true);
-        hudShootButton.onClick.AddListener(HUDShootButtonPressed);
-        hudShootButton.gameObject.SetActive(true);
-        hudVirtualJoystick.SetActive(true);
+        hudVirtualJoystickOne.SetActive(true);
+        hudVirtualJoystickTwo.SetActive(true);
     }
 
     private void CloseHUD()
@@ -469,9 +464,8 @@ public class Core_UIManager : MonoBehaviour {
         hudHolder.SetActive(false);
         hudPauseMenuButton.gameObject.SetActive(false);
         hudPauseMenuButton.onClick.RemoveAllListeners();
-        hudShootButton.gameObject.SetActive(false);
-        hudShootButton.onClick.RemoveAllListeners();
-        hudVirtualJoystick.SetActive(false);
+        hudVirtualJoystickOne.SetActive(false);
+        hudVirtualJoystickTwo.SetActive(false);
     }
 
     private void HUDOffline()
@@ -541,11 +535,6 @@ public class Core_UIManager : MonoBehaviour {
     private void HUDPauseMenuButtonPressed()
     {
         OpenPauseMenu();
-    }
-
-    private void HUDShootButtonPressed()
-    {
-        em.BroadcastShootButtonPressed();
     }
     #endregion
 
