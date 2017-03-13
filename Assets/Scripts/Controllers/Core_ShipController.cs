@@ -45,14 +45,14 @@ public class Core_ShipController : MonoBehaviour {
     bool isDead = false;
     bool shootOnCooldown = false;
     bool updatingHealthBar = false;
+    bool isPaused = false;
     protected bool rotatingTurret = false;
-    protected bool matchStarted = false;
 
     //Values coming from GlobalVariableLibrary
     string shipTag = "Ship";
     string environmentTag = "Environment";
-    float movementSpeed = -1;
     protected float maxHealth = -1;
+    float movementSpeed = -1;
     float shipTurretRotationSpeed = -1;
     float shipHullRotationSpeed = -1;
     float bulletLaunchForce = -1;
@@ -61,6 +61,7 @@ public class Core_ShipController : MonoBehaviour {
     float healthBarMinValue = -1;
     float healthBarMaxValue = -1;
     float healthBarLerpDuration = -1;
+    protected int buildPlatform = -1; //0 = PC, 1 = Android
     #endregion
 
     #region Initialization
@@ -83,6 +84,7 @@ public class Core_ShipController : MonoBehaviour {
     #region GetStats
     protected virtual void GetStats()
     {
+        buildPlatform = lib.gameSettingVariables.buildPlatform;
         shipTag = lib.shipVariables.shipTag;
         environmentTag = lib.shipVariables.environmentTag;
         movementSpeed = lib.shipVariables.movementSpeed;
@@ -132,7 +134,6 @@ public class Core_ShipController : MonoBehaviour {
         }
         else if (currentTimerValue == 0)
         {
-            matchStarted = true;
             SetIsMoveable(true);
             SetIsVulnerable(true);
             SetCanShoot(true);
@@ -142,8 +143,7 @@ public class Core_ShipController : MonoBehaviour {
     private void OnGameRestart()
     {
         //TODO: Change if implementing a pool for ships instead of instantiating them
-        matchStarted = false;
-        //Destroy(gameObject); //Done by GameManager
+        //Destroy(gameObject); //Currently done by GameManager
     }
 
     private void OnGameEnd(int winnerIndex)
@@ -161,12 +161,7 @@ public class Core_ShipController : MonoBehaviour {
     {
         if (currentGameModeIndex == gameModeSingleplayerIndex)
         {
-            if (matchStarted)
-            {
-                SetIsMoveable(false);
-                SetIsVulnerable(false);
-                SetCanShoot(false);
-            }
+            isPaused = true;
         }
         else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
         {
@@ -182,12 +177,7 @@ public class Core_ShipController : MonoBehaviour {
     {
         if (currentGameModeIndex == gameModeSingleplayerIndex)
         {
-            if (matchStarted)
-            {
-                SetIsMoveable(true);
-                SetIsVulnerable(true);
-                SetCanShoot(true);
-            }
+            isPaused = false;
         }
         else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
         {
@@ -204,7 +194,7 @@ public class Core_ShipController : MonoBehaviour {
     #region Update & FixedUpdate
     protected virtual void Update()
     {
-        ManageProjectileList();
+        //ManageProjectileList();
 
         if (updatingHealthBar)
         {
@@ -226,39 +216,48 @@ public class Core_ShipController : MonoBehaviour {
 
         #region Movement
         //TODO: Add lerp to movement?
-        if (isMovable && movementDirection != Vector3.zero)
+        if (!isPaused)
         {
-            rb.MovePosition(transform.position + movementDirection * movementSpeed * Time.fixedDeltaTime);
-            if (movementDirection == Vector3.zero)
+            if (isMovable && movementDirection != Vector3.zero)
             {
-                rb.velocity = Vector3.zero;
-            }
+                rb.MovePosition(transform.position + movementDirection * movementSpeed * Time.fixedDeltaTime);
+                if (movementDirection == Vector3.zero)
+                {
+                    rb.velocity = Vector3.zero;
+                }
 
-            //Hull rotation
-            Quaternion newHullRotation = Quaternion.LookRotation(movementDirection);
-            shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
-                Time.fixedDeltaTime * shipHullRotationSpeed);
+                //Hull rotation
+                Quaternion newHullRotation = Quaternion.LookRotation(movementDirection);
+                shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
+                    Time.fixedDeltaTime * shipHullRotationSpeed);
+            }
         }
         #endregion
 
         #region Turret rotation
-        if (rotatingTurret) //TODO: remove this on pc version
+        if (!isPaused)
         {
-            lookTargetPosition.y = shipTurret.position.y;
-            Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-            Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
-            shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
-                Time.fixedDeltaTime * shipTurretRotationSpeed);
+            if (buildPlatform == 0 || (buildPlatform == 1 && rotatingTurret))
+            {
+                lookTargetPosition.y = shipTurret.position.y;
+                Vector3 lookDirection = lookTargetPosition - shipTurret.position;
+                Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+                shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                    Time.fixedDeltaTime * shipTurretRotationSpeed);
+            }
         }
         #endregion
 
         #region Shoot cooldown
-        if (shootOnCooldown)
+        if (!isPaused)
         {
-            shootCooldownFrameTimer--;
-            if (shootCooldownFrameTimer <= 0)
+            if (shootOnCooldown)
             {
-                shootOnCooldown = false;
+                shootCooldownFrameTimer--;
+                if (shootCooldownFrameTimer <= 0)
+                {
+                    shootOnCooldown = false;
+                }
             }
         }
         #endregion
@@ -266,21 +265,24 @@ public class Core_ShipController : MonoBehaviour {
     #endregion
 
     #region Shooting & projectiles
-    private void ManageProjectileList()
-    {
-        if (projectileList.Count > 0)
-        {
-            for (int i = 0; i < projectileList.Count; i++)
-            {
-                Core_Projectile projectile = projectileList[i];
-                if (Time.time >= (projectile.GetSpawnTime() + projectile.GetLifeTime()))
-                {
-                    DestroyProjectile(projectile);
-                    i--;
-                }
-            }
-        }
-    }
+    #region Old projectile management
+    //private void ManageProjectileList()
+    //{
+    //    if (projectileList.Count > 0)
+    //    {
+    //        for (int i = 0; i < projectileList.Count; i++)
+    //        {
+    //            Core_Projectile projectile = projectileList[i];
+    //            //TODO: Handle projectile lifetime lengthening somehow with regards to pausing!
+    //            if (Time.time >= (projectile.GetSpawnTime() + projectile.GetLifeTime()))
+    //            {
+    //                DestroyProjectile(projectile);
+    //                i--;
+    //            }
+    //        }
+    //    }
+    //}
+    #endregion
 
     private void DestroyAllProjectiles()
     {
@@ -301,6 +303,11 @@ public class Core_ShipController : MonoBehaviour {
             Destroy(projectile.gameObject);
     }
 
+    public void OnProjectileLifetimeEnded(Core_Projectile projectile)
+    {
+        DestroyProjectile(projectile);
+    }
+
     public void OnProjectileTriggerEnter(Core_Projectile projectile, GameObject collidedObject)
     {
         //Check which object collided with
@@ -309,8 +316,14 @@ public class Core_ShipController : MonoBehaviour {
         //Instantiate effect
         string collidedObjectTag = collidedObject.tag;
 
+
         if (collidedObjectTag == shipTag)
         {
+            //Spawn hit effect
+            GameObject bulletHitEffect = Instantiate(Resources.Load("BulletHitEffect"),
+                projectile.transform.position, Quaternion.identity) as GameObject;
+            bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
+
             //Damage enemy ship
             collidedObject.GetComponentInParent<Core_ShipController>().TakeDamage(shootDamage);
             //Destroy projectile
@@ -318,6 +331,11 @@ public class Core_ShipController : MonoBehaviour {
         }
         else if (collidedObjectTag == environmentTag)
         {
+            //Spawn hit effect
+            GameObject bulletHitEffect = Instantiate(Resources.Load("BulletHitEffect"),
+                projectile.transform.position, Quaternion.identity) as GameObject;
+            bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
+
             DestroyProjectile(projectile);
         }
 
@@ -325,23 +343,26 @@ public class Core_ShipController : MonoBehaviour {
 
     protected void Shoot()
     {
-        if (canShoot && !shootOnCooldown)
+        if (!isPaused)
         {
-            //Spawn bullet at shipTurret position & rotation
-            GameObject newBullet = Instantiate(Resources.Load("Bullet", typeof(GameObject)),
-                turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
-            Physics.IgnoreCollision(newBullet.GetComponent<Collider>(), 
-                GetComponentInChildren<Collider>());
-            newBullet.GetComponent<Rigidbody>().AddForce(newBullet.transform.forward *
-                bulletLaunchForce, ForceMode.Impulse);
-            Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
-            newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.BULLET);
-            newBulletScript.SetShipController(this);
-            newBulletScript.SetProjectileColor(myShipColor);
-            projectileList.Add(newBulletScript);
-            //Set shoot on cooldown
-            shootCooldownFrameTimer = shootCooldownFrames;
-            shootOnCooldown = true;
+            if (canShoot && !shootOnCooldown)
+            {
+                //Spawn bullet at shipTurret position & rotation
+                GameObject newBullet = Instantiate(Resources.Load("Bullet", typeof(GameObject)),
+                    turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
+                Physics.IgnoreCollision(newBullet.GetComponent<Collider>(),
+                    GetComponentInChildren<Collider>());
+
+                Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
+                newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.BULLET);
+                newBulletScript.SetShipController(this);
+                newBulletScript.SetProjectileColor(myShipColor);
+
+                projectileList.Add(newBulletScript);
+                //Set shoot on cooldown
+                shootCooldownFrameTimer = shootCooldownFrames;
+                shootOnCooldown = true;
+            }
         }
     }
     #endregion
@@ -443,6 +464,11 @@ public class Core_ShipController : MonoBehaviour {
         //Broadcast ship death
         //Start spectator mode if player
         em.BroadcastShipDead(index);
+        
+        GameObject shipDeathEffect = Instantiate(Resources.Load("ShipDeathEffect"),
+            transform.position, Quaternion.identity) as GameObject;
+        shipDeathEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
+
         Destroy(gameObject);
     }
 

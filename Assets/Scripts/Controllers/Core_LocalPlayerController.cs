@@ -7,8 +7,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     Transform closestTarget;
     List<Transform> shipList = new List<Transform>();
     LayerMask mouseRayCollisionLayer = -1;
-    bool debugMode = false;
-    bool shootingJoystickDown = false;
+    bool isShooting = false;
 
     #region Initialization
     #region Awake & GetStats
@@ -34,7 +33,6 @@ public class Core_LocalPlayerController : Core_ShipController {
         base.GetStats();
         mouseRayCollisionLayer = LayerMask.NameToLayer(lib.shipVariables.
             mouseRayCollisionLayerName);
-        debugMode = lib.gameSettingVariables.debugMode;
     }
     #endregion
 
@@ -42,31 +40,47 @@ public class Core_LocalPlayerController : Core_ShipController {
     protected override void OnEnable()
     {
         base.OnEnable();
-        em.OnShipReference += OnShipReference;
-        em.OnMovementInput += OnMovementInput;
-        em.OnMousePosition += OnMousePosition;
-        em.OnMouseButtonLeftDown += OnMouseButtonLeftDown;
-        em.OnMouseButtonLeftUp += OnMouseButtonLeftUp;
-        em.OnMouseButtonRightDown += OnMouseButtonRightDown;
-        em.OnMouseButtonRightUp += OnMouseButtonRightUp;
-        em.OnVirtualJoystickPressed += OnVirtualJoystickPressed;
-        em.OnVirtualJoystickReleased += OnVirtualJoystickReleased;
-        em.OnVirtualJoystickValueChange += OnVirtualJoystickValueChange;
+        //TODO: Remove if autoAim deemed permanently obsolete
+        //em.OnShipReference += OnShipReference;
+
+        if (buildPlatform == 0)
+        {
+            em.OnMovementInput += OnMovementInput;
+            em.OnMousePosition += OnMousePosition;
+            em.OnMouseButtonLeftDown += OnMouseButtonLeftDown;
+            em.OnMouseButtonLeftUp += OnMouseButtonLeftUp;
+            em.OnMouseButtonRightDown += OnMouseButtonRightDown;
+            em.OnMouseButtonRightUp += OnMouseButtonRightUp;
+        }
+        else if (buildPlatform == 1)
+        {
+            em.OnVirtualJoystickPressed += OnVirtualJoystickPressed;
+            em.OnVirtualJoystickReleased += OnVirtualJoystickReleased;
+            em.OnVirtualJoystickValueChange += OnVirtualJoystickValueChange;
+        }
     }
 
     protected override void OnDisable()
     {
         base.OnDisable();
-        em.OnShipReference -= OnShipReference;
-        em.OnMovementInput -= OnMovementInput;
-        em.OnMousePosition -= OnMousePosition;
-        em.OnMouseButtonLeftDown -= OnMouseButtonLeftDown;
-        em.OnMouseButtonLeftUp -= OnMouseButtonLeftUp;
-        em.OnMouseButtonRightDown -= OnMouseButtonRightDown;
-        em.OnMouseButtonRightUp -= OnMouseButtonRightUp;
-        em.OnVirtualJoystickPressed -= OnVirtualJoystickPressed;
-        em.OnVirtualJoystickReleased -= OnVirtualJoystickReleased;
-        em.OnVirtualJoystickValueChange -= OnVirtualJoystickValueChange;
+        //TODO: Remove if autoAim deemed permanently obsolete
+        //em.OnShipReference -= OnShipReference;
+
+        if (buildPlatform == 0)
+        {
+            em.OnMovementInput -= OnMovementInput;
+            em.OnMousePosition -= OnMousePosition;
+            em.OnMouseButtonLeftDown -= OnMouseButtonLeftDown;
+            em.OnMouseButtonLeftUp -= OnMouseButtonLeftUp;
+            em.OnMouseButtonRightDown -= OnMouseButtonRightDown;
+            em.OnMouseButtonRightUp -= OnMouseButtonRightUp;
+        }
+        else if (buildPlatform == 1)
+        {
+            em.OnVirtualJoystickPressed -= OnVirtualJoystickPressed;
+            em.OnVirtualJoystickReleased -= OnVirtualJoystickReleased;
+            em.OnVirtualJoystickValueChange -= OnVirtualJoystickValueChange;
+        }
     }
     #endregion
     #endregion
@@ -110,7 +124,7 @@ public class Core_LocalPlayerController : Core_ShipController {
         //}
         #endregion
 
-        if (shootingJoystickDown)
+        if (isShooting)
         {
             Shoot();
         }
@@ -128,7 +142,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     #region Input subscribers
     private void OnMovementInput(int controllerIndex, Vector2 movementInputVector)
     {
-        if (debugMode)
+        if (buildPlatform == 0)
         {
             if (controllerIndex == index)
             {
@@ -141,15 +155,11 @@ public class Core_LocalPlayerController : Core_ShipController {
 
     private void OnMousePosition(int controllerIndex, Vector2 mousePosition)
     {
-        if (debugMode)
+        if (buildPlatform == 0)
         {
             if (controllerIndex == index)
             {
-                //Vector3 mousePositionInWorld = Camera.main.ScreenToWorldPoint(mousePosition);
-                //Camera.main.ScreenToViewportPoint();
-                //Debug.DrawRay(mousePositionInWorld, -Vector3.up * 10, Color.red);
                 Ray ray = Camera.main.ScreenPointToRay(mousePosition);
-                //Debug.DrawRay(ray, Color.red);
 
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit))
@@ -166,15 +176,12 @@ public class Core_LocalPlayerController : Core_ShipController {
 
     private void OnMouseButtonLeftDown(int controllerIndex)
     {
-        if (debugMode)
-        {
-            Shoot();
-        }
+        isShooting = true;
     }
 
     private void OnMouseButtonLeftUp(int controllerIndex)
     {
-        //Debug.Log("OnMouseButtonLeftUp");
+        isShooting = false;
     }
 
     private void OnMouseButtonRightDown(int controllerIndex)
@@ -189,50 +196,49 @@ public class Core_LocalPlayerController : Core_ShipController {
 
     private void OnVirtualJoystickPressed(int joystickIndex)
     {
-        //TODO: Get shooting joystickIndex from GVL and implement a check in case 
-        //          of a setting where player can swap functionality of the sticks from side to side
         if (joystickIndex == 2)
         {
-            shootingJoystickDown = true;
+            isShooting = true;
             rotatingTurret = true;
         }
     }
 
     private void OnVirtualJoystickReleased(int joystickIndex)
     {
-        //TODO: See OnVirtualJoystickPressed comment
         if (joystickIndex == 2)
         {
-            shootingJoystickDown = false;
+            isShooting = false;
             rotatingTurret = false;
         }
     }
 
     private void OnVirtualJoystickValueChange(int joystickIndex, Vector2 newValue)
     {
-        //TODO: See OnVirtualJoystickPressed comment
         if (joystickIndex == 1)
         {
+            //Move ship
             movementDirection.x = newValue.x;
             movementDirection.z = newValue.y;
             movementDirection.y = 0;
         }
         else if (joystickIndex == 2)
         {
-            // Move turret
+            //Rotate turret
             SetLookTargetPosition(transform.position + new Vector3(newValue.x, 0, newValue.y));
         }
     }
     #endregion
 
     #region GameEvent subscribers
-    private void OnShipReference(GameObject newShip)
-    {
-        if(newShip != gameObject)
-        {
-            shipList.Add(newShip.transform);
-        }
-    }
+    //TODO: Remove if autoAim deemed permanently obsolete
+    //Required for autoAim, [NOT CURRENTLY IN USE]
+    //private void OnShipReference(GameObject newShip)
+    //{
+    //    if(newShip != gameObject)
+    //    {
+    //        shipList.Add(newShip.transform);
+    //    }
+    //}
     #endregion
     #endregion
 

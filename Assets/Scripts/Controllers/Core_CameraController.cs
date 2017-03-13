@@ -9,34 +9,50 @@ public class Core_CameraController : MonoBehaviour {
      * Spectate mode (and free movement?)
      */
 
+    #region References & variables
+    //References
     Core_Toolbox toolbox;
     Core_EventManager em;
+    Core_GlobalVariableLibrary lib;
     Transform target;
     Transform cameraParent;
-
+    //Variables coming from within the script
     Vector3 wantedPosition;
     Vector3 spectatePosition;
     Vector3 spectatingRotation = new Vector3(90, 0, 0);
     //Vector3 originalPosition;
+    //float timeStartedLerping;
+    int myShipIndex = -1;
     bool spectateMode = false;
     bool movingToSpectate = false;
-    int myShipIndex = 0;
-    float spectatingHeight = 45;
-    float followDistance = 0;
-    float followHeight = 15.0f;
+    //Variables coming from GlobalVariableLibrary
     //float lerpTime = 1;
-    //float timeStartedLerping;
+    float spectatingHeight = -1;
+    float followDistance = -1;
+    float followHeight = -1;
+    #endregion
 
+    #region Initialization
+    #region Awake & GetStats
     void Awake()
     {
         toolbox = FindObjectOfType<Core_Toolbox>();
         em = toolbox.GetComponentInChildren<Core_EventManager>();
+        lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
+        GetStats();
+
+        cameraParent = transform.parent;
     }
 
-	void Start () {
-        cameraParent = transform.parent;
-	}
+    void GetStats()
+    {
+        spectatingHeight = lib.shipVariables.cameraSpectatingHeight;
+        followDistance = lib.shipVariables.cameraFollowDistance;
+        followHeight = lib.shipVariables.cameraFollowHeight;
+    }
+    #endregion
 
+    #region OnEnable & OnDisable
     private void OnEnable()
     {
         em.OnShipDead += OnShipDead;
@@ -46,8 +62,21 @@ public class Core_CameraController : MonoBehaviour {
     {
         em.OnShipDead -= OnShipDead;
     }
-	
-	void LateUpdate () {
+    #endregion
+
+    #region Subscribers
+    private void OnShipDead(int shipIndex)
+    {
+        if (shipIndex == myShipIndex)
+        {
+            SetSpectateMode(true);
+        }
+    }
+    #endregion
+    #endregion
+
+    #region LateUpdate
+    void LateUpdate () {
 
         if (!spectateMode)
         {
@@ -67,7 +96,9 @@ public class Core_CameraController : MonoBehaviour {
             movingToSpectate = false;
         }
 	}
+    #endregion
 
+    #region Setters
     public void SetTarget(Transform newTarget)
     {
         target = newTarget;
@@ -87,12 +118,6 @@ public class Core_CameraController : MonoBehaviour {
         //originalPosition = cameraParent.position;
         spectatePosition = new Vector3(0, spectatingHeight, 0);    
     }
+    #endregion
 
-    private void OnShipDead(int shipIndex)
-    {
-        if (shipIndex == myShipIndex)
-        {
-            SetSpectateMode(true);
-        }
-    }
 }

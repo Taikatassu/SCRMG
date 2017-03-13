@@ -25,6 +25,7 @@ public class Core_GameManager : MonoBehaviour {
     bool resetUsedSpawnPointsList = false;
     bool resetUsedShipColors = false;
     bool matchStartTimerRunning = false;
+    bool isPaused = false;
     int fixedUpdateLoopCounter = -1;
     int fixedUpdateLoopsPerSecond = -1;
     int matchStartTimerValue = -1;
@@ -89,6 +90,8 @@ public class Core_GameManager : MonoBehaviour {
         //em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnShipDead += OnShipDead;
         em.OnSetGameMode += OnSetGameMode;
+        em.OnPauseOn += OnPauseOn;
+        em.OnPauseOff += OnPauseOff;
     }
 
     private void OnDisable()
@@ -98,6 +101,8 @@ public class Core_GameManager : MonoBehaviour {
         //em.OnNewSceneLoading -= OnNewSceneLoading;
         em.OnShipDead -= OnShipDead;
         em.OnSetGameMode -= OnSetGameMode;
+        em.OnPauseOn -= OnPauseOn;
+        em.OnPauseOff -= OnPauseOff;
     }
     #endregion
     #endregion
@@ -113,6 +118,38 @@ public class Core_GameManager : MonoBehaviour {
     //    }
     //}
 
+    private void OnPauseOn()
+    {
+        if (currentGameModeIndex == gameModeSingleplayerIndex)
+        {
+            isPaused = true;
+        }
+        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in NetMP gameMode
+        }
+        else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in LocMP gameMode
+        }
+    }
+
+    private void OnPauseOff()
+    {
+        if (currentGameModeIndex == gameModeSingleplayerIndex)
+        {
+            isPaused = false;
+        }
+        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in NetMP gameMode
+        }
+        else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
+        {
+            // TODO: Decide how to manage pausing in LocMP gameMode
+        }
+    }
+    
     private void OnNewSceneLoaded(int sceneIndex)
     {
         //TODO: Remember to implement check for all future scenes
@@ -376,18 +413,21 @@ public class Core_GameManager : MonoBehaviour {
     private void FixedUpdate()
     {
         #region MatchStartTimer
-        if (matchStartTimerRunning)
+        if (!isPaused)
         {
-            fixedUpdateLoopCounter++;
-            if (fixedUpdateLoopCounter >= fixedUpdateLoopsPerSecond)
+            if (matchStartTimerRunning)
             {
-                matchStartTimerValue--;
-                em.BroadcastMatchStartTimerValue(matchStartTimerValue);
-                if (matchStartTimerValue <= 0)
+                fixedUpdateLoopCounter++;
+                if (fixedUpdateLoopCounter >= fixedUpdateLoopsPerSecond)
                 {
-                    matchStartTimerRunning = false;
+                    matchStartTimerValue--;
+                    em.BroadcastMatchStartTimerValue(matchStartTimerValue);
+                    if (matchStartTimerValue <= 0)
+                    {
+                        matchStartTimerRunning = false;
+                    }
+                    fixedUpdateLoopCounter = 0;
                 }
-                fixedUpdateLoopCounter = 0;
             }
         }
         #endregion

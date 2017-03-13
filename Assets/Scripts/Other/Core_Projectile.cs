@@ -4,40 +4,88 @@ using UnityEngine;
 
 public class Core_Projectile : MonoBehaviour {
 
-    //TODO: Add projectile pausing 
-    //      Subscribe to pause-broadcast
-    //      When paused store current velocity, set velocity to zero
-    //      Restore old velocity when un-paused
+    //TODO: Add fading effect when projectile runs out of lifetime
+    //          before hitting anything
 
+    #region References & variables
+    //References
+    Core_Toolbox toolbox;
+    Core_GlobalVariableLibrary lib;
+    Core_EventManager em;
+    Core_ShipController myShipController;
+    Rigidbody rb;
+    //Variables coming from within the script 
     public enum EProjectileType { DEFAULT, BULLET }
-    private EProjectileType projectileType = EProjectileType.DEFAULT;
-    private float spawnTime = 0;
-    private float lifeTime = 0;
-    private Core_ShipController myShipController;
+    EProjectileType projectileType = EProjectileType.DEFAULT;
+    float spawnTime = 0;
+    float lifeTime = 0;
+    bool isPaused = false;
+    float projectileSpeed = -1;
+    int projectileLifetimeFrames = -1;
+    int projectileLifetimeTimer = -1;
+    //Variables coming from GlobalVariableLibrary
+    float bulletSpeed = -1;
+    float bulletRange = -1;
+    #endregion
 
-    private float bulletLifeTime = 2;
+    #region Initialization
+    #region Awake & GetStats
+    private void Awake()
+    {
+        toolbox = FindObjectOfType<Core_Toolbox>();
+        em = toolbox.GetComponent<Core_EventManager>();
+        lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
+        rb = GetComponent<Rigidbody>();
+        GetStats();
+    }
 
+    private void GetStats()
+    {
+        bulletSpeed = lib.shipVariables.bulletSpeed;
+        bulletRange = lib.shipVariables.bulletRange;
+    }
+    #endregion
+
+    #region OnEnable & OnDisable
     void OnEnable()
     {
+        em.OnPauseOn += OnPauseOn;
+        em.OnPauseOff += OnPauseOff;
         spawnTime = Time.time;
     }
 
     void OnDisable()
     {
+        em.OnPauseOn -= OnPauseOn;
+        em.OnPauseOff -= OnPauseOff;
         spawnTime = 0;
         lifeTime = 0;
         projectileType = EProjectileType.DEFAULT;
     }
+    #endregion
 
-    public float GetSpawnTime()
+    #region Subscribers
+    private void OnPauseOn()
     {
-        return spawnTime;
+        isPaused = true;
     }
 
-    public float GetLifeTime()
+    private void OnPauseOff()
     {
-        return lifeTime;
+        isPaused = false;
     }
+    #endregion
+
+    #region Getters & setters
+    //public float GetSpawnTime()
+    //{
+    //    return spawnTime;
+    //}
+
+    //public float GetLifeTime()
+    //{
+    //    return lifeTime;
+    //}
 
     public void SetProjectileType(EProjectileType newProjectileType)
     {
@@ -48,7 +96,10 @@ public class Core_Projectile : MonoBehaviour {
                 Debug.LogError("Projetile should never be type: DEFAULT after spawning!!");
                 break;
             case EProjectileType.BULLET:
-                lifeTime = bulletLifeTime;
+                projectileSpeed = bulletSpeed;
+                projectileLifetimeFrames = Mathf.RoundToInt((bulletRange / projectileSpeed) / Time.fixedDeltaTime);
+                projectileLifetimeTimer = projectileLifetimeFrames;
+                Debug.Log("projectileLifetimeFrames: " + projectileLifetimeFrames);
                 break;
         }
     }
@@ -63,11 +114,40 @@ public class Core_Projectile : MonoBehaviour {
         //TODO: Change this if projectile hierarchy changes!
         transform.GetChild(0).GetComponent<Renderer>().material.SetColor("_TintColor", newColor);
     }
+    #endregion
+    #endregion
 
+    #region Update & FixedUpdate
+    private void Update()
+    {
+        if (!isPaused)
+        {
+            rb.MovePosition(transform.forward * projectileSpeed * Time.deltaTime + rb.position);
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (!isPaused)
+        {
+            projectileLifetimeTimer--;
+            if (projectileLifetimeTimer <= 0)
+            {
+                projectileLifetimeTimer = 0;
+                Debug.Log("Projectile lifetime ended");
+                if (myShipController != null)
+                    myShipController.OnProjectileLifetimeEnded(this);
+            }
+        }
+    }
+    #endregion
+
+    #region Collision detection
     private void OnTriggerEnter(Collider collider)
     {
         if (myShipController != null)
             myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
     }
+    #endregion
 
 }

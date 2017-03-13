@@ -2,8 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// TODO: Check that all scripts use GlobalVariableLibrary for
-//          their suitable variables
+/* TODO: 
+ * - Check that all scripts use GlobalVariableLibrary for
+ *   their suitable variables
+ *      
+ * - Reorganize GlobalVariableLibrary !
+ *      Separate categories for variables meant to be set by the 
+ *      developer and settings that can be changed through in
+ *      game menus
+*/
 
 public class Core_GlobalVariableLibrary : MonoBehaviour {
 
@@ -56,7 +63,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public int gameModeSingleplayerIndex = 0;
         public int gameModeNetworkMultiplayerIndex = 1;
         public int gameModeLocalMultiplayerIndex = 2;
-        public bool debugMode = true;
+        public int buildPlatform = 0; //0 = PC, 1 = Android
     }
 
     [System.Serializable]
@@ -72,11 +79,16 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float shipTurretRotationSpeed = 10;
         public float shipHullRotationSpeed = 10;
         public float bulletLaunchForce = 20;
-        public float shootCooldownTime = 0.5f;
-        public float shootDamage = 20;
+        public float shootCooldownTime = 0.25f;
+        public float shootDamage = 10;
         public float healthBarMinValue = 0.01f;
         public float healthBarMaxValue = 1;
         public float healthBarLerpDuration = 0.1f;
+        public float bulletSpeed = 5.0f;
+        public float bulletRange = 25.0f;
+        public float cameraSpectatingHeight = 45;
+        public float cameraFollowDistance = 0;
+        public float cameraFollowHeight = 25.0f;
     }
 
     [System.Serializable]
@@ -92,10 +104,12 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
     [System.Serializable]
     public class UI_Variables
     {
-        public string canvasTag = "Canvas";
         public string winText = "Victory!";
         public string lossText = "Defeat";
         public float fadeFromBlackTime = 2;
+        public float offscreenIndicatorSidebufferPC = 0;
+        public float offscreenIndicatorSidebufferAndroid = 0.22f;
+        public bool invertedHUD = false;
     }
 
     [System.Serializable]

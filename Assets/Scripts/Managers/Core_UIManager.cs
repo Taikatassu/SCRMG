@@ -21,7 +21,6 @@ public class Core_UIManager : MonoBehaviour {
     Core_GlobalVariableLibrary lib;
     Core_EventManager em;
     GameObject canvas;
-    string canvasTag;
 
     //MainMenu UI
     GameObject mainMenuHolder;
@@ -32,13 +31,19 @@ public class Core_UIManager : MonoBehaviour {
     GameObject inGameUIHolder;
     GameObject pauseMenuHolder;
     GameObject gameEndMenuHolder;
-    GameObject hudHolder;
     GameObject hudOfflineImage;
     GameObject hudLeftPanel;
     GameObject hudRightPanel;
     GameObject hudVirtualJoystickOne;
     GameObject hudVirtualJoystickTwo;
     Transform offscreenIndicatorHolder;
+    Transform hudHolder;
+    Transform hudRightSlotTop;
+    Transform hudRightSlotMid;
+    Transform hudRightSlotBot;
+    Transform hudLeftSlotTop;
+    Transform hudLeftSlotMid;
+    Transform hudLeftSlotBot;
     Image loadingScreenImage;
     Text matchStartTimerText;
     Text gameEndMenuText;
@@ -58,16 +63,20 @@ public class Core_UIManager : MonoBehaviour {
     int matchStartTimerValue = -1;
     int currentGameModeIndex = -1;
     float loadingScreenFadeStartTime = -1;
+    float offscreenIndicatorSidebuffer = -1;
     //Variables coming from globalVariableLibrary
+    string winText;
+    string lossText;
     int gameModeSingleplayerIndex = -1;
     int gameModeNetworkMultiplayerIndex = -1;
     int gameModeLocalMultiplayerIndex = -1;
     int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
+    int buildPlatform = -1; //0 = PC, 1 = Android
     float loadingScreenFadeTime = -1;
-    string winText;
-    string lossText;
-    bool debugMode;
+    float offscreenIndicatorSidebufferPC = -1;
+    float offscreenIndicatorSidebufferAndroid = -1;
+    bool invertedHUD = false;
     #endregion
 
     #region Initialization
@@ -96,60 +105,76 @@ public class Core_UIManager : MonoBehaviour {
         GetStats();
 
         //Canvas and UI region holders
-        canvas = GameObject.FindWithTag(canvasTag);
+        canvas = transform.GetComponentInChildren<Canvas>(true).gameObject;
         mainMenuHolder = canvas.GetComponentInChildren<Core_MainMenuHolderTag>(true).gameObject;
         inGameUIHolder = canvas.GetComponentInChildren<Core_InGameUIHolderTag>(true).gameObject;
+        loadingScreenImage = canvas.GetComponentInChildren<Core_LoadingScreenImageTag>(true).
+            GetComponent<Image>();
+        hudHolder = inGameUIHolder.GetComponentInChildren<Core_HUDHolderTag>(true).transform;
         pauseMenuHolder = inGameUIHolder.GetComponentInChildren<Core_PauseMenuHolderTag>(true).gameObject;
         gameEndMenuHolder = inGameUIHolder.GetComponentInChildren<Core_GameEndMenuHolderTag>(true).gameObject;
-        hudHolder = inGameUIHolder.GetComponentInChildren<Core_HUDHolderTag>(true).gameObject;
-
         //Main menu buttons
         playButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuPlayButtonTag>(true).
             GetComponent<Button>();
         exitButton = mainMenuHolder.GetComponentInChildren<Core_MainMenuExitButtonTag>(true).
             GetComponent<Button>();
 
-        //Match beginning visuals
-        loadingScreenImage = inGameUIHolder.GetComponentInChildren<Core_LoadingScreenImageTag>(true).
-            GetComponent<Image>();
+        //HUD
         matchStartTimerText = inGameUIHolder.GetComponentInChildren<Core_MatchBeginTimerTag>(true).
             GetComponent<Text>();
-        //Target indicators
         offscreenIndicatorHolder = inGameUIHolder.GetComponentInChildren<Core_OffscreenIndicatorHolderTag>(true).
             transform;
+        hudOfflineImage = inGameUIHolder.GetComponentInChildren<Core_HUDOffilneImageTag>(true).gameObject;
 
-        //HUD
-        hudLeftPanel = hudHolder.GetComponentInChildren<Core_HUDLeftPanel>(true).gameObject;
-        hudRightPanel = hudHolder.GetComponentInChildren<Core_HUDRightPanel>(true).gameObject;
-        hudPauseMenuButton = hudHolder.GetComponentInChildren<Core_HUDPauseMenuButtonTag>(true).
-            GetComponent<Button>();
-        Core_VirtualJoystick joystickScriptOne = hudLeftPanel.GetComponentInChildren<Core_VirtualJoystick>(true);
-        joystickScriptOne.SetIndex(1);
-        hudVirtualJoystickOne = joystickScriptOne.gameObject;
-        Core_VirtualJoystick joystickScriptTwo = hudRightPanel.GetComponentInChildren<Core_VirtualJoystick>(true);
-        joystickScriptTwo.SetIndex(2);
-        hudVirtualJoystickTwo = joystickScriptTwo.gameObject;
-        hudOfflineImage = hudHolder.GetComponentInChildren<Core_HUDOffilneImageTag>(true).gameObject;
+        if (buildPlatform < 0)
+        {
+            Debug.LogError("UIManager: BuildPlatform not set!");
+        }
+        if (buildPlatform == 0)
+        {
+            Debug.Log("UIManager: BuildPlatform set to PC");
+            offscreenIndicatorSidebuffer = offscreenIndicatorSidebufferPC;
+        }
+        else if (buildPlatform == 1)
+        {
+            Debug.Log("UIManager: BuildPlatform set to Android");
+            hudLeftPanel = Instantiate(Resources.Load("HUDLeftPanel", typeof(GameObject)),
+                hudHolder.transform) as GameObject;
+            
+            hudRightPanel = Instantiate(Resources.Load("HUDRightPanel", typeof(GameObject)),
+                hudHolder.transform) as GameObject;
+
+
+            hudLeftSlotTop = hudLeftPanel.GetComponentInChildren<Core_HUDSlotTopTag>(true).transform;
+            hudLeftSlotMid = hudLeftPanel.GetComponentInChildren<Core_HUDSlotMidTag>(true).transform;
+            hudLeftSlotBot = hudLeftPanel.GetComponentInChildren<Core_HUDSlotBotTag>(true).transform;
+            hudRightSlotTop = hudRightPanel.GetComponentInChildren<Core_HUDSlotTopTag>(true).transform;
+            hudRightSlotMid = hudRightPanel.GetComponentInChildren<Core_HUDSlotMidTag>(true).transform;
+            hudRightSlotBot = hudRightPanel.GetComponentInChildren<Core_HUDSlotBotTag>(true).transform;
+
+            offscreenIndicatorSidebuffer = offscreenIndicatorSidebufferAndroid;
+        }
 
         //PauseMenu
-        pauseMenuResumeButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>().
+        pauseMenuResumeButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuResumeButtonTag>(true).
             GetComponent<Button>();
-        pauseMenuRestartButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuRestartButtonTag>().
+        pauseMenuRestartButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuRestartButtonTag>(true).
             GetComponent<Button>();
-        pauseMenuMainMenuButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuMainMenuButtonTag>().
+        pauseMenuMainMenuButton = pauseMenuHolder.GetComponentInChildren<Core_PauseMenuMainMenuButtonTag>(true).
             GetComponent<Button>();
 
         //GameEndMenu
-        gameEndMenuText = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuTextTag>().GetComponent<Text>();
-        gameEndMenuRestartButton = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuRestartButtonTag>().
+        gameEndMenuText = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuTextTag>(true).GetComponent<Text>();
+        gameEndMenuRestartButton = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuRestartButtonTag>(true).
             GetComponent<Button>();
-        gameEndMenuMainMenuButton = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuMainMenuButtonTag>().
+        gameEndMenuMainMenuButton = gameEndMenuHolder.GetComponentInChildren<Core_GameEndMenuMainMenuButtonTag>(true).
             GetComponent<Button>();
         #endregion
 
         #region Initialize UI
-        ClosePauseMenu();
+        //ClosePauseMenu();
         CloseInGameUI();
+        CloseLoadingScreen();
         #endregion
     }
     #endregion
@@ -157,16 +182,18 @@ public class Core_UIManager : MonoBehaviour {
     #region GetStats
     private void GetStats()
     {
+        buildPlatform = lib.gameSettingVariables.buildPlatform;
+        invertedHUD = lib.uiVariables.invertedHUD;
         gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
         gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
         gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
         sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
         loadingScreenFadeTime = lib.uiVariables.fadeFromBlackTime;
-        canvasTag = lib.uiVariables.canvasTag;
         winText = lib.uiVariables.winText;
         lossText = lib.uiVariables.lossText;
-        debugMode = lib.gameSettingVariables.debugMode;
+        offscreenIndicatorSidebufferPC = lib.uiVariables.offscreenIndicatorSidebufferPC;
+        offscreenIndicatorSidebufferAndroid = lib.uiVariables.offscreenIndicatorSidebufferAndroid;
     }
     #endregion
 
@@ -211,7 +238,7 @@ public class Core_UIManager : MonoBehaviour {
     private void OnGameRestart()
     {
         //Reset neccessary values
-        loadingScreenImage.gameObject.SetActive(true);
+        OpenLoadingScreen();
         StartFadeFromLoadingScreen();
     }
 
@@ -220,14 +247,11 @@ public class Core_UIManager : MonoBehaviour {
         //TODO: Add checks for all future scenes
         if (sceneIndex == sceneIndexMainMenu)
         {
-            //Close InGameUI
-            CloseGameEndMenu();
-            ClosePauseMenu();
-            CloseInGameUI();
+            OpenLoadingScreen();
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
-            //Close main menu UI
+            OpenLoadingScreen();
             CloseMainMenuUI();
         }
     }
@@ -237,18 +261,17 @@ public class Core_UIManager : MonoBehaviour {
         //TODO: Add checks for all future scenes
         if (sceneIndex == sceneIndexMainMenu)
         {
-            //Open MainMenuUI
+            CloseInGameUI();
             OpenMainMenuUI();
+            CloseLoadingScreen();
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
-            //Open InGameUI
+            OpenLoadingScreen();
             OpenInGameUI();
-
-            loadingScreenImage.gameObject.SetActive(true);
-            StartFadeFromLoadingScreen();
             ClosePauseMenu();
             CloseGameEndMenu();
+            StartFadeFromLoadingScreen();
         }
     }
 
@@ -308,19 +331,16 @@ public class Core_UIManager : MonoBehaviour {
     #region Input subscribers
     private void OnEscapeButtonDown(int controllerIndex)
     {
-        if (debugMode)
+        if (inGameUIHolder.activeSelf && !gameEndMenuHolder.activeSelf)
         {
-            if (inGameUIHolder.activeSelf && !gameEndMenuHolder.activeSelf)
+            if (pauseMenuHolder.activeSelf)
             {
-                if (pauseMenuHolder.activeSelf)
-                {
 
-                    ClosePauseMenu();
-                }
-                else
-                {
-                    OpenPauseMenu();
-                }
+                ClosePauseMenu();
+            }
+            else
+            {
+                OpenPauseMenu();
             }
         }
     }
@@ -343,7 +363,7 @@ public class Core_UIManager : MonoBehaviour {
             if (percentageComplete >= 1.0f)
             {
                 isFadingFromLoadingScreen = false;
-                loadingScreenImage.gameObject.SetActive(false);
+                CloseLoadingScreen();
                 loadingScreenImage.color = loadingScreenOriginalColor;
             }
         }
@@ -360,6 +380,18 @@ public class Core_UIManager : MonoBehaviour {
     #endregion
 
     #region UI functions
+    #region Global UI
+    private void OpenLoadingScreen()
+    {
+        loadingScreenImage.gameObject.SetActive(true);
+    }
+
+    private void CloseLoadingScreen()
+    {
+        loadingScreenImage.gameObject.SetActive(false);
+    }
+    #endregion
+
     #region MainMenu UI
     private void OpenMainMenuUI()
     {
@@ -381,12 +413,14 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OnPlayButtonPressed()
     {
+        OpenLoadingScreen();
         em.BroadcastSetGameMode(gameModeSingleplayerIndex);
         em.BroadcastRequestSceneSingleLevel01();
     }
 
     private void OnExitButtonPressed()
     {
+        Debug.Log("UIManager: MainMenuExitButton pressed");
         Application.Quit();
     }
     #endregion
@@ -395,23 +429,73 @@ public class Core_UIManager : MonoBehaviour {
     #region Toggle UI Elements
     private void OpenInGameUI()
     {
+        if (buildPlatform == 1)
+        {
+            if (!invertedHUD)
+            {
+                GameObject temp = Instantiate(Resources.Load("HUDPauseMenuButton", typeof(GameObject)),
+                    hudLeftSlotTop.position, hudLeftSlotTop.rotation, hudLeftSlotTop) as GameObject;
+                hudPauseMenuButton = temp.GetComponent<Button>();
+
+                hudVirtualJoystickOne = Instantiate(Resources.Load("HUDVirtualJoystickHolder", typeof(GameObject)),
+                    hudLeftSlotBot.position, hudLeftSlotBot.rotation, hudLeftSlotBot) as GameObject;
+                hudVirtualJoystickOne.GetComponent<Core_VirtualJoystick>().SetIndex(1);
+
+                hudVirtualJoystickTwo = Instantiate(Resources.Load("HUDVirtualJoystickHolder", typeof(GameObject)),
+                    hudRightSlotBot.position, hudRightSlotBot.rotation, hudRightSlotBot) as GameObject;
+                hudVirtualJoystickTwo.GetComponent<Core_VirtualJoystick>().SetIndex(2);
+            }
+            else
+            {
+                GameObject temp = Instantiate(Resources.Load("HUDPauseMenuButton", typeof(GameObject)),
+                    hudRightSlotTop.position, hudRightSlotTop.rotation, hudRightSlotTop) as GameObject;
+                hudPauseMenuButton = temp.GetComponent<Button>();
+
+                hudVirtualJoystickOne = Instantiate(Resources.Load("HUDVirtualJoystickHolder", typeof(GameObject)),
+                    hudRightSlotBot.position, hudRightSlotBot.rotation, hudRightSlotBot) as GameObject;
+                hudVirtualJoystickOne.GetComponent<Core_VirtualJoystick>().SetIndex(1);
+
+                hudVirtualJoystickTwo = Instantiate(Resources.Load("HUDVirtualJoystickHolder", typeof(GameObject)),
+                    hudLeftSlotBot.position, hudLeftSlotBot.rotation, hudLeftSlotBot) as GameObject;
+                hudVirtualJoystickTwo.GetComponent<Core_VirtualJoystick>().SetIndex(2);
+            }
+
+            hudPauseMenuButton.onClick.AddListener(HUDPauseMenuButtonPressed);
+        }
+
         inGameUIHolder.SetActive(true);
-        OpenHUD();
-        HUDOnline();
         offscreenIndicatorHolder.gameObject.SetActive(true);
+        HUDOnline();
     }
 
     private void CloseInGameUI()
     {
-        CloseHUD();
+        if (buildPlatform == 1)
+        {
+            if (hudPauseMenuButton != null)
+            {
+                Destroy(hudPauseMenuButton.gameObject);
+            }
+
+            if (hudVirtualJoystickOne != null)
+            {
+                Destroy(hudVirtualJoystickOne);
+            }
+
+            if (hudVirtualJoystickTwo != null)
+            {
+                Destroy(hudVirtualJoystickTwo);
+            }
+        }
+
         inGameUIHolder.SetActive(false);
         ResetOffscreenTargetFollowing();
         DestroyOffscreenIndicators();
+        HUDOffline();
     }
 
     private void OpenPauseMenu()
     {
-        //TODO: Implement game pausing if in singleplayer
         HUDOffline();
         pauseMenuResumeButton.onClick.AddListener(PauseMenuResumeButtonPressed);
         pauseMenuRestartButton.onClick.AddListener(PauseMenuRestartButtonPressed);
@@ -432,8 +516,8 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OpenGameEndMenu()
     {
-        HUDOffline();
         ClosePauseMenu();
+        HUDOffline();
         gameEndMenuRestartButton.onClick.AddListener(GameEndMenuRestartButtonPressed);
         gameEndMenuMainMenuButton.onClick.AddListener(GameEndMenuMainMenuButtonPressed);
         gameEndMenuHolder.SetActive(true);
@@ -450,24 +534,6 @@ public class Core_UIManager : MonoBehaviour {
         em.BroadcastPauseOff();
     }
 
-    private void OpenHUD()
-    {
-        hudHolder.SetActive(true);
-        hudPauseMenuButton.onClick.AddListener(HUDPauseMenuButtonPressed);
-        hudPauseMenuButton.gameObject.SetActive(true);
-        hudVirtualJoystickOne.SetActive(true);
-        hudVirtualJoystickTwo.SetActive(true);
-    }
-
-    private void CloseHUD()
-    {
-        hudHolder.SetActive(false);
-        hudPauseMenuButton.gameObject.SetActive(false);
-        hudPauseMenuButton.onClick.RemoveAllListeners();
-        hudVirtualJoystickOne.SetActive(false);
-        hudVirtualJoystickTwo.SetActive(false);
-    }
-
     private void HUDOffline()
     {
         hudOfflineImage.SetActive(true);
@@ -482,59 +548,47 @@ public class Core_UIManager : MonoBehaviour {
     #region PauseMenu buttons
     private void PauseMenuResumeButtonPressed()
     {
-        Debug.Log("Resume button pressed");
-        //Close pauseMenu
         ClosePauseMenu();
-        //TODO: Resume game (if pause implemented and in effect)
     }
 
     private void PauseMenuRestartButtonPressed()
     {
-        Debug.Log("Restart button pressed");
-        //Close pauseMenu
+        OpenLoadingScreen();
         ClosePauseMenu();
-        //Restart game
         ResetOffscreenTargetFollowing();
         em.BroadcastGameRestart();
     }
 
     private void PauseMenuMainMenuButtonPressed()
     {
-        Debug.Log("ReturnToMainMenu button pressed");
-        //Close pauseMenu (happens when loading main menu)
-        //Close InGameUI (happens when loading main menu)
-        //Load mainMenuScene
+        OpenLoadingScreen();
         em.BroadcastRequestSceneSingleMainMenu();
-        //Open mainMenuUI (happens when loading main menu)
     }
     #endregion
 
     #region GameEndMenu buttons
     private void GameEndMenuRestartButtonPressed()
     {
-        Debug.Log("Restart button pressed");
-        //Close gameEndMenu
+        OpenLoadingScreen();
         CloseGameEndMenu();
-        //Restart game
         ResetOffscreenTargetFollowing();
         em.BroadcastGameRestart();
     }
 
     private void GameEndMenuMainMenuButtonPressed()
     {
-        Debug.Log("ReturnToMainMenu button pressed");
-        //Close gameEndMenu (happens when loading main menu)
-        //Close InGameUI (happens when loading main menu)
-        //Load mainMenuScene
+        OpenLoadingScreen();
         em.BroadcastRequestSceneSingleMainMenu();
-        //Open mainMenuUI (happens when loading main menu)
     }
     #endregion
 
     #region HUD buttons
     private void HUDPauseMenuButtonPressed()
     {
-        OpenPauseMenu();
+        if (!gameEndMenuHolder.activeSelf)
+        {
+            OpenPauseMenu();
+        }
     }
     #endregion
 
@@ -556,7 +610,10 @@ public class Core_UIManager : MonoBehaviour {
 
     private void StartFadeFromLoadingScreen()
     {
-        loadingScreenImage.gameObject.SetActive(true);
+        //TODO: Remove below if deemed permanently obsolete and implement 
+        //      a check to see if the loading screen is open
+        OpenLoadingScreen();
+
         loadingScreenOriginalColor = loadingScreenImage.color;
         loadingScreenOriginalColor.a = 1;
         loadingScreenNewColor = loadingScreenOriginalColor;
@@ -587,7 +644,7 @@ public class Core_UIManager : MonoBehaviour {
                     Transform indicator = offscreenIndicatorPool[i];
                     Vector3 screenPosition = Camera.main.WorldToViewportPoint(target.position);
 
-                    if (screenPosition.x >= (-0.08f + 0.25f) && screenPosition.x <= (1.08f - 0.25f)&& 
+                    if (screenPosition.x >= (-0.08f + offscreenIndicatorSidebuffer) && screenPosition.x <= (1.08f - offscreenIndicatorSidebuffer) && 
                         screenPosition.y >= -0.08f && screenPosition.y <= 1.08f)
                     {
                         //Target is within screenspace
@@ -672,7 +729,8 @@ public class Core_UIManager : MonoBehaviour {
                         #endregion
 
                         indicator.localEulerAngles = new Vector3(0.0f, 0.0f, -angle * Mathf.Rad2Deg);
-                        screenPosition.x = Mathf.Clamp(screenPosition.x, 0.22f, 0.78f);
+                        screenPosition.x = Mathf.Clamp(screenPosition.x, (0 + offscreenIndicatorSidebuffer), 
+                            (1 - offscreenIndicatorSidebuffer));
                         indicator.position = Camera.main.ViewportToScreenPoint(screenPosition);
 
                     }

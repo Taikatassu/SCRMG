@@ -110,7 +110,7 @@ public class Core_AIPlayerController : Core_ShipController {
     protected override void Update()
     {
         #region Targeting behaviour
-        if (matchStarted && !isPaused)
+        if (!isPaused)
         {
             rotatingTurret = true;
             if (shipList.Count > 0)
@@ -216,7 +216,7 @@ public class Core_AIPlayerController : Core_ShipController {
         #endregion
 
         #region Movement behaviour
-        if (matchStarted && !isPaused)
+        if (!isPaused)
         {
             if (changeDirectionTimer <= 0)
             {
@@ -231,7 +231,6 @@ public class Core_AIPlayerController : Core_ShipController {
 
         if (directionChangeLerping)
         {
-            Debug.Log("AI " + index + ": directionChangeLerping");
             float timeSinceStarted = Time.time / directionChangeLerpStartTime;
             float percentageCompleted = timeSinceStarted / directionChangeLerpDuration;
             movementDirection = Vector3.Lerp(oldMovementDirection, newMovementDirection, percentageCompleted);
@@ -244,7 +243,7 @@ public class Core_AIPlayerController : Core_ShipController {
         #endregion
 
         #region Shooting behaviour
-        if (matchStarted && !isPaused)
+        if (!isPaused)
         {
             if (currentTarget != null && DistanceToObject(currentTarget.position) < shootingRange)
             {
@@ -264,7 +263,7 @@ public class Core_AIPlayerController : Core_ShipController {
     protected override void FixedUpdate()
     {
         #region ClosestTargetTimer
-        if (matchStarted && !isPaused)
+        if (!isPaused)
         {
             if (currentTargetNoLongerClosest && closestTargetTimer > 0)
             {
@@ -278,7 +277,7 @@ public class Core_AIPlayerController : Core_ShipController {
         #endregion
 
         #region ChangeDirectionTimer
-        if (matchStarted && !isPaused)
+        if (!isPaused)
         {
             if (changeDirectionTimer > 0)
             {
