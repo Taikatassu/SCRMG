@@ -89,7 +89,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     #region Update
     protected override void Update()
     {
-        if (rotatingTurret)
+        if (buildPlatform == 1 && rotatingTurret)
         {
             //Rotate turret
             SetLookTargetPosition(transform.position + new Vector3(turretJoystickValue.x, 0, turretJoystickValue.y));
