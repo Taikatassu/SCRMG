@@ -7,6 +7,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     Transform closestTarget;
     List<Transform> shipList = new List<Transform>();
     LayerMask mouseRayCollisionLayer = -1;
+    Vector2 turretJoystickValue = Vector2.zero;
     bool isShooting = false;
 
     #region Initialization
@@ -88,6 +89,12 @@ public class Core_LocalPlayerController : Core_ShipController {
     #region Update
     protected override void Update()
     {
+        if (rotatingTurret)
+        {
+            //Rotate turret
+            SetLookTargetPosition(transform.position + new Vector3(turretJoystickValue.x, 0, turretJoystickValue.y));
+        }
+
         #region [NOT CURRENTLY IN USE] AutoAim
         //if (!debugMode)
         //{
@@ -131,7 +138,9 @@ public class Core_LocalPlayerController : Core_ShipController {
 
         base.Update();
     }
+    #endregion
 
+    #region DistanceToObject
     private float DistanceToObject(Vector3 objectPosition)
     {
         return Vector3.Distance(transform.position, objectPosition);
@@ -223,8 +232,9 @@ public class Core_LocalPlayerController : Core_ShipController {
         }
         else if (joystickIndex == 2)
         {
-            //Rotate turret
-            SetLookTargetPosition(transform.position + new Vector3(newValue.x, 0, newValue.y));
+            turretJoystickValue = newValue;
+            ////Rotate turret
+            //SetLookTargetPosition(transform.position + new Vector3(newValue.x, 0, newValue.y));
         }
     }
     #endregion

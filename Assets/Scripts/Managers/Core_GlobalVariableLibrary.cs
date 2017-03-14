@@ -83,12 +83,12 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float shootDamage = 10;
         public float healthBarMinValue = 0.01f;
         public float healthBarMaxValue = 1;
-        public float healthBarLerpDuration = 0.1f;
-        public float bulletSpeed = 5.0f;
-        public float bulletRange = 25.0f;
+        public float healthBarLerpDuration = 0.5f;
+        public float bulletSpeed = 60;
+        public float bulletRange = 200;
         public float cameraSpectatingHeight = 45;
         public float cameraFollowDistance = 0;
-        public float cameraFollowHeight = 25.0f;
+        public float cameraFollowHeight = 20;
     }
 
     [System.Serializable]
