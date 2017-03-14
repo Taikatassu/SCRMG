@@ -17,8 +17,6 @@ public class Core_Projectile : MonoBehaviour {
     //Variables coming from within the script 
     public enum EProjectileType { DEFAULT, BULLET }
     EProjectileType projectileType = EProjectileType.DEFAULT;
-    float spawnTime = 0;
-    float lifeTime = 0;
     bool isPaused = false;
     float projectileSpeed = -1;
     int projectileLifetimeFrames = -1;
@@ -51,15 +49,12 @@ public class Core_Projectile : MonoBehaviour {
     {
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
-        spawnTime = Time.time;
     }
 
     void OnDisable()
     {
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
-        spawnTime = 0;
-        lifeTime = 0;
         projectileType = EProjectileType.DEFAULT;
     }
     #endregion
@@ -77,16 +72,6 @@ public class Core_Projectile : MonoBehaviour {
     #endregion
 
     #region Getters & setters
-    //public float GetSpawnTime()
-    //{
-    //    return spawnTime;
-    //}
-
-    //public float GetLifeTime()
-    //{
-    //    return lifeTime;
-    //}
-
     public void SetProjectileType(EProjectileType newProjectileType)
     {
         projectileType = newProjectileType;
@@ -99,7 +84,6 @@ public class Core_Projectile : MonoBehaviour {
                 projectileSpeed = bulletSpeed;
                 projectileLifetimeFrames = Mathf.RoundToInt((bulletRange / projectileSpeed) / Time.fixedDeltaTime);
                 projectileLifetimeTimer = projectileLifetimeFrames;
-                Debug.Log("projectileLifetimeFrames: " + projectileLifetimeFrames);
                 break;
         }
     }

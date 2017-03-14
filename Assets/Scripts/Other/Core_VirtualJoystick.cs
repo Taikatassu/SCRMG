@@ -38,9 +38,7 @@ public class Core_VirtualJoystick : MonoBehaviour, IDragHandler, IPointerDownHan
         {
             position.x = (position.x / joystickBackground.rectTransform.sizeDelta.x);
             position.y = (position.y / joystickBackground.rectTransform.sizeDelta.y);
-
-            //Debug.Log("x: " + joystickBackground.rectTransform.pivot.x);
-            //Debug.Log("y: " + joystickBackground.rectTransform.pivot.y);
+            
             float x = position.x * 2;
             float y = position.y * 2;
 
@@ -49,8 +47,7 @@ public class Core_VirtualJoystick : MonoBehaviour, IDragHandler, IPointerDownHan
             {
                 inputDirection.Normalize();
             }
-
-            //Debug.Log("inputDirection: " + inputDirection);
+            
             em.BroadcastVirtualJoystickValueChange(index, inputDirection);
 
             joystickImage.rectTransform.anchoredPosition =

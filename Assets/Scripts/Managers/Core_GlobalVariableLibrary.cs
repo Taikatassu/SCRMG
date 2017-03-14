@@ -78,7 +78,6 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float maxHealth = 100;
         public float shipTurretRotationSpeed = 10;
         public float shipHullRotationSpeed = 10;
-        public float bulletLaunchForce = 20;
         public float shootCooldownTime = 0.25f;
         public float shootDamage = 10;
         public float healthBarMinValue = 0.01f;

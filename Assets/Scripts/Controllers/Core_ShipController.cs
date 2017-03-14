@@ -55,7 +55,6 @@ public class Core_ShipController : MonoBehaviour {
     float movementSpeed = -1;
     float shipTurretRotationSpeed = -1;
     float shipHullRotationSpeed = -1;
-    float bulletLaunchForce = -1;
     float shootCooldownTime = -1;
     float shootDamage = -1;
     float healthBarMinValue = -1;
@@ -91,7 +90,6 @@ public class Core_ShipController : MonoBehaviour {
         maxHealth = lib.shipVariables.maxHealth;
         shipTurretRotationSpeed = lib.shipVariables.shipTurretRotationSpeed;
         shipHullRotationSpeed = lib.shipVariables.shipHullRotationSpeed;
-        bulletLaunchForce = lib.shipVariables.bulletLaunchForce;
         shootCooldownTime = lib.shipVariables.shootCooldownTime;
         shootCooldownFrames = Mathf.RoundToInt(shootCooldownTime / Time.fixedDeltaTime);
         shootDamage = lib.shipVariables.shootDamage;
@@ -265,25 +263,6 @@ public class Core_ShipController : MonoBehaviour {
     #endregion
 
     #region Shooting & projectiles
-    #region Old projectile management
-    //private void ManageProjectileList()
-    //{
-    //    if (projectileList.Count > 0)
-    //    {
-    //        for (int i = 0; i < projectileList.Count; i++)
-    //        {
-    //            Core_Projectile projectile = projectileList[i];
-    //            //TODO: Handle projectile lifetime lengthening somehow with regards to pausing!
-    //            if (Time.time >= (projectile.GetSpawnTime() + projectile.GetLifeTime()))
-    //            {
-    //                DestroyProjectile(projectile);
-    //                i--;
-    //            }
-    //        }
-    //    }
-    //}
-    #endregion
-
     private void DestroyAllProjectiles()
     {
         int count = projectileList.Count;

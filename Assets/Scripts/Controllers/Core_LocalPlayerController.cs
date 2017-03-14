@@ -5,7 +5,7 @@ using UnityEngine;
 public class Core_LocalPlayerController : Core_ShipController {
     
     Transform closestTarget;
-    List<Transform> shipList = new List<Transform>();
+    //List<Transform> shipList = new List<Transform>();
     LayerMask mouseRayCollisionLayer = -1;
     Vector2 turretJoystickValue = Vector2.zero;
     bool isShooting = false;
@@ -233,8 +233,6 @@ public class Core_LocalPlayerController : Core_ShipController {
         else if (joystickIndex == 2)
         {
             turretJoystickValue = newValue;
-            ////Rotate turret
-            //SetLookTargetPosition(transform.position + new Vector3(newValue.x, 0, newValue.y));
         }
     }
     #endregion

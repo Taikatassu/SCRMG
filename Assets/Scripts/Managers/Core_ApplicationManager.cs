@@ -52,25 +52,16 @@ public class Core_ApplicationManager : MonoBehaviour
     {
         em.OnRequestSceneSingleMainMenu += OnRequestSceneSingleMainMenu;
         em.OnRequestSceneSingleLevel01 += OnRequestSceneSingleLevel01;
-        em.OnEscapeButtonDown += OnEscapeButtonDown;
     }
 
     private void OnDisable()
     {
         em.OnRequestSceneSingleMainMenu -= OnRequestSceneSingleMainMenu;
         em.OnRequestSceneSingleLevel01 -= OnRequestSceneSingleLevel01;
-        em.OnEscapeButtonDown -= OnEscapeButtonDown;
     }
     #endregion
 
     #region Subscribers
-    #region Input subscribers
-    private void OnEscapeButtonDown(int index)
-    {
-        Application.Quit();
-    }
-    #endregion
-
     #region OnRequestScene subscribers
     private void OnRequestSceneSingleMainMenu()
     {
