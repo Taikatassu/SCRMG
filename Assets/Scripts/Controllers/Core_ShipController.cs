@@ -106,7 +106,7 @@ public class Core_ShipController : MonoBehaviour {
     protected virtual void OnEnable()
     {
         em.OnGameRestart += OnGameRestart;
-        em.OnMatchStartTimerValue += OnMatchStartTimerValue;
+        em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
         em.OnGameEnd += OnGameEnd;
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
@@ -116,7 +116,7 @@ public class Core_ShipController : MonoBehaviour {
     {
         DestroyAllProjectiles();
         em.OnGameRestart -= OnGameRestart;
-        em.OnMatchStartTimerValue -= OnMatchStartTimerValue;
+        em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
         em.OnGameEnd -= OnGameEnd;
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
@@ -124,7 +124,7 @@ public class Core_ShipController : MonoBehaviour {
     #endregion
 
     #region Subscribers
-    private void OnMatchStartTimerValue(int currentTimerValue)
+    private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
         if (currentTimerValue == 1)
         {

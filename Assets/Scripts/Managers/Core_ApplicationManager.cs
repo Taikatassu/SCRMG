@@ -50,12 +50,14 @@ public class Core_ApplicationManager : MonoBehaviour
 
     private void OnEnable()
     {
+        em.OnRequestApplicationExit += OnRequestApplicationExit;
         em.OnRequestSceneSingleMainMenu += OnRequestSceneSingleMainMenu;
         em.OnRequestSceneSingleLevel01 += OnRequestSceneSingleLevel01;
     }
 
     private void OnDisable()
     {
+        em.OnRequestApplicationExit -= OnRequestApplicationExit;
         em.OnRequestSceneSingleMainMenu -= OnRequestSceneSingleMainMenu;
         em.OnRequestSceneSingleLevel01 -= OnRequestSceneSingleLevel01;
     }
@@ -63,6 +65,12 @@ public class Core_ApplicationManager : MonoBehaviour
 
     #region Subscribers
     #region OnRequestScene subscribers
+    private void OnRequestApplicationExit()
+    {
+        Debug.Log("ApplicationManager: OnRequestApplicationExit");
+        Application.Quit();
+    }
+
     private void OnRequestSceneSingleMainMenu()
     {
         Debug.Log("SceneManager: Received MainMenu load request!");

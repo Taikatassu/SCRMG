@@ -48,6 +48,8 @@ public class Core_UIManager : MonoBehaviour {
     GameObject hudOfflineImage;
     GameObject hudLeftPanel;
     GameObject hudRightPanel;
+    GameObject hudTopPanel;
+    GameObject hudTimer;
     GameObject hudVirtualJoystickOne;
     GameObject hudVirtualJoystickTwo;
     GameObject hudOpenPauseMenuButton;
@@ -68,6 +70,7 @@ public class Core_UIManager : MonoBehaviour {
     Transform hudLeftSlotBot;
     Image loadingScreenImage;
     Text matchStartTimerText;
+    Text hudTimerText;
     List<Transform> offscreenIndicatorPool = new List<Transform>();
     List<Transform> offscreenIndicatorTargets = new List<Transform>();
 
@@ -92,6 +95,7 @@ public class Core_UIManager : MonoBehaviour {
     int currentGameModeIndex = -1;
     float loadingScreenFadeStartTime = -1;
     float offscreenIndicatorSidebuffer = -1;
+    float matchTimer = 0;
     //Variables coming from globalVariableLibrary
     string winText;
     string lossText;
@@ -139,6 +143,8 @@ public class Core_UIManager : MonoBehaviour {
 
         //MainMenu
         mainMenuHolder = canvas.GetComponentInChildren<Core_MainMenuHolderTag>(true).gameObject;
+        
+
         mainMenuCenter = Instantiate(Resources.Load("UI/MainMenu/MainMenuCenter", typeof(GameObject)),
                 mainMenuHolder.transform) as GameObject;
         mainMenuRightPanel = Instantiate(Resources.Load("UI/MainMenu/MainMenuRightPanel", typeof(GameObject)),
@@ -170,6 +176,10 @@ public class Core_UIManager : MonoBehaviour {
         if (buildPlatform == 0)
         {
             Debug.Log("UIManager: BuildPlatform set to PC");
+
+            hudTopPanel = Instantiate(Resources.Load("UI/HUD/HUDTopPanel", typeof(GameObject)),
+                hudHolder.transform) as GameObject;
+
             offscreenIndicatorSidebuffer = offscreenIndicatorSidebufferPC;
         }
         else if (buildPlatform == 1)
@@ -181,6 +191,8 @@ public class Core_UIManager : MonoBehaviour {
             hudRightPanel = Instantiate(Resources.Load("UI/HUD/HUDRightPanel", typeof(GameObject)),
                 hudHolder.transform) as GameObject;
 
+            hudTopPanel = Instantiate(Resources.Load("UI/HUD/HUDTopPanel", typeof(GameObject)),
+                hudHolder.transform) as GameObject;
 
             hudLeftSlotTop = hudLeftPanel.GetComponentInChildren<Core_UISlotTopTag>(true).transform;
             hudLeftSlotMid = hudLeftPanel.GetComponentInChildren<Core_UISlotMidTag>(true).transform;
@@ -191,12 +203,6 @@ public class Core_UIManager : MonoBehaviour {
 
             offscreenIndicatorSidebuffer = offscreenIndicatorSidebufferAndroid;
         }
-
-        //PauseMenu
-        pauseMenuHolder = inGameUIHolder.GetComponentInChildren<Core_PauseMenuHolderTag>(true).gameObject;
-        pauseMenuPanel = pauseMenuHolder.transform.GetChild(0);
-        pauseMenuText = Instantiate(Resources.Load("UI/HUD/PauseMenu/PauseMenuText", typeof(GameObject)),
-                pauseMenuPanel.transform) as GameObject;
         #endregion
     }
     #endregion
@@ -222,7 +228,7 @@ public class Core_UIManager : MonoBehaviour {
     #region OnEnable & OnDisable
     private void OnEnable()
     {
-        em.OnMatchStartTimerValue += OnMatchStartTimerValue;
+        em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnNewSceneLoaded += OnNewSceneLoaded;
@@ -230,11 +236,12 @@ public class Core_UIManager : MonoBehaviour {
         em.OnSetGameMode += OnSetGameMode;
         em.OnGameEnd += OnGameEnd;
         em.OnShipReference += OnShipReference;
+        em.OnMatchTimerValueChange += OnMatchTimerValueChange;
     }
 
     private void OnDisable()
     {
-        em.OnMatchStartTimerValue -= OnMatchStartTimerValue;
+        em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
         em.OnGameRestart -= OnGameRestart;
         em.OnNewSceneLoading -= OnNewSceneLoading;
         em.OnNewSceneLoaded -= OnNewSceneLoaded;
@@ -242,12 +249,13 @@ public class Core_UIManager : MonoBehaviour {
         em.OnSetGameMode -= OnSetGameMode;
         em.OnGameEnd -= OnGameEnd;
         em.OnShipReference -= OnShipReference;
+        em.OnMatchTimerValueChange -= OnMatchTimerValueChange;
     }
     #endregion
 
     #region Subscribers
     #region GameEvent subscribers
-    private void OnMatchStartTimerValue(int currentTimerValue)
+    private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
         UpdateMatchStartTimer(currentTimerValue);
 
@@ -348,6 +356,25 @@ public class Core_UIManager : MonoBehaviour {
             }
         }
     }
+
+    private void OnMatchTimerValueChange(float newValue)
+    {
+        matchTimer = newValue;
+
+        int minutes = Mathf.FloorToInt(matchTimer / 60f);
+        int seconds = Mathf.FloorToInt(matchTimer - minutes * 60);
+        int milliseconds = Mathf.FloorToInt((matchTimer - seconds) * 100);
+
+        if (minutes > 99)
+        {
+            minutes = 99;
+        }
+
+        string t = string.Format("{0:00}:{1:00}:{2:00}", minutes, seconds, milliseconds);
+
+        if(hudTimerText != null)
+            hudTimerText.text = t.ToString();
+    }
     #endregion
 
     #region Input subscribers
@@ -370,6 +397,10 @@ public class Core_UIManager : MonoBehaviour {
         {
             CloseMainMenuGameModeView();
             OpenMainMenuDefaultView();
+        }
+        else if (buildPlatform == 1 && uiState == UIState.MAINMENUDEFAULT)
+        {
+            em.BroadcastRequestApplicationExit();
         }
     }
     #endregion
@@ -567,8 +598,7 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OnMainMenuExitButtonPressed()
     {
-        Debug.Log("UIManager: MainMenuExitButton pressed");
-        Application.Quit();
+        em.BroadcastRequestApplicationExit();
     }
 
     private void OnMainMenuSettingsButtonPressed()
@@ -665,6 +695,16 @@ public class Core_UIManager : MonoBehaviour {
             hudOpenPauseMenuButton.GetComponent<Button>().onClick.AddListener(HUDOpenPauseMenuButtonPressed);
         }
 
+        hudTimer = Instantiate(Resources.Load("UI/HUD/HUDTimer", typeof(GameObject)),
+            hudTopPanel.transform) as GameObject;
+        hudTimerText = hudTimer.GetComponentInChildren<Text>();
+
+        pauseMenuHolder = Instantiate(Resources.Load("UI/HUD/PauseMenu/PauseMenuHolder", typeof(GameObject)),
+            inGameUIHolder.transform) as GameObject;
+        pauseMenuPanel = pauseMenuHolder.transform.GetChild(0);
+        pauseMenuText = Instantiate(Resources.Load("UI/HUD/PauseMenu/PauseMenuText", typeof(GameObject)),
+                pauseMenuPanel.transform) as GameObject;
+
         inGameUIHolder.SetActive(true);
         offscreenIndicatorHolder.gameObject.SetActive(true);
         HUDOnline();
@@ -690,7 +730,18 @@ public class Core_UIManager : MonoBehaviour {
                 Destroy(hudVirtualJoystickTwo);
             }
         }
+        if (hudTimer != null)
+        {
+            Destroy(hudTimer);
+        }
 
+        CloseGameEndMenu();
+        ClosePauseMenu();
+
+        if (pauseMenuHolder != null)
+        {
+            Destroy(pauseMenuHolder);
+        }
         inGameUIHolder.SetActive(false);
         ResetOffscreenTargetFollowing();
         DestroyOffscreenIndicators();
@@ -741,7 +792,10 @@ public class Core_UIManager : MonoBehaviour {
             Destroy(pauseMenuMainMenuButton);
         }
         
-        pauseMenuHolder.SetActive(false);
+        if(pauseMenuHolder != null)
+        {
+            pauseMenuHolder.SetActive(false);
+        }
         em.BroadcastPauseOff();
         HUDOnline();
         uiState = UIState.INGAMEDEFAULT;
@@ -781,7 +835,10 @@ public class Core_UIManager : MonoBehaviour {
             Destroy(pauseMenuMainMenuButton);
         }
 
-        pauseMenuHolder.SetActive(false);
+        if (pauseMenuHolder != null)
+        {
+            pauseMenuHolder.SetActive(false);
+        }
         em.BroadcastPauseOff();
         HUDOnline();
         uiState = UIState.INGAMEDEFAULT;

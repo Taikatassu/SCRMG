@@ -27,6 +27,7 @@ public class Core_EventManager : MonoBehaviour
 
     #region Delegates
     public delegate void EmptyVoid();
+    public delegate void FloatVoid(float floatingPoint);
     public delegate void IntVoid(int integer);
     public delegate void Vector2Void(Vector2 vec2);
     public delegate void IntVector2Void(int integer, Vector2 vec2);
@@ -46,6 +47,15 @@ public class Core_EventManager : MonoBehaviour
     #endregion
 
     #region Scene events
+    public event EmptyVoid OnRequestApplicationExit;
+    public void BroadcastRequestApplicationExit()
+    {
+        if(OnRequestApplicationExit != null)
+        {
+            OnRequestApplicationExit();
+        }
+    }
+
     public event EmptyVoid OnRequestSceneSingleMainMenu;
     public void BroadcastRequestSceneSingleMainMenu()
     {
@@ -287,12 +297,12 @@ public class Core_EventManager : MonoBehaviour
     #endregion
 
     #region GameplayEvents
-    public event IntVoid OnMatchStartTimerValue;
-    public void BroadcastMatchStartTimerValue(int currentValue)
+    public event IntVoid OnMatchStartTimerValueChange;
+    public void BroadcastMatchStartTimerValueChange(int currentValue)
     {
-        if (OnMatchStartTimerValue != null)
+        if (OnMatchStartTimerValueChange != null)
         {
-            OnMatchStartTimerValue(currentValue);
+            OnMatchStartTimerValueChange(currentValue);
         }
     }
 
@@ -348,6 +358,15 @@ public class Core_EventManager : MonoBehaviour
         if(OnShipReference != null)
         {
             OnShipReference(newShip);
+        }
+    }
+
+    public event FloatVoid OnMatchTimerValueChange;
+    public void BroadcastMatchTimerValueChange(float newValue)
+    {
+        if(OnMatchTimerValueChange != null)
+        {
+            OnMatchTimerValueChange(newValue);
         }
     }
     #endregion

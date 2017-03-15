@@ -26,10 +26,12 @@ public class Core_GameManager : MonoBehaviour {
     bool resetUsedShipColors = false;
     bool matchStartTimerRunning = false;
     bool isPaused = false;
+    bool matchStarted = false;
     int fixedUpdateLoopCounter = -1;
     int fixedUpdateLoopsPerSecond = -1;
     int matchStartTimerValue = -1;
     int currentGameModeIndex = -1;
+    float matchTimer = 0;
 
     //Variables coming from globalVariableLibrary
     List<Color> shipColorOptions = new List<Color>();
@@ -173,6 +175,7 @@ public class Core_GameManager : MonoBehaviour {
         //Respawn everything
         InitializeGame();
         StartMatchStartTimer();
+        matchStarted = false;
     }
 
     private void OnShipDead(int shipIndex)
@@ -184,6 +187,7 @@ public class Core_GameManager : MonoBehaviour {
             if (currentlyAliveShipIndices.Count == 1)
             {
                 em.BroadcastGameEnd(currentlyAliveShipIndices[0]);
+                matchStarted = false;
             }
         }
     }
@@ -221,6 +225,9 @@ public class Core_GameManager : MonoBehaviour {
 
     private void InitializeGame()
     {
+        matchStarted = false;
+        matchTimer = 0;
+        em.BroadcastMatchTimerValueChange(matchTimer);
         /*TODO: Have server tell level manager how many ships to spawn, and which ship is whose
         *   - Add AIPlayerController or NetworkPlayerController to other ships
         */
@@ -409,7 +416,18 @@ public class Core_GameManager : MonoBehaviour {
     //}
     #endregion
 
-    #region FixedUpdate
+    #region Update & FixedUpdate
+    private void Update()
+    {
+        #region HUD Timer
+        if (matchStarted && !isPaused)
+        {
+            matchTimer += Time.deltaTime;
+            em.BroadcastMatchTimerValueChange(matchTimer);
+        }
+        #endregion
+    }
+
     private void FixedUpdate()
     {
         #region MatchStartTimer
@@ -421,9 +439,10 @@ public class Core_GameManager : MonoBehaviour {
                 if (fixedUpdateLoopCounter >= fixedUpdateLoopsPerSecond)
                 {
                     matchStartTimerValue--;
-                    em.BroadcastMatchStartTimerValue(matchStartTimerValue);
+                    em.BroadcastMatchStartTimerValueChange(matchStartTimerValue);
                     if (matchStartTimerValue <= 0)
                     {
+                        matchStarted = true;
                         matchStartTimerRunning = false;
                     }
                     fixedUpdateLoopCounter = 0;
@@ -442,7 +461,7 @@ public class Core_GameManager : MonoBehaviour {
         fixedUpdateLoopsPerSecond = Mathf.RoundToInt(1 / Time.fixedDeltaTime);
         matchStartTimerValue = matchStartTimerLength;
         fixedUpdateLoopCounter = 0;
-        em.BroadcastMatchStartTimerValue(matchStartTimerValue);
+        em.BroadcastMatchStartTimerValueChange(matchStartTimerValue);
     }  
     #endregion
 
