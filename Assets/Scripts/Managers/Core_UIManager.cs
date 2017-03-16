@@ -90,7 +90,7 @@ public class Core_UIManager : MonoBehaviour {
     Color loadingScreenOriginalColor;
     Vector3 offscreenIndicatorDefaultPosition;
     bool isFadingFromLoadingScreen = false;
-    bool followingOffscreenTargets = false;
+    bool matchStarted = false;
     int matchStartTimerValue = -1;
     int currentGameModeIndex = -1;
     float loadingScreenFadeStartTime = -1;
@@ -261,14 +261,17 @@ public class Core_UIManager : MonoBehaviour {
 
         if (currentTimerValue == 0)
         {
-            followingOffscreenTargets = true;
+            matchStarted = true;
         }
     }
 
     private void OnGameRestart()
     {
         //Reset neccessary values
+        matchStarted = false;
         OpenLoadingScreen();
+        CloseInGameUI();
+        OpenInGameUI();
         StartFadeFromLoadingScreen();
     }
 
@@ -278,6 +281,7 @@ public class Core_UIManager : MonoBehaviour {
         if (sceneIndex == sceneIndexMainMenu)
         {
             OpenLoadingScreen();
+            matchStarted = false;
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
@@ -299,8 +303,6 @@ public class Core_UIManager : MonoBehaviour {
             OpenLoadingScreen();
             CloseMainMenuUI();
             OpenInGameUI();
-            ClosePauseMenu();
-            CloseGameEndMenu();
             StartFadeFromLoadingScreen();
         }
     }
@@ -312,7 +314,9 @@ public class Core_UIManager : MonoBehaviour {
 
     private void OnGameEnd(int newWinnerIndex)
     {
+        matchStarted = false;
         ResetOffscreenTargetFollowing();
+        DestroyOffscreenIndicators();
 
         if (currentGameModeIndex == gameModeSingleplayerIndex)
         {
@@ -345,15 +349,6 @@ public class Core_UIManager : MonoBehaviour {
         if (newShip.GetComponent<Core_LocalPlayerController>() == null)
         {
             offscreenIndicatorTargets.Add(newShip.transform);
-            if (offscreenIndicatorTargets.Count > offscreenIndicatorPool.Count)
-            {
-                GameObject newOffscreenIndicator = Instantiate(Resources.Load("UI/HUD/HUDOffscreenIndicator", typeof(GameObject)),
-                     offscreenIndicatorHolder.position, offscreenIndicatorHolder.rotation, offscreenIndicatorHolder) as GameObject;
-                Transform newOffscreenIndicatorTransform = newOffscreenIndicator.transform;
-                offscreenIndicatorDefaultPosition = newOffscreenIndicatorTransform.position;
-                offscreenIndicatorPool.Add(newOffscreenIndicatorTransform);
-                newOffscreenIndicator.SetActive(false);
-            }
         }
     }
 
@@ -363,7 +358,7 @@ public class Core_UIManager : MonoBehaviour {
 
         int minutes = Mathf.FloorToInt(matchTimer / 60f);
         int seconds = Mathf.FloorToInt(matchTimer - minutes * 60);
-        int milliseconds = Mathf.FloorToInt((matchTimer - seconds) * 100);
+        int milliseconds = Mathf.FloorToInt((matchTimer - seconds - minutes * 60) * 100);
 
         if (minutes > 99)
         {
@@ -431,7 +426,7 @@ public class Core_UIManager : MonoBehaviour {
 
     private void LateUpdate()
     {
-        if (followingOffscreenTargets)
+        if (matchStarted)
         {
             FollowOffscreenTargets();
         }
@@ -707,6 +702,10 @@ public class Core_UIManager : MonoBehaviour {
 
         inGameUIHolder.SetActive(true);
         offscreenIndicatorHolder.gameObject.SetActive(true);
+
+        ClosePauseMenu();
+        CloseGameEndMenu();
+
         HUDOnline();
         uiState = UIState.INGAMEDEFAULT;
     }
@@ -743,8 +742,6 @@ public class Core_UIManager : MonoBehaviour {
             Destroy(pauseMenuHolder);
         }
         inGameUIHolder.SetActive(false);
-        ResetOffscreenTargetFollowing();
-        DestroyOffscreenIndicators();
         HUDOffline();
     }
 
@@ -866,12 +863,16 @@ public class Core_UIManager : MonoBehaviour {
         OpenLoadingScreen();
         ClosePauseMenu();
         ResetOffscreenTargetFollowing();
+        DestroyOffscreenIndicators();
         em.BroadcastGameRestart();
     }
 
     private void PauseMenuMainMenuButtonPressed()
     {
         OpenLoadingScreen();
+        ClosePauseMenu();
+        ResetOffscreenTargetFollowing();
+        DestroyOffscreenIndicators();
         em.BroadcastRequestSceneSingleMainMenu();
     }
     #endregion
@@ -886,7 +887,7 @@ public class Core_UIManager : MonoBehaviour {
     }
     #endregion
 
-    #region Match timer & Loading screen fade
+    #region MatchStartTimer & Loading screen fade
     private void UpdateMatchStartTimer(int newTimerValue)
     {
         matchStartTimerValue = newTimerValue;
@@ -919,21 +920,37 @@ public class Core_UIManager : MonoBehaviour {
     #region Offscreen indicators
     private void FollowOffscreenTargets()
     {
-        if(offscreenIndicatorTargets.Count > 0)
+        if (offscreenIndicatorTargets.Count > 0)
         {
             for (int i = 0; i < offscreenIndicatorTargets.Count; i++)
             {
                 if (offscreenIndicatorTargets[i] == null)
                 {
-                    Debug.Log("Removing element " + i);
                     offscreenIndicatorTargets.RemoveAt(i);
-                    offscreenIndicatorPool[offscreenIndicatorTargets.Count].gameObject.SetActive(false);
-                    offscreenIndicatorPool[offscreenIndicatorTargets.Count].position = offscreenIndicatorDefaultPosition;
-                    Debug.Log("New offscreenIndicatorTargets.Count: " + offscreenIndicatorTargets.Count);
+                    //Destroy obsolete indicators
+                    if (offscreenIndicatorPool.Count >= offscreenIndicatorTargets.Count)
+                    {
+                        if (offscreenIndicatorPool[offscreenIndicatorTargets.Count].gameObject != null)
+                        {
+                            Destroy(offscreenIndicatorPool[offscreenIndicatorTargets.Count].gameObject);
+                        }
+                        offscreenIndicatorPool.RemoveAt(offscreenIndicatorTargets.Count);
+                    }
                     i--;
                 }
                 else
                 {
+                    //If not enough indicators, create a new one
+                    if (offscreenIndicatorTargets.Count > offscreenIndicatorPool.Count)
+                    {
+                        GameObject newOffscreenIndicator = Instantiate(Resources.Load("UI/HUD/HUDOffscreenIndicator", typeof(GameObject)),
+                             offscreenIndicatorHolder.position, offscreenIndicatorHolder.rotation, offscreenIndicatorHolder) as GameObject;
+                        Transform newOffscreenIndicatorTransform = newOffscreenIndicator.transform;
+                        offscreenIndicatorDefaultPosition = newOffscreenIndicatorTransform.position;
+                        offscreenIndicatorPool.Add(newOffscreenIndicatorTransform);
+                        newOffscreenIndicator.SetActive(false);
+                    }
+
                     Transform target = offscreenIndicatorTargets[i];
                     Transform indicator = offscreenIndicatorPool[i];
                     Vector3 screenPosition = Camera.main.WorldToViewportPoint(target.position);
@@ -948,9 +965,6 @@ public class Core_UIManager : MonoBehaviour {
                     else
                     {
                         //Target is outside of screenspace
-                        if (i > offscreenIndicatorPool.Count)
-                            Debug.LogError("More ships than indicators! Implement spawning system if neccessary.");
-                 
                         if (!indicator.gameObject.activeSelf)
                         {
                             indicator.gameObject.SetActive(true);
@@ -1036,7 +1050,6 @@ public class Core_UIManager : MonoBehaviour {
 
     private void ResetOffscreenTargetFollowing()
     {
-        followingOffscreenTargets = false;
         offscreenIndicatorTargets.Clear();
         foreach(Transform indicator in offscreenIndicatorPool)
         {

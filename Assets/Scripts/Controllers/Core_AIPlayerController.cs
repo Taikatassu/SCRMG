@@ -31,6 +31,7 @@ public class Core_AIPlayerController : Core_ShipController {
     float changeDirectionTimerDuration = -1;
     float directionChangeLerpDuration = -1;
     float shootingRange = -1;
+    float preferredMaxDistanceToTarget = -1;
     #endregion
 
     #region Awake & GetStates
@@ -53,6 +54,7 @@ public class Core_AIPlayerController : Core_ShipController {
         closestTargetTimerFrames = Mathf.RoundToInt(closestTargetTimerDuration / Time.fixedDeltaTime);
         changeDirectionTimerFrames = Mathf.RoundToInt(changeDirectionTimerDuration / Time.fixedDeltaTime);
         changeDirectionTimer = 0;
+        preferredMaxDistanceToTarget = lib.aiVariables.preferredMaxDistanceToTarget;
     }
     #endregion
 
@@ -240,6 +242,17 @@ public class Core_AIPlayerController : Core_ShipController {
                 directionChangeLerping = false;
             }
         }
+
+        //If target is too far
+        if (DistanceToObject(currentTarget.position) > preferredMaxDistanceToTarget)
+        {
+            newMovementDirection = (currentTarget.position - transform.position).normalized;
+            changeDirectionTimer = changeDirectionTimerFrames;
+
+            oldMovementDirection = movementDirection;
+            directionChangeLerpStartTime = Time.time;
+            directionChangeLerping = true;
+        }
         #endregion
 
         #region Shooting behaviour
@@ -297,13 +310,14 @@ public class Core_AIPlayerController : Core_ShipController {
     {
         if (collision.collider.gameObject.CompareTag("Environment"))
         {
-            float angle = Vector3.Angle(transform.forward, movementDirection);
-            newMovementDirection = RandomizeDirection((int)-angle - 45, (int)-angle + 45);
-            changeDirectionTimer = changeDirectionTimerFrames;
+            //float angle = Vector3.Angle(transform.forward, movementDirection);
+            //newMovementDirection = RandomizeDirection((int)-angle - 45, (int)-angle + 45);
+            //changeDirectionTimer = changeDirectionTimerFrames;
 
-            oldMovementDirection = movementDirection;
-            directionChangeLerpStartTime = Time.time;
-            directionChangeLerping = true;
+            //oldMovementDirection = movementDirection;
+            //directionChangeLerpStartTime = Time.time;
+            //directionChangeLerping = true;
+            movementDirection = -movementDirection;
         }
     }
 }

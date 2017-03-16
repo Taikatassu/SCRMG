@@ -39,6 +39,7 @@ public class Core_ShipController : MonoBehaviour {
     int gameModeSingleplayerIndex = -1;
     int gameModeNetworkMultiplayerIndex = -1;
     int gameModeLocalMultiplayerIndex = -1;
+    int powerUpType = -1;
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
@@ -132,6 +133,7 @@ public class Core_ShipController : MonoBehaviour {
         }
         else if (currentTimerValue == 0)
         {
+            powerUpType = 0;
             SetIsMoveable(true);
             SetIsVulnerable(true);
             SetCanShoot(true);
@@ -299,7 +301,7 @@ public class Core_ShipController : MonoBehaviour {
         if (collidedObjectTag == shipTag)
         {
             //Spawn hit effect
-            GameObject bulletHitEffect = Instantiate(Resources.Load("BulletHitEffect"),
+            GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
                 projectile.transform.position, Quaternion.identity) as GameObject;
             bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
 
@@ -311,7 +313,7 @@ public class Core_ShipController : MonoBehaviour {
         else if (collidedObjectTag == environmentTag)
         {
             //Spawn hit effect
-            GameObject bulletHitEffect = Instantiate(Resources.Load("BulletHitEffect"),
+            GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
                 projectile.transform.position, Quaternion.identity) as GameObject;
             bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
 
@@ -326,21 +328,35 @@ public class Core_ShipController : MonoBehaviour {
         {
             if (canShoot && !shootOnCooldown)
             {
-                //Spawn bullet at shipTurret position & rotation
-                GameObject newBullet = Instantiate(Resources.Load("Bullet", typeof(GameObject)),
-                    turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
-                Physics.IgnoreCollision(newBullet.GetComponent<Collider>(),
-                    GetComponentInChildren<Collider>());
 
-                Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
-                newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.BULLET);
-                newBulletScript.SetShipController(this);
-                newBulletScript.SetProjectileColor(myShipColor);
 
-                projectileList.Add(newBulletScript);
-                //Set shoot on cooldown
-                shootCooldownFrameTimer = shootCooldownFrames;
-                shootOnCooldown = true;
+                if (powerUpType == 0)
+                {
+                    //Default weapon
+                    //Spawn bullet at shipTurret position & rotation
+                    GameObject newBullet = Instantiate(Resources.Load("Projectiles/Bullet", typeof(GameObject)),
+                        turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
+                    Physics.IgnoreCollision(newBullet.GetComponent<Collider>(),
+                        GetComponentInChildren<Collider>());
+
+                    Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
+                    newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.BULLET);
+                    newBulletScript.SetShipController(this);
+                    newBulletScript.SetProjectileColor(myShipColor);
+
+                    projectileList.Add(newBulletScript);
+                    //Set shoot on cooldown
+                    shootCooldownFrameTimer = shootCooldownFrames;
+                    shootOnCooldown = true;
+                }
+                else if (powerUpType == 1)
+                {
+                    //Laser beam?
+                }
+                else if (powerUpType == 2)
+                {
+                    //Area of effect bombs / black holes?
+                }
             }
         }
     }
@@ -373,6 +389,11 @@ public class Core_ShipController : MonoBehaviour {
     protected void SetCanShoot(bool state)
     {
         canShoot = state;
+    }
+
+    public void SetPowerUpType(int newType)
+    {
+        powerUpType = newType;
     }
 
     public void SetShipColor(Color newColor)
@@ -444,7 +465,7 @@ public class Core_ShipController : MonoBehaviour {
         //Start spectator mode if player
         em.BroadcastShipDead(index);
         
-        GameObject shipDeathEffect = Instantiate(Resources.Load("ShipDeathEffect"),
+        GameObject shipDeathEffect = Instantiate(Resources.Load("Effects/ShipDeathEffect"),
             transform.position, Quaternion.identity) as GameObject;
         shipDeathEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
 

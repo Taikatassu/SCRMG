@@ -82,6 +82,7 @@ public class Core_Projectile : MonoBehaviour {
                 break;
             case EProjectileType.BULLET:
                 projectileSpeed = bulletSpeed;
+                //TODO: This calculation is wrong, bulletRange 50 should cover the whole arena, currently 200 is minimum requirement?
                 projectileLifetimeFrames = Mathf.RoundToInt((bulletRange / projectileSpeed) / Time.fixedDeltaTime);
                 projectileLifetimeTimer = projectileLifetimeFrames;
                 break;

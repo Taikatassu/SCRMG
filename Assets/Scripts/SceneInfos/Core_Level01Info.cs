@@ -12,6 +12,7 @@ public class Core_Level01Info : MonoBehaviour {
     Core_GameManager gameManager;
     Core_GlobalVariableLibrary lib;
     List<Transform> respawnPoints = new List<Transform>();
+    List<Transform> powerUpPositions = new List<Transform>();
     //Variables coming from globalVariableLibrary
     int mySceneIndex = 0;
     #endregion
@@ -32,12 +33,20 @@ public class Core_Level01Info : MonoBehaviour {
             respawnPoints.Add(child);
         }
 
+        Transform powerUpPositionHolder = transform.
+            GetComponentInChildren<Core_PowerUpPositionsHolderTag>().transform;
+        foreach(Transform child in powerUpPositionHolder)
+        {
+            powerUpPositions.Add(child);
+        }
+
         //Find globalVariableLibrary and get variables from it
         lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         GetStats();
 
         //Send respawnPoint list to GameManager and broadcast NewSceneLoaded
         gameManager.SetRespawnPoints(respawnPoints);
+        gameManager.SetPowerUpPositions(powerUpPositions);
         em.BroadcastNewSceneLoaded(mySceneIndex);
     }
     #endregion

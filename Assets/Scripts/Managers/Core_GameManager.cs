@@ -16,6 +16,7 @@ public class Core_GameManager : MonoBehaviour {
     Core_EventManager em;
     Core_GlobalVariableLibrary lib;
     List<Transform> respawnPoints = new List<Transform>();
+    List<Transform> powerUpPositions = new List<Transform>();
     List<GameObject> currentlyAliveShips = new List<GameObject>();
     GameObject currentPlayerCamera;
     //Variables coming from within the script
@@ -27,6 +28,7 @@ public class Core_GameManager : MonoBehaviour {
     bool matchStartTimerRunning = false;
     bool isPaused = false;
     bool matchStarted = false;
+    bool inGame = false;
     int fixedUpdateLoopCounter = -1;
     int fixedUpdateLoopsPerSecond = -1;
     int matchStartTimerValue = -1;
@@ -40,7 +42,7 @@ public class Core_GameManager : MonoBehaviour {
     int gameModeLocalMultiplayerIndex = -1;
     int numberOfShips; //Can also be set with the public "SetNumberOfShips()"-function
     int matchStartTimerLength = -1;
-    //int sceneIndexMainMenu = -1;
+    int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
     #endregion
 
@@ -79,7 +81,7 @@ public class Core_GameManager : MonoBehaviour {
         shipColorOptions = lib.shipVariables.shipColorOptions;
         matchStartTimerLength = lib.sceneVariables.matchStartTimerLength;
         numberOfShips = lib.sceneVariables.numberOfShips;
-        //sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
+        sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
     }
     #endregion
@@ -88,8 +90,8 @@ public class Core_GameManager : MonoBehaviour {
     private void OnEnable()
     {
         em.OnGameRestart += OnGameRestart;
+        em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnNewSceneLoaded += OnNewSceneLoaded;
-        //em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnShipDead += OnShipDead;
         em.OnSetGameMode += OnSetGameMode;
         em.OnPauseOn += OnPauseOn;
@@ -99,8 +101,8 @@ public class Core_GameManager : MonoBehaviour {
     private void OnDisable()
     {
         em.OnGameRestart -= OnGameRestart;
+        em.OnNewSceneLoading -= OnNewSceneLoading;
         em.OnNewSceneLoaded -= OnNewSceneLoaded;
-        //em.OnNewSceneLoading -= OnNewSceneLoading;
         em.OnShipDead -= OnShipDead;
         em.OnSetGameMode -= OnSetGameMode;
         em.OnPauseOn -= OnPauseOn;
@@ -110,16 +112,6 @@ public class Core_GameManager : MonoBehaviour {
     #endregion
 
     #region Subscribers
-    // TODO: Remove if deemed permanently obsolete
-    //private void OnNewSceneLoading(int sceneIndex)
-    //{
-    //    //TODO: Remember to implement check for all future scenes
-    //    if (sceneIndex == sceneIndexMainMenu)
-    //    {
-    //        //DestroyAllShipsAndCamera();
-    //    }
-    //}
-
     private void OnPauseOn()
     {
         if (currentGameModeIndex == gameModeSingleplayerIndex)
@@ -152,11 +144,32 @@ public class Core_GameManager : MonoBehaviour {
         }
     }
     
+    private void OnNewSceneLoading(int sceneIndex)
+    {
+        //TODO: Remember to implement check for all future scenes
+        if (sceneIndex == sceneIndexMainMenu)
+        {
+            matchStarted = false;
+            inGame = false;
+        }
+        else if (sceneIndex == sceneIndexLevel01)
+        {
+            DestroyAllShipsAndCamera();
+            resetUsedShipColors = true;
+            resetUsedSpawnPointsList = true;
+        }
+    }
+
     private void OnNewSceneLoaded(int sceneIndex)
     {
         //TODO: Remember to implement check for all future scenes
-        if (sceneIndex == sceneIndexLevel01)
+        if (sceneIndex == sceneIndexMainMenu)
         {
+
+        }
+        else if (sceneIndex == sceneIndexLevel01)
+        {
+            inGame = true;
             DestroyAllShipsAndCamera();
             resetUsedShipColors = true;
             resetUsedSpawnPointsList = true;
@@ -236,7 +249,7 @@ public class Core_GameManager : MonoBehaviour {
         for (int i = 0; i < numberOfShips; i++ )
         {
             Transform spawnPoint = FindAvailableSpawnPoint();
-            GameObject newShip = Instantiate(Resources.Load("Ship", typeof(GameObject)),
+            GameObject newShip = Instantiate(Resources.Load("Ships/Ship", typeof(GameObject)),
                 spawnPoint.position, spawnPoint.rotation) as GameObject;
             Core_ShipController newShipController;
             Color newShipColor = FindNewShipColor();
@@ -248,13 +261,13 @@ public class Core_GameManager : MonoBehaviour {
                 {
                     newShipController =
                         newShip.AddComponent<Core_LocalPlayerController>();
-                    GameObject newPlayerIndicator = Instantiate(Resources.Load("PlayerIndicator",
+                    GameObject newPlayerIndicator = Instantiate(Resources.Load("Effects/PlayerIndicator",
                         typeof(GameObject)), newShip.transform.position, Quaternion.identity,
                         newShip.transform) as GameObject;
                     //Set playerIndicator color
                     ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
                     pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
-                    currentPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
+                    currentPlayerCamera = Instantiate(Resources.Load("Cameras/PlayerCamera",
                         typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
                     Core_CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<Core_CameraController>();
                     currentCameraScript.SetTarget(newShip.transform);
@@ -342,6 +355,17 @@ public class Core_GameManager : MonoBehaviour {
         //    em.BroadcastShipReference(currentlyAliveShips[j]);
         //}
         #endregion
+
+        #region Instantiate  PowerUps
+        //int powerUpBaseIndexCounter = 0;
+        //foreach (Transform position in powerUpPositions)
+        //{
+        //    powerUpBaseIndexCounter++;
+        //    GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpBase", typeof(GameObject)), position.position,
+        //        Quaternion.identity) as GameObject;
+        //    newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpBaseIndex(powerUpBaseIndexCounter);
+        //}
+        #endregion
     }
     #endregion
 
@@ -349,6 +373,11 @@ public class Core_GameManager : MonoBehaviour {
     public void SetRespawnPoints(List<Transform> newRespawnPoints)
     {
         respawnPoints = newRespawnPoints;
+    }
+
+    public void SetPowerUpPositions(List<Transform> newPowerUpPositions)
+    {
+        powerUpPositions = newPowerUpPositions;
     }
 
     public void SetNumberOfShips(int newNumberOfShips)
@@ -419,37 +448,43 @@ public class Core_GameManager : MonoBehaviour {
     #region Update & FixedUpdate
     private void Update()
     {
-        #region HUD Timer
-        if (matchStarted && !isPaused)
+        if (inGame)
         {
-            matchTimer += Time.deltaTime;
-            em.BroadcastMatchTimerValueChange(matchTimer);
+            #region HUD Timer
+            if (matchStarted && !isPaused)
+            {
+                matchTimer += Time.deltaTime;
+                em.BroadcastMatchTimerValueChange(matchTimer);
+            }
+            #endregion
         }
-        #endregion
     }
 
     private void FixedUpdate()
     {
-        #region MatchStartTimer
-        if (!isPaused)
+        if(inGame)
         {
-            if (matchStartTimerRunning)
+            #region MatchStartTimer
+            if (!isPaused)
             {
-                fixedUpdateLoopCounter++;
-                if (fixedUpdateLoopCounter >= fixedUpdateLoopsPerSecond)
+                if (matchStartTimerRunning)
                 {
-                    matchStartTimerValue--;
-                    em.BroadcastMatchStartTimerValueChange(matchStartTimerValue);
-                    if (matchStartTimerValue <= 0)
+                    fixedUpdateLoopCounter++;
+                    if (fixedUpdateLoopCounter >= fixedUpdateLoopsPerSecond)
                     {
-                        matchStarted = true;
-                        matchStartTimerRunning = false;
+                        matchStartTimerValue--;
+                        em.BroadcastMatchStartTimerValueChange(matchStartTimerValue);
+                        if (matchStartTimerValue <= 0)
+                        {
+                            matchStarted = true;
+                            matchStartTimerRunning = false;
+                        }
+                        fixedUpdateLoopCounter = 0;
                     }
-                    fixedUpdateLoopCounter = 0;
                 }
             }
+            #endregion
         }
-        #endregion
     }
     #endregion
 

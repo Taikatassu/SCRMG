@@ -74,7 +74,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public string shipTag = "Ship";
         public string environmentTag = "Environment";
         public string mouseRayCollisionLayerName = "MouseRayCollider";
-        public float movementSpeed = 10;
+        public float movementSpeed = 12;
         public float maxHealth = 100;
         public float shipTurretRotationSpeed = 10;
         public float shipHullRotationSpeed = 10;
@@ -118,6 +118,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float closestTargetTimerDuration = 1;
         public float changeDirectionTimerDuration = 4;
         public float directionChangeLerpDuration = 1f;
-        public float shootingRange = 15;
+        public float shootingRange = 18;
+        public float preferredMaxDistanceToTarget = 35;
     }
 }
