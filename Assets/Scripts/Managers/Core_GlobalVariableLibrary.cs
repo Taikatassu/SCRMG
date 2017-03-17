@@ -85,6 +85,9 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float healthBarLerpDuration = 0.5f;
         public float bulletSpeed = 60;
         public float bulletRange = 200;
+        public float rubberBulletSpeed = 180;
+        public float rubberBulletRange = 600;
+        public int rubberBulletRicochetNumber = 3;
         public float cameraSpectatingHeight = 45;
         public float cameraFollowDistance = 0;
         public float cameraFollowHeight = 20;

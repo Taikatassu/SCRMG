@@ -357,14 +357,14 @@ public class Core_GameManager : MonoBehaviour {
         #endregion
 
         #region Instantiate  PowerUps
-        //int powerUpBaseIndexCounter = 0;
-        //foreach (Transform position in powerUpPositions)
-        //{
-        //    powerUpBaseIndexCounter++;
-        //    GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpBase", typeof(GameObject)), position.position,
-        //        Quaternion.identity) as GameObject;
-        //    newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpBaseIndex(powerUpBaseIndexCounter);
-        //}
+        int powerUpBaseIndexCounter = 0;
+        foreach (Transform position in powerUpPositions)
+        {
+            powerUpBaseIndexCounter++;
+            GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpBase", typeof(GameObject)), position.position,
+                Quaternion.identity) as GameObject;
+            newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpBaseIndex(powerUpBaseIndexCounter);
+        }
         #endregion
     }
     #endregion

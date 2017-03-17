@@ -14,16 +14,24 @@ public class Core_Projectile : MonoBehaviour {
     Core_EventManager em;
     Core_ShipController myShipController;
     Rigidbody rb;
+    BoxCollider projectileCollider;
+    GameObject projectileVisuals;
     //Variables coming from within the script 
-    public enum EProjectileType { DEFAULT, BULLET }
+    public enum EProjectileType { DEFAULT, BULLET, RUBBERBULLET }
     EProjectileType projectileType = EProjectileType.DEFAULT;
     bool isPaused = false;
     float projectileSpeed = -1;
     int projectileLifetimeFrames = -1;
     int projectileLifetimeTimer = -1;
+    int projectileRicochetCounter = -1;
+    int projectileRicochetNumber = -1;
     //Variables coming from GlobalVariableLibrary
     float bulletSpeed = -1;
     float bulletRange = -1;
+    float rubberBulletSpeed = -1;
+    float rubberBulletRange = -1;
+    int rubberBulletRicochetNumber = -1;
+    string environmentTag = "Environment";
     #endregion
 
     #region Initialization
@@ -39,8 +47,12 @@ public class Core_Projectile : MonoBehaviour {
 
     private void GetStats()
     {
+        environmentTag = lib.shipVariables.environmentTag;
         bulletSpeed = lib.shipVariables.bulletSpeed;
         bulletRange = lib.shipVariables.bulletRange;
+        rubberBulletSpeed = lib.shipVariables.rubberBulletSpeed;
+        rubberBulletRange = lib.shipVariables.rubberBulletRange;
+        rubberBulletRicochetNumber = lib.shipVariables.rubberBulletRicochetNumber;
     }
     #endregion
 
@@ -85,6 +97,22 @@ public class Core_Projectile : MonoBehaviour {
                 //TODO: This calculation is wrong, bulletRange 50 should cover the whole arena, currently 200 is minimum requirement?
                 projectileLifetimeFrames = Mathf.RoundToInt((bulletRange / projectileSpeed) / Time.fixedDeltaTime);
                 projectileLifetimeTimer = projectileLifetimeFrames;
+                projectileVisuals = Instantiate(Resources.Load("Projectiles/Visuals/BulletVisuals", typeof(GameObject)), 
+                    transform) as GameObject;
+                projectileCollider = GetComponent<BoxCollider>();
+                projectileCollider.size = new Vector3(0.4f, 0.4f, 0.8f);
+                break;
+            case EProjectileType.RUBBERBULLET:
+                projectileSpeed = rubberBulletSpeed;
+                //TODO: This calculation is wrong, bulletRange 50 should cover the whole arena, currently 200 is minimum requirement?
+                projectileLifetimeFrames = Mathf.RoundToInt((rubberBulletRange / projectileSpeed) / Time.fixedDeltaTime);
+                projectileLifetimeTimer = projectileLifetimeFrames;
+                projectileRicochetCounter = 0;
+                projectileRicochetNumber = rubberBulletRicochetNumber;
+                projectileVisuals = Instantiate(Resources.Load("Projectiles/Visuals/RubberBulletVisuals", typeof(GameObject)),
+                    transform) as GameObject;
+                projectileCollider = GetComponent<BoxCollider>();
+                projectileCollider.size = new Vector3(0.8f, 0.8f, 0.8f);
                 break;
         }
     }
@@ -97,7 +125,11 @@ public class Core_Projectile : MonoBehaviour {
     public void SetProjectileColor(Color newColor)
     {
         //TODO: Change this if projectile hierarchy changes!
-        transform.GetChild(0).GetComponent<Renderer>().material.SetColor("_TintColor", newColor);
+        projectileVisuals.GetComponent<Renderer>().material.SetColor("_TintColor", newColor);
+        if (projectileType == EProjectileType.RUBBERBULLET)
+        {
+            projectileVisuals.GetComponent<TrailRenderer>().material.SetColor("_TintColor", newColor);  //material.SetColor("_TintColor", newColor);
+        }
     }
     #endregion
     #endregion
@@ -130,8 +162,25 @@ public class Core_Projectile : MonoBehaviour {
     #region Collision detection
     private void OnTriggerEnter(Collider collider)
     {
-        if (myShipController != null)
-            myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
+        if (projectileType == EProjectileType.BULLET)
+        {
+            if (myShipController != null)
+                myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
+        }
+        else if (projectileType == EProjectileType.RUBBERBULLET)
+        {
+            string collidedObjectTag = collider.gameObject.tag;
+            if (projectileRicochetCounter < projectileRicochetNumber && collidedObjectTag == environmentTag)
+            {
+                Vector3 originalRotation = transform.eulerAngles;
+                transform.eulerAngles = new Vector3(originalRotation.x, originalRotation.y + 180, originalRotation.z);
+            }
+            else
+            {
+                if (myShipController != null)
+                    myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
+            }
+        }
     }
     #endregion
 

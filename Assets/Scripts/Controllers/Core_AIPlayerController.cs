@@ -244,7 +244,7 @@ public class Core_AIPlayerController : Core_ShipController {
         }
 
         //If target is too far
-        if (DistanceToObject(currentTarget.position) > preferredMaxDistanceToTarget)
+        if (currentTarget != null && DistanceToObject(currentTarget.position) > preferredMaxDistanceToTarget)
         {
             newMovementDirection = (currentTarget.position - transform.position).normalized;
             changeDirectionTimer = changeDirectionTimerFrames;

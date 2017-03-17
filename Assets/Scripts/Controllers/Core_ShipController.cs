@@ -33,13 +33,15 @@ public class Core_ShipController : MonoBehaviour {
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
     float healthBarLerpStartTime = -1;
+    float powerUpDuration = -1;
+    public int currentGameModeIndex = -1;
     int shootCooldownFrames = -1;
     int shootCooldownFrameTimer = -1;
-    public int currentGameModeIndex = -1;
     int gameModeSingleplayerIndex = -1;
     int gameModeNetworkMultiplayerIndex = -1;
     int gameModeLocalMultiplayerIndex = -1;
     int powerUpType = -1;
+    int powerUpTimer = -1;
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
@@ -47,6 +49,7 @@ public class Core_ShipController : MonoBehaviour {
     bool shootOnCooldown = false;
     bool updatingHealthBar = false;
     bool isPaused = false;
+    bool isPoweredUp = false;
     protected bool rotatingTurret = false;
 
     //Values coming from GlobalVariableLibrary
@@ -261,6 +264,22 @@ public class Core_ShipController : MonoBehaviour {
             }
         }
         #endregion
+
+        #region PowerUp timer
+        if (!isPaused)
+        {
+            if (isPoweredUp)
+            {
+                powerUpTimer--;
+                if (powerUpTimer <= 0)
+                {
+                    isPoweredUp = false;
+                    powerUpType = 0;
+                    //TODO: Implement proper method for removing powerUps (disable visuals, broadcast change etc.)
+                }
+            }
+        }
+        #endregion
     }
     #endregion
 
@@ -328,13 +347,11 @@ public class Core_ShipController : MonoBehaviour {
         {
             if (canShoot && !shootOnCooldown)
             {
-
-
                 if (powerUpType == 0)
                 {
                     //Default weapon
                     //Spawn bullet at shipTurret position & rotation
-                    GameObject newBullet = Instantiate(Resources.Load("Projectiles/Bullet", typeof(GameObject)),
+                    GameObject newBullet = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
                         turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
                     Physics.IgnoreCollision(newBullet.GetComponent<Collider>(),
                         GetComponentInChildren<Collider>());
@@ -351,7 +368,22 @@ public class Core_ShipController : MonoBehaviour {
                 }
                 else if (powerUpType == 1)
                 {
-                    //Laser beam?
+                    //Rubber bullets
+                    //Spawn bullet at shipTurret position & rotation
+                    GameObject newBullet = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
+                        turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
+                    Physics.IgnoreCollision(newBullet.GetComponent<Collider>(),
+                        GetComponentInChildren<Collider>());
+
+                    Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
+                    newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.RUBBERBULLET);
+                    newBulletScript.SetShipController(this);
+                    newBulletScript.SetProjectileColor(myShipColor);
+
+                    projectileList.Add(newBulletScript);
+                    //Set shoot on cooldown
+                    shootCooldownFrameTimer = shootCooldownFrames;
+                    shootOnCooldown = true;
                 }
                 else if (powerUpType == 2)
                 {
@@ -393,7 +425,14 @@ public class Core_ShipController : MonoBehaviour {
 
     public void SetPowerUpType(int newType)
     {
+        //TODO: Remove juice
         powerUpType = newType;
+        if (powerUpType == 1)
+        {
+            powerUpDuration = 5f;
+        }
+        powerUpTimer = Mathf.RoundToInt(powerUpDuration / Time.fixedDeltaTime);
+        isPoweredUp = true;
     }
 
     public void SetShipColor(Color newColor)

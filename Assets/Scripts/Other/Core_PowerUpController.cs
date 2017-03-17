@@ -8,7 +8,7 @@ public class Core_PowerUpController : MonoBehaviour {
     ParticleSystem powerUpPickupEffect;
     GameObject powerUpObject;
 
-    float powerUpCooldown = 5;
+    float powerUpCooldown = 10;
     int powerUpCooldownTimer = 0;
     int powerUpType = -1;
     int powerUpBaseIndex = -1;
@@ -73,6 +73,7 @@ public class Core_PowerUpController : MonoBehaviour {
                 Debug.Log("Ship entered trigger, powerUp type: " + powerUpType);
                 Core_ShipController collidingShipController = collider.transform.GetComponentInParent<Core_ShipController>();
                 //Tell shipController which powerUp was received
+                collidingShipController.SetPowerUpType(1);
 
                 powerUpPickupEffect.Play();
                 powerUpCooldownTimer = Mathf.RoundToInt(powerUpCooldown / Time.fixedDeltaTime);
