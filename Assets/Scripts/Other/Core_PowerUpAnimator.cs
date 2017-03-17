@@ -4,6 +4,10 @@ using UnityEngine;
 
 public class Core_PowerUpAnimator : MonoBehaviour {
 
+    #region References & variables
+    Core_Toolbox toolbox;
+    Core_EventManager em;
+    //Core_GlobalVariableLibrary lib;
     Transform floatingPart;
     Transform rotatingPart;
     Transform tiltingPart;
@@ -12,26 +16,61 @@ public class Core_PowerUpAnimator : MonoBehaviour {
     float originalY;
     float floatingDistance = 0.25f;
     float floatingSpeed = 2f;
+    bool isPaused = false;
+    #endregion
 
-    void Awake()
+    #region Awake
+    private void Awake()
     {
+        toolbox = FindObjectOfType<Core_Toolbox>();
+        em = toolbox.GetComponent<Core_EventManager>();
+        //lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         floatingPart = transform.GetChild(0);
         rotatingPart = floatingPart.GetChild(0);
         tiltingPart = rotatingPart.GetChild(0);
         originalPosition = floatingPart.position;
         originalY = floatingPart.position.y;
     }
+    #endregion
 
-    void OnEnable ()
+    #region OnEnable & OnDisable
+    private void OnEnable ()
     {
+        em.OnPauseOn += OnPauseOn;
+        em.OnPauseOff += OnPauseOff;
         floatingPart.position = originalPosition;
         newPosition = originalPosition;
     }
-	
-	void Update () {
-        rotatingPart.Rotate(new Vector3(0, 0.25f, 0));
-        tiltingPart.Rotate(new Vector3(0.25f, 0, 0));
-        newPosition.y = originalY + floatingDistance * Mathf.Sin(floatingSpeed * Time.time);
-        floatingPart.position = newPosition;
+
+    private void OnDisable()
+    {
+        em.OnPauseOn -= OnPauseOn;
+        em.OnPauseOff -= OnPauseOff;
     }
+    #endregion
+
+    #region Subscribers
+    private void OnPauseOn()
+    {
+        isPaused = true;
+    }
+    
+    private void OnPauseOff()
+    {
+        isPaused = false;
+    }
+    #endregion
+
+    #region Update
+    private void Update ()
+    {
+        if (!isPaused)
+        {
+            rotatingPart.Rotate(new Vector3(0, 0.25f, 0));
+            tiltingPart.Rotate(new Vector3(0.25f, 0, 0));
+            newPosition.y = originalY + floatingDistance * Mathf.Sin(floatingSpeed * Time.time);
+            floatingPart.position = newPosition;
+        }
+    }
+    #endregion
 }

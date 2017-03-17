@@ -234,7 +234,8 @@ public class Core_UIManager : MonoBehaviour {
         em.OnNewSceneLoaded += OnNewSceneLoaded;
         em.OnEscapeButtonDown += OnEscapeButtonDown;
         em.OnSetGameMode += OnSetGameMode;
-        em.OnGameEnd += OnGameEnd;
+        em.OnMatchStarted += OnMatchStarted;
+        em.OnMatchEnded += OnMatchEnded;
         em.OnShipReference += OnShipReference;
         em.OnMatchTimerValueChange += OnMatchTimerValueChange;
     }
@@ -247,7 +248,8 @@ public class Core_UIManager : MonoBehaviour {
         em.OnNewSceneLoaded -= OnNewSceneLoaded;
         em.OnEscapeButtonDown -= OnEscapeButtonDown;
         em.OnSetGameMode -= OnSetGameMode;
-        em.OnGameEnd -= OnGameEnd;
+        em.OnMatchStarted -= OnMatchStarted;
+        em.OnMatchEnded -= OnMatchEnded;
         em.OnShipReference -= OnShipReference;
         em.OnMatchTimerValueChange -= OnMatchTimerValueChange;
     }
@@ -257,12 +259,7 @@ public class Core_UIManager : MonoBehaviour {
     #region GameEvent subscribers
     private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
-        UpdateMatchStartTimer(currentTimerValue);
-
-        if (currentTimerValue == 0)
-        {
-            matchStarted = true;
-        }
+        UpdateMatchStartTimer(currentTimerValue);      
     }
 
     private void OnGameRestart()
@@ -312,7 +309,12 @@ public class Core_UIManager : MonoBehaviour {
         currentGameModeIndex = newGameModeIndex;
     }
 
-    private void OnGameEnd(int newWinnerIndex)
+    private void OnMatchStarted()
+    {
+        matchStarted = true;
+    }
+
+    private void OnMatchEnded(int newWinnerIndex)
     {
         matchStarted = false;
         ResetOffscreenTargetFollowing();

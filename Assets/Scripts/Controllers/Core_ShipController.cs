@@ -23,9 +23,10 @@ public class Core_ShipController : MonoBehaviour {
     Transform shipTurret;
     Transform turretOutputMarker;
     GameObject healthBar;
+    GameObject blazingRam;
     Color myShipColor;
     Core_ShipColorablePartTag[] shipColorableParts;
-    List<Core_Projectile> projectileList = new List<Core_Projectile>();
+    //List<Core_Projectile> projectileList = new List<Core_Projectile>();
 
     //Variables coming from within the script
     protected int index = -1; //Set by gameManager when instantiating ships
@@ -33,7 +34,8 @@ public class Core_ShipController : MonoBehaviour {
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
     float healthBarLerpStartTime = -1;
-    float powerUpDuration = -1;
+    float defaultMovementSpeed = -1;
+    float damageTakenModifier = -1;
     public int currentGameModeIndex = -1;
     int shootCooldownFrames = -1;
     int shootCooldownFrameTimer = -1;
@@ -41,7 +43,6 @@ public class Core_ShipController : MonoBehaviour {
     int gameModeNetworkMultiplayerIndex = -1;
     int gameModeLocalMultiplayerIndex = -1;
     int powerUpType = -1;
-    int powerUpTimer = -1;
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
@@ -53,18 +54,20 @@ public class Core_ShipController : MonoBehaviour {
     protected bool rotatingTurret = false;
 
     //Values coming from GlobalVariableLibrary
-    string shipTag = "Ship";
-    string environmentTag = "Environment";
     protected float maxHealth = -1;
     float movementSpeed = -1;
     float shipTurretRotationSpeed = -1;
     float shipHullRotationSpeed = -1;
     float shootCooldownTime = -1;
-    float shootDamage = -1;
     float healthBarMinValue = -1;
     float healthBarMaxValue = -1;
     float healthBarLerpDuration = -1;
     protected int buildPlatform = -1; //0 = PC, 1 = Android
+    int powerUpTimer = -1;
+    int rubberBulletsIndex = -1;
+    int blazingRamIndex = -1;
+    int beamCannonIndex = -1;
+    int bombsIndex = -1;
     #endregion
 
     #region Initialization
@@ -88,21 +91,23 @@ public class Core_ShipController : MonoBehaviour {
     protected virtual void GetStats()
     {
         buildPlatform = lib.gameSettingVariables.buildPlatform;
-        shipTag = lib.shipVariables.shipTag;
-        environmentTag = lib.shipVariables.environmentTag;
-        movementSpeed = lib.shipVariables.movementSpeed;
+        defaultMovementSpeed = lib.shipVariables.movementSpeed;
+        movementSpeed = defaultMovementSpeed;
         maxHealth = lib.shipVariables.maxHealth;
         shipTurretRotationSpeed = lib.shipVariables.shipTurretRotationSpeed;
         shipHullRotationSpeed = lib.shipVariables.shipHullRotationSpeed;
         shootCooldownTime = lib.shipVariables.shootCooldownTime;
         shootCooldownFrames = Mathf.RoundToInt(shootCooldownTime / Time.fixedDeltaTime);
-        shootDamage = lib.shipVariables.shootDamage;
         healthBarMinValue = lib.shipVariables.healthBarMinValue;
         healthBarMaxValue = lib.shipVariables.healthBarMaxValue;
         healthBarLerpDuration = lib.shipVariables.healthBarLerpDuration;
         gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
         gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
         gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
+        rubberBulletsIndex = -lib.shipVariables.rubberBulletsIndex;
+        blazingRamIndex = lib.shipVariables.blazingRamIndex;
+        beamCannonIndex = lib.shipVariables.beamCannonIndex;
+        bombsIndex = lib.shipVariables.bombsIndex;
     }
     #endregion
 
@@ -111,17 +116,20 @@ public class Core_ShipController : MonoBehaviour {
     {
         em.OnGameRestart += OnGameRestart;
         em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
-        em.OnGameEnd += OnGameEnd;
+        em.OnMatchStarted += OnMatchStarted;
+        em.OnMatchEnded += OnMatchEnded;
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
+        damageTakenModifier = 1;
     }
 
     protected virtual void OnDisable()
     {
-        DestroyAllProjectiles();
+        //DestroyAllProjectiles();
         em.OnGameRestart -= OnGameRestart;
         em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
-        em.OnGameEnd -= OnGameEnd;
+        em.OnMatchStarted -= OnMatchStarted;
+        em.OnMatchEnded -= OnMatchEnded;
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
     }
@@ -134,13 +142,6 @@ public class Core_ShipController : MonoBehaviour {
         {
             AddHealth(maxHealth * 2);
         }
-        else if (currentTimerValue == 0)
-        {
-            powerUpType = 0;
-            SetIsMoveable(true);
-            SetIsVulnerable(true);
-            SetCanShoot(true);
-        }
     }
 
     private void OnGameRestart()
@@ -149,10 +150,20 @@ public class Core_ShipController : MonoBehaviour {
         //Destroy(gameObject); //Currently done by GameManager
     }
 
-    private void OnGameEnd(int winnerIndex)
+    private void OnMatchStarted()
     {
+        powerUpType = 0;
+        SetIsMoveable(true);
+        SetIsVulnerable(true);
+        SetCanShoot(true);
+    }
+
+    private void OnMatchEnded(int winnerIndex)
+    {
+        powerUpType = 0;
         SetIsVulnerable(false);
         SetIsMoveable(false);
+        SetCanShoot(false);
     }
 
     public void SetGameMode(int newGameModeIndex)
@@ -274,6 +285,13 @@ public class Core_ShipController : MonoBehaviour {
                 if (powerUpTimer <= 0)
                 {
                     isPoweredUp = false;
+                    if (powerUpType == blazingRamIndex)
+                    {
+                        movementSpeed = defaultMovementSpeed;
+                        damageTakenModifier = 1;
+                        canShoot = true;
+                        Destroy(blazingRam);
+                    }
                     powerUpType = 0;
                     //TODO: Implement proper method for removing powerUps (disable visuals, broadcast change etc.)
                 }
@@ -283,63 +301,80 @@ public class Core_ShipController : MonoBehaviour {
     }
     #endregion
 
-    #region Shooting & projectiles
-    private void DestroyAllProjectiles()
-    {
-        int count = projectileList.Count;
-        if (count > 0)
-        {
-            for (int i = 0; i < count; i++)
-            {
-                DestroyProjectile(projectileList[0]);
-            }
-        }
-    }
+    #region Attacking, shooting & projectiles
+    //private void DestroyAllProjectiles()
+    //{
+    //    int count = projectileList.Count;
+    //    if (count > 0)
+    //    {
+    //        for (int i = 0; i < count; i++)
+    //        {
+    //            DestroyProjectile(projectileList[0]);
+    //        }
+    //    }
+    //}
 
-    private void DestroyProjectile(Core_Projectile projectile)
-    {
-        projectileList.Remove(projectile);
-        if (projectile != null)
-            Destroy(projectile.gameObject);
-    }
+    //private void DestroyProjectile(Core_Projectile projectile)
+    //{
+    //    projectileList.Remove(projectile);
+    //    if (projectile != null)
+    //        Destroy(projectile.gameObject);
+    //}
 
-    public void OnProjectileLifetimeEnded(Core_Projectile projectile)
-    {
-        DestroyProjectile(projectile);
-    }
+    //public void OnProjectileLifetimeEnded(Core_Projectile projectile)
+    //{
+    //    DestroyProjectile(projectile);
+    //}
 
-    public void OnProjectileTriggerEnter(Core_Projectile projectile, GameObject collidedObject)
-    {
-        //Check which object collided with
-        //If enemy ship, damage enemyShip
-        //Destroy projectile
-        //Instantiate effect
-        string collidedObjectTag = collidedObject.tag;
+    //public void OnProjectileTriggerEnter(Core_Projectile projectile, GameObject collidedObject, int projectileType)
+    //{
+    //    //Check which object collided with
+    //    //If enemy ship, damage enemyShip
+    //    //Destroy projectile
+    //    //Instantiate effect
+    //    string collidedObjectTag = collidedObject.tag;
 
+    //    if (collidedObjectTag == shipTag)
+    //    {
+    //        //Spawn hit effect
+    //        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+    //            projectile.transform.position, Quaternion.identity) as GameObject;
+    //        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
 
-        if (collidedObjectTag == shipTag)
-        {
-            //Spawn hit effect
-            GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-                projectile.transform.position, Quaternion.identity) as GameObject;
-            bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
+    //        //Damage enemy ship
+    //        collidedObject.GetComponentInParent<Core_ShipController>().TakeDamage(shootDamage);
+    //        //Destroy projectile
+    //        DestroyProjectile(projectile);
+    //    }
+    //    else if (collidedObjectTag == environmentTag)
+    //    {
+    //        //Spawn hit effect
+    //        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+    //            projectile.transform.position, Quaternion.identity) as GameObject;
+    //        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
 
-            //Damage enemy ship
-            collidedObject.GetComponentInParent<Core_ShipController>().TakeDamage(shootDamage);
-            //Destroy projectile
-            DestroyProjectile(projectile);
-        }
-        else if (collidedObjectTag == environmentTag)
-        {
-            //Spawn hit effect
-            GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-                projectile.transform.position, Quaternion.identity) as GameObject;
-            bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
+    //        DestroyProjectile(projectile);
+    //    }
 
-            DestroyProjectile(projectile);
-        }
+    //}
 
-    }
+    //public void OnRamTriggerEnter(GameObject collidedObject)
+    //{
+    //    string collidedObjectTag = collidedObject.tag;
+
+    //    if (collidedObjectTag == shipTag)
+    //    {
+    //        ////Spawn hit effect
+    //        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+    //            transform.position, Quaternion.identity) as GameObject;
+    //        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
+
+    //        //Damage enemy ship
+    //        collidedObject.GetComponentInParent<Core_ShipController>().TakeDamage(shootDamage);
+    //        ////Destroy projectile
+    //        //DestroyProjectile(projectile);
+    //    }
+    //}
 
     protected void Shoot()
     {
@@ -361,7 +396,7 @@ public class Core_ShipController : MonoBehaviour {
                     newBulletScript.SetShipController(this);
                     newBulletScript.SetProjectileColor(myShipColor);
 
-                    projectileList.Add(newBulletScript);
+                    //projectileList.Add(newBulletScript);
                     //Set shoot on cooldown
                     shootCooldownFrameTimer = shootCooldownFrames;
                     shootOnCooldown = true;
@@ -380,7 +415,7 @@ public class Core_ShipController : MonoBehaviour {
                     newBulletScript.SetShipController(this);
                     newBulletScript.SetProjectileColor(myShipColor);
 
-                    projectileList.Add(newBulletScript);
+                    //projectileList.Add(newBulletScript);
                     //Set shoot on cooldown
                     shootCooldownFrameTimer = shootCooldownFrames;
                     shootOnCooldown = true;
@@ -423,15 +458,31 @@ public class Core_ShipController : MonoBehaviour {
         canShoot = state;
     }
 
-    public void SetPowerUpType(int newType)
+    public void SetPowerUpType(int newType, float newDuration)
     {
         //TODO: Remove juice
         powerUpType = newType;
-        if (powerUpType == 1)
+        powerUpTimer = Mathf.RoundToInt(newDuration / Time.fixedDeltaTime);
+        if (powerUpType == rubberBulletsIndex)
         {
-            powerUpDuration = 5f;
+            //TODO: Use this for something?
         }
-        powerUpTimer = Mathf.RoundToInt(powerUpDuration / Time.fixedDeltaTime);
+        else if(powerUpType == blazingRamIndex)
+        {
+            movementSpeed = defaultMovementSpeed * 2.5f;
+            damageTakenModifier = 0.5f;
+            canShoot = false;
+            blazingRam = Instantiate(Resources.Load("PowerUps/BlazingRam", typeof(GameObject)), shipTurret.transform) as GameObject;
+            blazingRam.GetComponent<TrailRenderer>().material.SetColor("_TintColor", myShipColor);
+        }
+        else if (powerUpType == beamCannonIndex)
+        {
+            //TODO: Use this for something?
+        }
+        else if (powerUpType == bombsIndex)
+        {
+            //TODO: Use this for something?
+        }
         isPoweredUp = true;
     }
 
@@ -467,7 +518,7 @@ public class Core_ShipController : MonoBehaviour {
         if (!isDead && isVulnerable)
         {
             //Debug.Log("I'm taking damage.");
-            currentHealth -= amount;
+            currentHealth -= amount * damageTakenModifier;
             if (currentHealth <= 0)
             {
                 currentHealth = 0;

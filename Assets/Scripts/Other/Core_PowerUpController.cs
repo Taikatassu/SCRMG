@@ -4,26 +4,109 @@ using UnityEngine;
 
 public class Core_PowerUpController : MonoBehaviour {
 
+    #region References & variables
+    Core_Toolbox toolbox;
+    Core_EventManager em;
+    Core_GlobalVariableLibrary lib;
     ParticleSystem powerUpBaseEffect;
     ParticleSystem powerUpPickupEffect;
     GameObject powerUpObject;
-
-    float powerUpCooldown = 10;
-    int powerUpCooldownTimer = 0;
-    int powerUpType = -1;
-    int powerUpBaseIndex = -1;
+    //Values coming from within the script
+    List<int> availablePowerUps = new List<int>();
+    int powerUpCooldownTimer = -1;
+    float powerUpDuration = -1;
     bool powerUpOnline = false;
+    //Values coming from GlobalVariableLibrary
+    int powerUpBaseIndex = -1;
+    int rubberBulletsIndex = -1;
+    int blazingRamIndex = -1;
+    int beamCannonIndex = -1;
+    int bombsIndex = -1;
+    int powerUpType = -1;
+    float powerUpCooldown = -1;
+    float rubberBulletsDuration = -1;
+    float blazingRamDuration = -1;
+    float beamCannonDuration = -1;
+    float bombsDuration = -1;
+    bool rubberBulletsAvailable = false;
+    bool blazingRamAvailable = false;
+    bool beamCannonAvailable = false;
+    bool bombsAvailable = false;
+    #endregion
 
-	void Awake () {
+    #region Awake & GetStats
+    private void Awake ()
+    {
+        toolbox = FindObjectOfType<Core_Toolbox>();
+        em = toolbox.GetComponent<Core_EventManager>();
+        lib = toolbox.GetComponent<Core_GlobalVariableLibrary>();
         powerUpBaseEffect = transform.GetChild(1).GetComponent<ParticleSystem>();
         powerUpPickupEffect = transform.GetChild(2).GetComponent<ParticleSystem>();
         powerUpObject = GetComponentInChildren<Core_PowerUpAnimator>().gameObject;
+
+        GetStats();
     }
 
-    void OnEnable()
+    private void GetStats()
+    {
+        powerUpCooldown = lib.shipVariables.powerUpCooldown;
+        rubberBulletsIndex = lib.shipVariables.rubberBulletsIndex;
+        blazingRamIndex = lib.shipVariables.blazingRamIndex;
+        beamCannonIndex = lib.shipVariables.beamCannonIndex;
+        bombsIndex = lib.shipVariables.bombsIndex;
+        rubberBulletsAvailable = lib.shipVariables.rubberBulletsAvailable;
+        blazingRamAvailable = lib.shipVariables.blazingRamAvailable;
+        beamCannonAvailable = lib.shipVariables.beamCannonAvailable;
+        bombsAvailable = lib.shipVariables.bombsAvailable;
+        rubberBulletsDuration = lib.shipVariables.rubberBulletsDuration;
+        blazingRamDuration = lib.shipVariables.blazingRamDuration;
+        beamCannonDuration = lib.shipVariables.beamCannonDuration;
+        bombsDuration = lib.shipVariables.bombsDuration;
+
+        if (rubberBulletsAvailable)
+        {
+            availablePowerUps.Add(rubberBulletsIndex);
+        }
+        if (blazingRamAvailable)
+        {
+            availablePowerUps.Add(blazingRamIndex);
+        }
+        if (beamCannonAvailable)
+        {
+            availablePowerUps.Add(beamCannonIndex);
+        }
+        if (bombsAvailable)
+        {
+            availablePowerUps.Add(bombsIndex);
+        }
+    }
+    #endregion
+
+    #region OnEnable & OnDisable
+    private void OnEnable()
+    {
+        em.OnMatchStarted += OnMatchStarted;
+        em.OnMatchEnded += OnMatchEnded;
+        SetPowerUpState(false);
+    }
+
+    private void OnDisable()
+    {
+        em.OnMatchStarted -= OnMatchStarted;
+        em.OnMatchEnded -= OnMatchEnded;
+    }
+    #endregion
+
+    #region Subscribers
+    private void OnMatchStarted()
     {
         SetPowerUpState(true);
     }
+    private void OnMatchEnded(int winnerIndex)
+    {
+        SetPowerUpState(false);
+    }
+    #endregion
 
     void FixedUpdate ()
     {
@@ -35,11 +118,6 @@ public class Core_PowerUpController : MonoBehaviour {
                 powerUpCooldownTimer = 0;
                 SetPowerUpState(true);
             }
-
-            //if (!powerUpPickupEffect.isPlaying)
-            //{
-            //    powerUpPickupEffect.Stop();
-            //}
         }
 	}
 
@@ -50,6 +128,27 @@ public class Core_PowerUpController : MonoBehaviour {
 
         if (state)
         {
+            powerUpType = availablePowerUps[Random.Range(0, availablePowerUps.Count)];
+
+            if (powerUpType == 1)
+            {
+                powerUpDuration = rubberBulletsDuration;
+            }
+            else if (powerUpType == 2)
+            {
+                powerUpDuration = blazingRamDuration;
+            }
+            else if (powerUpType == 3)
+            {
+                powerUpDuration = beamCannonDuration;
+            }
+            else if (powerUpType == 4)
+            {
+                powerUpDuration = bombsDuration;
+            }
+
+
+            em.BroadcastPowerUpOnline(powerUpBaseIndex, powerUpType);
             powerUpBaseEffect.Play();
         }
         else
@@ -70,10 +169,11 @@ public class Core_PowerUpController : MonoBehaviour {
         {
             if (collider.gameObject.CompareTag("Ship"))
             {
-                Debug.Log("Ship entered trigger, powerUp type: " + powerUpType);
                 Core_ShipController collidingShipController = collider.transform.GetComponentInParent<Core_ShipController>();
                 //Tell shipController which powerUp was received
-                collidingShipController.SetPowerUpType(1);
+                collidingShipController.SetPowerUpType(powerUpType, powerUpDuration);
+                int collidingShipIndex = collidingShipController.GetIndex();
+                em.BroadcastPowerUpPickedUp(collidingShipIndex, powerUpBaseIndex, powerUpType);
 
                 powerUpPickupEffect.Play();
                 powerUpCooldownTimer = Mathf.RoundToInt(powerUpCooldown / Time.fixedDeltaTime);

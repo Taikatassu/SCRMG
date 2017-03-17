@@ -19,19 +19,25 @@ public class Core_Projectile : MonoBehaviour {
     //Variables coming from within the script 
     public enum EProjectileType { DEFAULT, BULLET, RUBBERBULLET }
     EProjectileType projectileType = EProjectileType.DEFAULT;
+    Color projectileColor;
     bool isPaused = false;
+    bool ricohetOnCooldown = false;
     float projectileSpeed = -1;
+    float ricochetCooldown = 0.1f;
+    int ricochetCooldownTimer = -1;
     int projectileLifetimeFrames = -1;
     int projectileLifetimeTimer = -1;
     int projectileRicochetCounter = -1;
     int projectileRicochetNumber = -1;
     //Variables coming from GlobalVariableLibrary
+    string shipTag = "Ship";
+    string environmentTag = "Environment";
+    float bulletDamage = -1;
     float bulletSpeed = -1;
     float bulletRange = -1;
     float rubberBulletSpeed = -1;
     float rubberBulletRange = -1;
     int rubberBulletRicochetNumber = -1;
-    string environmentTag = "Environment";
     #endregion
 
     #region Initialization
@@ -47,7 +53,9 @@ public class Core_Projectile : MonoBehaviour {
 
     private void GetStats()
     {
+        shipTag = lib.shipVariables.shipTag;
         environmentTag = lib.shipVariables.environmentTag;
+        bulletDamage = lib.shipVariables.bulletDamage;
         bulletSpeed = lib.shipVariables.bulletSpeed;
         bulletRange = lib.shipVariables.bulletRange;
         rubberBulletSpeed = lib.shipVariables.rubberBulletSpeed;
@@ -61,12 +69,16 @@ public class Core_Projectile : MonoBehaviour {
     {
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
+        em.OnGameRestart += OnGameRestart;
+        em.OnNewSceneLoading += OnNewSceneLoading;
     }
 
     void OnDisable()
     {
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
+        em.OnGameRestart -= OnGameRestart;
+        em.OnNewSceneLoading -= OnNewSceneLoading;
         projectileType = EProjectileType.DEFAULT;
     }
     #endregion
@@ -75,11 +87,22 @@ public class Core_Projectile : MonoBehaviour {
     private void OnPauseOn()
     {
         isPaused = true;
+        rb.velocity = Vector3.zero;
     }
 
     private void OnPauseOff()
     {
         isPaused = false;
+    }
+
+    private void OnGameRestart()
+    {
+        Destroy(gameObject);
+    }
+
+    private void OnNewSceneLoading(int sceneIndex)
+    {
+        Destroy(gameObject);
     }
     #endregion
 
@@ -117,6 +140,11 @@ public class Core_Projectile : MonoBehaviour {
         }
     }
 
+    public EProjectileType GetProjectileType()
+    {
+        return projectileType;
+    }
+
     public void SetShipController(Core_ShipController newShipController)
     {
         myShipController = newShipController;
@@ -125,10 +153,11 @@ public class Core_Projectile : MonoBehaviour {
     public void SetProjectileColor(Color newColor)
     {
         //TODO: Change this if projectile hierarchy changes!
-        projectileVisuals.GetComponent<Renderer>().material.SetColor("_TintColor", newColor);
+        projectileColor = newColor;
+        projectileVisuals.GetComponent<Renderer>().material.SetColor("_TintColor", projectileColor);
         if (projectileType == EProjectileType.RUBBERBULLET)
         {
-            projectileVisuals.GetComponent<TrailRenderer>().material.SetColor("_TintColor", newColor);  //material.SetColor("_TintColor", newColor);
+            projectileVisuals.GetComponent<TrailRenderer>().material.SetColor("_TintColor", projectileColor);
         }
     }
     #endregion
@@ -139,6 +168,7 @@ public class Core_Projectile : MonoBehaviour {
     {
         if (!isPaused)
         {
+            rb.velocity = Vector3.zero;
             rb.MovePosition(transform.forward * projectileSpeed * Time.deltaTime + rb.position);
         }
     }
@@ -151,36 +181,104 @@ public class Core_Projectile : MonoBehaviour {
             if (projectileLifetimeTimer <= 0)
             {
                 projectileLifetimeTimer = 0;
-                Debug.Log("Projectile lifetime ended");
                 if (myShipController != null)
-                    myShipController.OnProjectileLifetimeEnded(this);
+                    OnProjectileLifetimeEnded();
+            }
+
+            if (ricohetOnCooldown)
+            {
+                ricochetCooldownTimer--;
+                if (ricochetCooldownTimer <= 0)
+                {
+                    ricochetCooldownTimer = 0;
+                    ricohetOnCooldown = false;
+                }
             }
         }
     }
     #endregion
 
-    #region Collision detection
-    private void OnTriggerEnter(Collider collider)
+    #region OnProjectileLifetimeEnded
+    private void OnProjectileLifetimeEnded()
     {
-        if (projectileType == EProjectileType.BULLET)
+        Destroy(gameObject);
+    }
+    #endregion
+
+    #region Collision detection
+    private void OnCollisionEnter(Collision collision)
+    {
+
+        GameObject collidedObject = collision.gameObject;
+        string collidedObjectTag = collidedObject.tag;
+
+        if (collidedObjectTag == shipTag)
         {
-            if (myShipController != null)
-                myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
+            //Spawn hit effect
+            GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                transform.position, Quaternion.identity) as GameObject;
+            bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+
+            //Damage enemy ship
+            collidedObject.GetComponentInParent<Core_ShipController>().TakeDamage(bulletDamage);
+            //Destroy projectile
+            Destroy(gameObject);
         }
-        else if (projectileType == EProjectileType.RUBBERBULLET)
+        else if (collidedObjectTag == environmentTag)
         {
-            string collidedObjectTag = collider.gameObject.tag;
-            if (projectileRicochetCounter < projectileRicochetNumber && collidedObjectTag == environmentTag)
+            if (projectileType == EProjectileType.RUBBERBULLET)
             {
-                Vector3 originalRotation = transform.eulerAngles;
-                transform.eulerAngles = new Vector3(originalRotation.x, originalRotation.y + 180, originalRotation.z);
+                if (projectileRicochetCounter < projectileRicochetNumber && collidedObjectTag == environmentTag)
+                {
+                    if (!ricohetOnCooldown)
+                    {
+                        projectileRicochetCounter++;
+                        Vector3 originalRotation = transform.eulerAngles;
+                        transform.eulerAngles = new Vector3(originalRotation.x, originalRotation.y + 180, originalRotation.z);
+                        ricochetCooldownTimer = Mathf.RoundToInt(ricochetCooldown / Time.fixedDeltaTime);
+                        ricohetOnCooldown = true;
+                    }
+                }
             }
             else
             {
-                if (myShipController != null)
-                    myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
+                //Spawn hit effect
+                GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                    transform.position, Quaternion.identity) as GameObject;
+                bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+
+                Destroy(gameObject);
             }
-        }
+
+        }      
+    }
+
+    private void OnTriggerEnter(Collider collider)
+    {
+        //if (projectileType == EProjectileType.BULLET)
+        //{
+        //    //if (myShipController != null)
+        //    //    myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
+        //}
+        //else if (projectileType == EProjectileType.RUBBERBULLET)
+        //{
+        //    string collidedObjectTag = collider.gameObject.tag;
+        //    if (projectileRicochetCounter < projectileRicochetNumber && collidedObjectTag == environmentTag)
+        //    {
+        //        if (!ricohetOnCooldown)
+        //        {
+        //            Vector3 originalRotation = transform.eulerAngles;
+        //            transform.eulerAngles = new Vector3(originalRotation.x, originalRotation.y + 180, originalRotation.z);
+        //            ricochetCooldownTimer = Mathf.RoundToInt(ricochetCooldown / Time.fixedDeltaTime);
+        //            ricohetOnCooldown = true;
+        //        }
+        //    }
+        //    else
+        //    {
+        //        if (myShipController != null)
+        //            myShipController.OnProjectileTriggerEnter(this, collider.gameObject);
+        //    }
+        //}
     }
     #endregion
 

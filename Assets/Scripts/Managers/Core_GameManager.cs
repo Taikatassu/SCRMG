@@ -18,6 +18,7 @@ public class Core_GameManager : MonoBehaviour {
     List<Transform> respawnPoints = new List<Transform>();
     List<Transform> powerUpPositions = new List<Transform>();
     List<GameObject> currentlyAliveShips = new List<GameObject>();
+    List<GameObject> currentlyExistingPowerUps = new List<GameObject>();
     GameObject currentPlayerCamera;
     //Variables coming from within the script
     List<int> usedSpawnPoints = new List<int>();
@@ -89,6 +90,8 @@ public class Core_GameManager : MonoBehaviour {
     #region OnEnable & OnDisable
     private void OnEnable()
     {
+        em.OnMatchStarted += OnMatchStarted;
+        em.OnMatchEnded += OnMatchEnded;
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnNewSceneLoaded += OnNewSceneLoaded;
@@ -96,10 +99,14 @@ public class Core_GameManager : MonoBehaviour {
         em.OnSetGameMode += OnSetGameMode;
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
+        em.OnPowerUpPickedUp += OnPowerUpPickedUp;
+        em.OnPowerUpOnline += OnPowerUpOnline;
     }
 
     private void OnDisable()
     {
+        em.OnMatchStarted -= OnMatchStarted;
+        em.OnMatchEnded -= OnMatchEnded;
         em.OnGameRestart -= OnGameRestart;
         em.OnNewSceneLoading -= OnNewSceneLoading;
         em.OnNewSceneLoaded -= OnNewSceneLoaded;
@@ -107,16 +114,29 @@ public class Core_GameManager : MonoBehaviour {
         em.OnSetGameMode -= OnSetGameMode;
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
+        em.OnPowerUpPickedUp -= OnPowerUpPickedUp;
+        em.OnPowerUpOnline -= OnPowerUpOnline;
     }
     #endregion
     #endregion
 
     #region Subscribers
+    private void OnMatchStarted()
+    {
+        matchStarted = true;
+    }
+
+    private void OnMatchEnded(int winnerIndex)
+    {
+        matchStarted = false;
+    }
+
     private void OnPauseOn()
     {
         if (currentGameModeIndex == gameModeSingleplayerIndex)
         {
             isPaused = true;
+            Time.timeScale = 0;
         }
         else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
         {
@@ -133,6 +153,7 @@ public class Core_GameManager : MonoBehaviour {
         if (currentGameModeIndex == gameModeSingleplayerIndex)
         {
             isPaused = false;
+            Time.timeScale = 1;
         }
         else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
         {
@@ -154,7 +175,7 @@ public class Core_GameManager : MonoBehaviour {
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
-            DestroyAllShipsAndCamera();
+            DestroyAllObjects();
             resetUsedShipColors = true;
             resetUsedSpawnPointsList = true;
         }
@@ -170,7 +191,7 @@ public class Core_GameManager : MonoBehaviour {
         else if (sceneIndex == sceneIndexLevel01)
         {
             inGame = true;
-            DestroyAllShipsAndCamera();
+            DestroyAllObjects();
             resetUsedShipColors = true;
             resetUsedSpawnPointsList = true;
             InitializeGame();
@@ -180,8 +201,7 @@ public class Core_GameManager : MonoBehaviour {
 
     private void OnGameRestart()
     {
-        Debug.Log("GameManager: OnGameRestart");
-        DestroyAllShipsAndCamera();
+        DestroyAllObjects();
         //Reset all
         resetUsedShipColors = true;
         resetUsedSpawnPointsList = true;
@@ -199,8 +219,7 @@ public class Core_GameManager : MonoBehaviour {
 
             if (currentlyAliveShipIndices.Count == 1)
             {
-                em.BroadcastGameEnd(currentlyAliveShipIndices[0]);
-                matchStarted = false;
+                em.BroadcastMatchEnded(currentlyAliveShipIndices[0]);
             }
         }
     }
@@ -209,14 +228,26 @@ public class Core_GameManager : MonoBehaviour {
     {
         currentGameModeIndex = newGameModeIndex;
     }
+
+    private void OnPowerUpPickedUp(int shipIndex, int powerUpBaseIndex, int powerUpType)
+    {
+        //TODO: Do something with this
+        Debug.Log("GameManager: PowerUp index: " + powerUpBaseIndex + " (Type: " + powerUpType + ") picked up by ship " + shipIndex);
+    }
+
+    private void OnPowerUpOnline(int powerUpBaseIndex, int powerUpType)
+    {
+        //TODO: Do something with this
+        //Debug.Log("GameManager: PowerUp index: " + powerUpBaseIndex + " back online with type: " + powerUpType);
+    }
     #endregion
 
     #region Match initialization
-    private void DestroyAllShipsAndCamera()
+    private void DestroyAllObjects()
     {
+        //Destroy all existing ships and clear ship list
         if (currentlyAliveShips.Count > 0)
         {
-            //Ensure all ships are destroyed
             for (int i = 0; i < currentlyAliveShips.Count; i++)
             {
                 if (currentlyAliveShips[0] != null)
@@ -225,14 +256,24 @@ public class Core_GameManager : MonoBehaviour {
                 }
                 currentlyAliveShips.RemoveAt(0);
                 i--;
-
             }
+            currentlyAliveShips.Clear();
         }
-        currentlyAliveShips.Clear();
 
+        //Destroy player camera
         if (currentPlayerCamera != null)
         {
             Destroy(currentPlayerCamera);
+        }
+
+        //Destroy all existing powerUps and clear powerUp list
+        if (currentlyExistingPowerUps.Count > 0)
+        {
+            foreach(GameObject powerUpObject in currentlyExistingPowerUps)
+            {
+                Destroy(powerUpObject);
+            }
+            currentlyExistingPowerUps.Clear();
         }
     }
 
@@ -356,13 +397,14 @@ public class Core_GameManager : MonoBehaviour {
         //}
         #endregion
 
-        #region Instantiate  PowerUps
+        #region Instantiate PowerUps
         int powerUpBaseIndexCounter = 0;
         foreach (Transform position in powerUpPositions)
         {
             powerUpBaseIndexCounter++;
             GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpBase", typeof(GameObject)), position.position,
                 Quaternion.identity) as GameObject;
+            currentlyExistingPowerUps.Add(newPowerUp);
             newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpBaseIndex(powerUpBaseIndexCounter);
         }
         #endregion
@@ -476,7 +518,7 @@ public class Core_GameManager : MonoBehaviour {
                         em.BroadcastMatchStartTimerValueChange(matchStartTimerValue);
                         if (matchStartTimerValue <= 0)
                         {
-                            matchStarted = true;
+                            em.BroadcastMatchStarted();
                             matchStartTimerRunning = false;
                         }
                         fixedUpdateLoopCounter = 0;

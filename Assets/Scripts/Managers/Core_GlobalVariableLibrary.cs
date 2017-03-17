@@ -79,7 +79,8 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float shipTurretRotationSpeed = 10;
         public float shipHullRotationSpeed = 10;
         public float shootCooldownTime = 0.25f;
-        public float shootDamage = 10;
+        public float bulletDamage = 10;
+        public float blazingRamDamage = 20;
         public float healthBarMinValue = 0.01f;
         public float healthBarMaxValue = 1;
         public float healthBarLerpDuration = 0.5f;
@@ -87,10 +88,23 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float bulletRange = 200;
         public float rubberBulletSpeed = 180;
         public float rubberBulletRange = 600;
+        public float powerUpCooldown = 10;
+        public float rubberBulletsDuration = 8f;
+        public float blazingRamDuration = 8f;
+        public float beamCannonDuration = 8f;
+        public float bombsDuration = 8f;
         public int rubberBulletRicochetNumber = 3;
+        public int rubberBulletsIndex = 1;
+        public int blazingRamIndex = 2;
+        public int beamCannonIndex = 3;
+        public int bombsIndex = 4;
         public float cameraSpectatingHeight = 45;
         public float cameraFollowDistance = 0;
         public float cameraFollowHeight = 20;
+        public bool rubberBulletsAvailable = true;
+        public bool blazingRamAvailable = false;
+        public bool beamCannonAvailable = false;
+        public bool bombsAvailable = false;
     }
 
     [System.Serializable]

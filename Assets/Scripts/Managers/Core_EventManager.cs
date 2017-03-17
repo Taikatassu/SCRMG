@@ -29,6 +29,8 @@ public class Core_EventManager : MonoBehaviour
     public delegate void EmptyVoid();
     public delegate void FloatVoid(float floatingPoint);
     public delegate void IntVoid(int integer);
+    public delegate void IntIntVoid(int integer1, int integer2);
+    public delegate void IntIntIntVoid(int integer1, int integer2, int integer3);
     public delegate void Vector2Void(Vector2 vec2);
     public delegate void IntVector2Void(int integer, Vector2 vec2);
     public delegate void GameObjectVoid(GameObject gameObject);
@@ -296,7 +298,7 @@ public class Core_EventManager : MonoBehaviour
     #endregion
     #endregion
 
-    #region GameplayEvents
+    #region Gameplay events
     public event IntVoid OnMatchStartTimerValueChange;
     public void BroadcastMatchStartTimerValueChange(int currentValue)
     {
@@ -306,10 +308,27 @@ public class Core_EventManager : MonoBehaviour
         }
     }
 
+    public event EmptyVoid OnMatchStarted;
+    public void BroadcastMatchStarted()
+    {
+        if (OnMatchStarted != null)
+        {
+            OnMatchStarted();
+        }
+    }
+
+    public event IntVoid OnMatchEnded;
+    public void BroadcastMatchEnded(int winnerIndex)
+    {
+        if (OnMatchEnded != null)
+        {
+            OnMatchEnded(winnerIndex);
+        }
+    }
+
     public event EmptyVoid OnGameRestart;
     public void BroadcastGameRestart()
     {
-        Debug.Log("EventManager: BroadcastGameRestart");
         if (OnGameRestart != null)
         {
             OnGameRestart();
@@ -322,15 +341,6 @@ public class Core_EventManager : MonoBehaviour
         if(OnShipDead != null)
         {
             OnShipDead(shipIndex);
-        }
-    }
-
-    public event IntVoid OnGameEnd;
-    public void BroadcastGameEnd(int winnerIndex)
-    {
-        if (OnGameEnd != null)
-        {
-            OnGameEnd(winnerIndex);
         }
     }
 
@@ -369,8 +379,25 @@ public class Core_EventManager : MonoBehaviour
             OnMatchTimerValueChange(newValue);
         }
     }
-    #endregion
-    #endregion
 
+    public event IntIntIntVoid OnPowerUpPickedUp;
+    public void BroadcastPowerUpPickedUp(int shipIndex, int powerUpBaseIndex, int powerUpType)
+    {
+        if (OnPowerUpPickedUp != null)
+        {
+            OnPowerUpPickedUp(shipIndex, powerUpBaseIndex, powerUpType);
+        }
+    }
+
+    public event IntIntVoid OnPowerUpOnline;
+    public void BroadcastPowerUpOnline(int powerUpBaseIndex, int powerUpType)
+    {
+        if (OnPowerUpOnline != null)
+        {
+            OnPowerUpOnline(powerUpBaseIndex, powerUpType);
+        }
+    }
+    #endregion
+    #endregion
 
 }
