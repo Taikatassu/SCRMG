@@ -397,6 +397,15 @@ public class Core_EventManager : MonoBehaviour
             OnPowerUpOnline(powerUpBaseIndex, powerUpType);
         }
     }
+
+    public event IntIntVoid OnPowerUpEnded;
+    public void BroadcastPowerUpEnded(int shipIndex, int powerUpType)
+    {
+        if(OnPowerUpEnded != null)
+        {
+            OnPowerUpEnded(shipIndex, powerUpType);
+        }
+    }
     #endregion
     #endregion
 

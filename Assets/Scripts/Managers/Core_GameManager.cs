@@ -402,10 +402,10 @@ public class Core_GameManager : MonoBehaviour {
         foreach (Transform position in powerUpPositions)
         {
             powerUpBaseIndexCounter++;
-            GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpBase", typeof(GameObject)), position.position,
+            GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpPlatform", typeof(GameObject)), position.position,
                 Quaternion.identity) as GameObject;
             currentlyExistingPowerUps.Add(newPowerUp);
-            newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpBaseIndex(powerUpBaseIndexCounter);
+            newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpPlatformIndex(powerUpBaseIndexCounter);
         }
         #endregion
     }

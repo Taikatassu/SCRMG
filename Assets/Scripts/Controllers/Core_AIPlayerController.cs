@@ -32,6 +32,7 @@ public class Core_AIPlayerController : Core_ShipController {
     float directionChangeLerpDuration = -1;
     float shootingRange = -1;
     float preferredMaxDistanceToTarget = -1;
+    bool aiDisabled = false;
     #endregion
 
     #region Awake & GetStates
@@ -45,7 +46,7 @@ public class Core_AIPlayerController : Core_ShipController {
     {
         base.GetStats();
 
-
+        aiDisabled = lib.aiVariables.aiDisabled;
         closestTargetTimerDuration = lib.aiVariables.closestTargetTimerDuration;
         changeDirectionTimerDuration = lib.aiVariables.changeDirectionTimerDuration;
         directionChangeLerpDuration = lib.aiVariables.directionChangeLerpDuration;
@@ -111,159 +112,154 @@ public class Core_AIPlayerController : Core_ShipController {
 
     protected override void Update()
     {
-        #region Targeting behaviour
-        if (!isPaused)
+        if (!aiDisabled)
         {
-            rotatingTurret = true;
-            if (shipList.Count > 0)
+            #region Targeting behaviour
+            if (!isPaused)
             {
-                if (currentTargetNoLongerClosest && closestTargetTimer <= 0)
+                rotatingTurret = true;
+                if (shipList.Count > 0)
                 {
-                    currentTarget = closestTarget;
-                }
-
-                for (int i = 0; i < shipList.Count; i++)
-                {
-                    if (shipList[i] == null)
+                    if (currentTargetNoLongerClosest && closestTargetTimer <= 0)
                     {
-                        //Debug.Log("AI: ShipList element was null, removing");
-                        shipList.RemoveAt(i);
-                        i--;
+                        currentTarget = closestTarget;
                     }
-                    else
+
+                    for (int i = 0; i < shipList.Count; i++)
                     {
-                        if (currentTarget == null)
+                        if (shipList[i] == null)
                         {
-                            currentTarget = shipList[i];
-                            closestTarget = currentTarget;
-                            //Debug.Log("AI " + index + ": currentTarget was null, set to shipList element " + 
-                            //    i + ", " + shipList[i].gameObject.name);
+                            shipList.RemoveAt(i);
+                            i--;
                         }
-
-                        if (DistanceToObject(shipList[i].position) < DistanceToObject(currentTarget.position))
+                        else
                         {
-                            //Debug.Log("AI: closest target found!");
-                            closestTarget = shipList[i];
+                            if (currentTarget == null)
+                            {
+                                currentTarget = shipList[i];
+                                closestTarget = currentTarget;
+                            }
+
+                            if (DistanceToObject(shipList[i].position) < DistanceToObject(currentTarget.position))
+                            {
+                                closestTarget = shipList[i];
+                            }
                         }
                     }
-                }
-                //Debug.Log("closestTarget.gameObject: " + closestTarget.gameObject.name + 
-                //    ", currentTarget.gameObject: " + currentTarget.gameObject.name);
-                if (closestTarget != null && currentTarget != null)
-                {
-                    if (closestTarget.gameObject == currentTarget.gameObject)
+                    if (closestTarget != null && currentTarget != null)
                     {
-                        //Debug.Log("currentTarget is closestTarget");
-                        currentTargetNoLongerClosest = false;
-                        closestTargetTimer = closestTargetTimerFrames;
+                        if (closestTarget.gameObject == currentTarget.gameObject)
+                        {
+                            currentTargetNoLongerClosest = false;
+                            closestTargetTimer = closestTargetTimerFrames;
+                        }
+                        else
+                        {
+                            if (!currentTargetNoLongerClosest)
+                                currentTargetNoLongerClosest = true;
+                        }
                     }
-                    else
+
+                    if (currentTarget != null)
                     {
-                        //Debug.Log("currentTarget is NOT closestTarget");
-                        if (!currentTargetNoLongerClosest)
-                            currentTargetNoLongerClosest = true;
+                        SetLookTargetPosition(currentTarget.position);
                     }
                 }
 
-                if (currentTarget != null)
+            }
+            else
+            {
+                rotatingTurret = false;
+            }
+            #endregion
+
+            #region [WIP] Experimental Movement behaviour
+            //if (matchStarted && !isPaused)
+            //{
+
+            //    if (currentTarget != null)
+            //    {
+            //        Vector3 direction = currentTarget.position - transform.position;
+            //        float distanceToTarget = direction.magnitude;
+            //        if (distanceToTarget < preferredMinDistanceToTarget)
+            //        {
+            //            Debug.Log("AI " + index + "distanceToTarget < preferredMinDistanceToTarget, changeDirectionTimer: " + changeDirectionTimer);
+            //            //Move to random direction
+            //            if (changeDirectionTimer <= 0)
+            //            {
+            //                float angle = Vector3.Angle(movementDirection, currentTarget.position);
+            //                Debug.Log("AI " + index + ": angle: " + angle);
+            //                RandomizeDirection((int)angle - 90, (int)angle + 90);
+            //                changeDirectionTimer = changeDirectionTimerFrames;
+            //                changeDirectionTimerOn = true;
+            //            }
+            //        }
+            //        else
+            //        {
+            //            if (distanceToTarget > 1)
+            //            {
+            //                //Debug.Log("AI " + index + "distanceToTarget > 1");
+            //                direction = new Vector3(direction.x / distanceToTarget, 
+            //                    direction.y / distanceToTarget, direction.z / distanceToTarget);
+            //            }
+            //            movementDirection = direction;
+            //        }
+            //    }
+            //    else
+            //    {
+            //        Debug.Log("AI " + index + ": currentTarget == null");
+            //    }
+            //}
+            #endregion
+
+            #region Movement behaviour
+            if (!isPaused)
+            {
+                if (changeDirectionTimer <= 0)
                 {
-                    SetLookTargetPosition(currentTarget.position);
+                    newMovementDirection = RandomizeDirection(-180, 180).normalized;
+                    changeDirectionTimer = changeDirectionTimerFrames;
+
+                    oldMovementDirection = movementDirection;
+                    directionChangeLerpStartTime = Time.time;
+                    directionChangeLerping = true;
                 }
             }
 
-        }
-        else
-        {
-            rotatingTurret = false;
-        }
-        #endregion
-
-        #region [WIP] Experimental Movement behaviour
-        //if (matchStarted && !isPaused)
-        //{
-
-        //    if (currentTarget != null)
-        //    {
-        //        Vector3 direction = currentTarget.position - transform.position;
-        //        float distanceToTarget = direction.magnitude;
-        //        if (distanceToTarget < preferredMinDistanceToTarget)
-        //        {
-        //            Debug.Log("AI " + index + "distanceToTarget < preferredMinDistanceToTarget, changeDirectionTimer: " + changeDirectionTimer);
-        //            //Move to random direction
-        //            if (changeDirectionTimer <= 0)
-        //            {
-        //                float angle = Vector3.Angle(movementDirection, currentTarget.position);
-        //                Debug.Log("AI " + index + ": angle: " + angle);
-        //                RandomizeDirection((int)angle - 90, (int)angle + 90);
-        //                changeDirectionTimer = changeDirectionTimerFrames;
-        //                changeDirectionTimerOn = true;
-        //            }
-        //        }
-        //        else
-        //        {
-        //            if (distanceToTarget > 1)
-        //            {
-        //                //Debug.Log("AI " + index + "distanceToTarget > 1");
-        //                direction = new Vector3(direction.x / distanceToTarget, 
-        //                    direction.y / distanceToTarget, direction.z / distanceToTarget);
-        //            }
-        //            movementDirection = direction;
-        //        }
-        //    }
-        //    else
-        //    {
-        //        Debug.Log("AI " + index + ": currentTarget == null");
-        //    }
-        //}
-        #endregion
-
-        #region Movement behaviour
-        if (!isPaused)
-        {
-            if (changeDirectionTimer <= 0)
+            if (directionChangeLerping)
             {
-                newMovementDirection = RandomizeDirection(-180, 180).normalized;
+                float timeSinceStarted = Time.time / directionChangeLerpStartTime;
+                float percentageCompleted = timeSinceStarted / directionChangeLerpDuration;
+                movementDirection = Vector3.Lerp(oldMovementDirection, newMovementDirection, percentageCompleted);
+
+                if (percentageCompleted >= 1)
+                {
+                    directionChangeLerping = false;
+                }
+            }
+
+            //If target is too far
+            if (currentTarget != null && DistanceToObject(currentTarget.position) > preferredMaxDistanceToTarget)
+            {
+                newMovementDirection = (currentTarget.position - transform.position).normalized;
                 changeDirectionTimer = changeDirectionTimerFrames;
 
                 oldMovementDirection = movementDirection;
                 directionChangeLerpStartTime = Time.time;
                 directionChangeLerping = true;
             }
-        }
+            #endregion
 
-        if (directionChangeLerping)
-        {
-            float timeSinceStarted = Time.time / directionChangeLerpStartTime;
-            float percentageCompleted = timeSinceStarted / directionChangeLerpDuration;
-            movementDirection = Vector3.Lerp(oldMovementDirection, newMovementDirection, percentageCompleted);
-
-            if (percentageCompleted >= 1)
+            #region Shooting behaviour
+            if (!isPaused)
             {
-                directionChangeLerping = false;
+                if (currentTarget != null && DistanceToObject(currentTarget.position) < shootingRange)
+                {
+                    Shoot();
+                }
             }
+            #endregion
         }
-
-        //If target is too far
-        if (currentTarget != null && DistanceToObject(currentTarget.position) > preferredMaxDistanceToTarget)
-        {
-            newMovementDirection = (currentTarget.position - transform.position).normalized;
-            changeDirectionTimer = changeDirectionTimerFrames;
-
-            oldMovementDirection = movementDirection;
-            directionChangeLerpStartTime = Time.time;
-            directionChangeLerping = true;
-        }
-        #endregion
-
-        #region Shooting behaviour
-        if (!isPaused)
-        {
-            if (currentTarget != null && DistanceToObject(currentTarget.position) < shootingRange)
-            {
-                Shoot();
-            }
-        }
-        #endregion
 
         base.Update();
     }

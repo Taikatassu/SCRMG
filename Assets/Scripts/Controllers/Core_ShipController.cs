@@ -9,6 +9,8 @@ public class Core_ShipController : MonoBehaviour {
      *      -When game is started, ONE player controller is assigned to ONE ship 
      *      -Other ships are controlled by AI or through network by other players
      *      
+     * Figure out a way of blocking ship from moving outside of arena bounds, and
+     *      return it to arena if somehow managing to get outside of it
     */
 
     #region References & variables
@@ -23,9 +25,9 @@ public class Core_ShipController : MonoBehaviour {
     Transform shipTurret;
     Transform turretOutputMarker;
     GameObject healthBar;
-    GameObject blazingRam;
     Color myShipColor;
     Core_ShipColorablePartTag[] shipColorableParts;
+    Core_Projectile newProjectileScript;
     //List<Core_Projectile> projectileList = new List<Core_Projectile>();
 
     //Variables coming from within the script
@@ -35,14 +37,17 @@ public class Core_ShipController : MonoBehaviour {
     float healthBarStartValue = -1;
     float healthBarLerpStartTime = -1;
     float defaultMovementSpeed = -1;
+    float speedModifier = -1;
     float damageTakenModifier = -1;
+    float shootCooldownModifier = -1;
     public int currentGameModeIndex = -1;
-    int shootCooldownFrames = -1;
     int shootCooldownFrameTimer = -1;
     int gameModeSingleplayerIndex = -1;
     int gameModeNetworkMultiplayerIndex = -1;
     int gameModeLocalMultiplayerIndex = -1;
     int powerUpType = -1;
+    bool isPersistingProjectile = false;
+    bool persistingProjectileOnline = false;
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
@@ -58,11 +63,12 @@ public class Core_ShipController : MonoBehaviour {
     float movementSpeed = -1;
     float shipTurretRotationSpeed = -1;
     float shipHullRotationSpeed = -1;
-    float shootCooldownTime = -1;
+    float shootCooldownDuration = -1;
     float healthBarMinValue = -1;
     float healthBarMaxValue = -1;
     float healthBarLerpDuration = -1;
     protected int buildPlatform = -1; //0 = PC, 1 = Android
+    int projectileType = -1;
     int powerUpTimer = -1;
     int rubberBulletsIndex = -1;
     int blazingRamIndex = -1;
@@ -96,18 +102,17 @@ public class Core_ShipController : MonoBehaviour {
         maxHealth = lib.shipVariables.maxHealth;
         shipTurretRotationSpeed = lib.shipVariables.shipTurretRotationSpeed;
         shipHullRotationSpeed = lib.shipVariables.shipHullRotationSpeed;
-        shootCooldownTime = lib.shipVariables.shootCooldownTime;
-        shootCooldownFrames = Mathf.RoundToInt(shootCooldownTime / Time.fixedDeltaTime);
+        shootCooldownDuration = lib.shipVariables.shootCooldownDuration;
         healthBarMinValue = lib.shipVariables.healthBarMinValue;
         healthBarMaxValue = lib.shipVariables.healthBarMaxValue;
         healthBarLerpDuration = lib.shipVariables.healthBarLerpDuration;
         gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
         gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
         gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
-        rubberBulletsIndex = -lib.shipVariables.rubberBulletsIndex;
-        blazingRamIndex = lib.shipVariables.blazingRamIndex;
-        beamCannonIndex = lib.shipVariables.beamCannonIndex;
-        bombsIndex = lib.shipVariables.bombsIndex;
+        rubberBulletsIndex = -lib.powerUpVariables.rubberBulletsIndex;
+        blazingRamIndex = lib.powerUpVariables.blazingRamIndex;
+        beamCannonIndex = lib.powerUpVariables.beamCannonIndex;
+        bombsIndex = lib.powerUpVariables.bombsIndex;
     }
     #endregion
 
@@ -120,7 +125,18 @@ public class Core_ShipController : MonoBehaviour {
         em.OnMatchEnded += OnMatchEnded;
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
+
+        powerUpType = 0;
+        powerUpTimer = 0;
+        projectileType = 0;
+        isPersistingProjectile = false;
+        speedModifier = 1;
         damageTakenModifier = 1;
+        shootCooldownModifier = 1;
+        canShoot = false;
+        isMovable = false;
+        isVulnerable = false;
+        isPoweredUp = false;
     }
 
     protected virtual void OnDisable()
@@ -234,7 +250,7 @@ public class Core_ShipController : MonoBehaviour {
         {
             if (isMovable && movementDirection != Vector3.zero)
             {
-                rb.MovePosition(transform.position + movementDirection * movementSpeed * Time.fixedDeltaTime);
+                rb.MovePosition(transform.position + movementDirection * (movementSpeed * speedModifier) * Time.fixedDeltaTime);
                 if (movementDirection == Vector3.zero)
                 {
                     rb.velocity = Vector3.zero;
@@ -284,16 +300,7 @@ public class Core_ShipController : MonoBehaviour {
                 powerUpTimer--;
                 if (powerUpTimer <= 0)
                 {
-                    isPoweredUp = false;
-                    if (powerUpType == blazingRamIndex)
-                    {
-                        movementSpeed = defaultMovementSpeed;
-                        damageTakenModifier = 1;
-                        canShoot = true;
-                        Destroy(blazingRam);
-                    }
-                    powerUpType = 0;
-                    //TODO: Implement proper method for removing powerUps (disable visuals, broadcast change etc.)
+                    EndPowerUp();
                 }
             }
         }
@@ -301,130 +308,77 @@ public class Core_ShipController : MonoBehaviour {
     }
     #endregion
 
-    #region Attacking, shooting & projectiles
-    //private void DestroyAllProjectiles()
-    //{
-    //    int count = projectileList.Count;
-    //    if (count > 0)
-    //    {
-    //        for (int i = 0; i < count; i++)
-    //        {
-    //            DestroyProjectile(projectileList[0]);
-    //        }
-    //    }
-    //}
+    #region PowerUp management
+    private void EndPowerUp()
+    {
+        Debug.Log("EndPowerUp");
+        em.BroadcastPowerUpEnded(index, powerUpType);
+        DestroyPersistingProjectile();
+        powerUpType = 0;
+        powerUpTimer = 0;
+        projectileType = 0;
+        isPersistingProjectile = false;
+        speedModifier = 1;
+        damageTakenModifier = 1;
+        shootCooldownModifier = 1;
+        canShoot = true;
+        isMovable = true;
+        isVulnerable = true;
+        isPoweredUp = false;
+    }
+    #endregion
 
-    //private void DestroyProjectile(Core_Projectile projectile)
-    //{
-    //    projectileList.Remove(projectile);
-    //    if (projectile != null)
-    //        Destroy(projectile.gameObject);
-    //}
-
-    //public void OnProjectileLifetimeEnded(Core_Projectile projectile)
-    //{
-    //    DestroyProjectile(projectile);
-    //}
-
-    //public void OnProjectileTriggerEnter(Core_Projectile projectile, GameObject collidedObject, int projectileType)
-    //{
-    //    //Check which object collided with
-    //    //If enemy ship, damage enemyShip
-    //    //Destroy projectile
-    //    //Instantiate effect
-    //    string collidedObjectTag = collidedObject.tag;
-
-    //    if (collidedObjectTag == shipTag)
-    //    {
-    //        //Spawn hit effect
-    //        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-    //            projectile.transform.position, Quaternion.identity) as GameObject;
-    //        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
-
-    //        //Damage enemy ship
-    //        collidedObject.GetComponentInParent<Core_ShipController>().TakeDamage(shootDamage);
-    //        //Destroy projectile
-    //        DestroyProjectile(projectile);
-    //    }
-    //    else if (collidedObjectTag == environmentTag)
-    //    {
-    //        //Spawn hit effect
-    //        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-    //            projectile.transform.position, Quaternion.identity) as GameObject;
-    //        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
-
-    //        DestroyProjectile(projectile);
-    //    }
-
-    //}
-
-    //public void OnRamTriggerEnter(GameObject collidedObject)
-    //{
-    //    string collidedObjectTag = collidedObject.tag;
-
-    //    if (collidedObjectTag == shipTag)
-    //    {
-    //        ////Spawn hit effect
-    //        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-    //            transform.position, Quaternion.identity) as GameObject;
-    //        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", myShipColor);
-
-    //        //Damage enemy ship
-    //        collidedObject.GetComponentInParent<Core_ShipController>().TakeDamage(shootDamage);
-    //        ////Destroy projectile
-    //        //DestroyProjectile(projectile);
-    //    }
-    //}
-
+    #region Shooting & projectiles
     protected void Shoot()
     {
         if (!isPaused)
         {
             if (canShoot && !shootOnCooldown)
             {
-                if (powerUpType == 0)
+                //Debug.Log("Shooting, projectileType: " + projectileType);
+                if (!isPersistingProjectile || (isPersistingProjectile && !persistingProjectileOnline))
                 {
-                    //Default weapon
-                    //Spawn bullet at shipTurret position & rotation
-                    GameObject newBullet = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
-                        turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
-                    Physics.IgnoreCollision(newBullet.GetComponent<Collider>(),
+                    GameObject newProjectile;
+
+                    if (isPersistingProjectile)
+                    {
+                        newProjectile = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
+                                shipTurret.transform) as GameObject;
+
+                        persistingProjectileOnline = true;
+                    }
+                    else
+                    {
+                        newProjectile = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
+                                turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
+                    }
+
+                    Physics.IgnoreCollision(newProjectile.GetComponent<Collider>(),
                         GetComponentInChildren<Collider>());
 
-                    Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
-                    newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.BULLET);
-                    newBulletScript.SetShipController(this);
-                    newBulletScript.SetProjectileColor(myShipColor);
-
-                    //projectileList.Add(newBulletScript);
+                    newProjectileScript = newProjectile.GetComponent<Core_Projectile>();
+                    newProjectileScript.SetShipController(this);
+                    newProjectileScript.SetProjectileType(projectileType);
+                    
                     //Set shoot on cooldown
-                    shootCooldownFrameTimer = shootCooldownFrames;
+                    shootCooldownFrameTimer = Mathf.RoundToInt((shootCooldownDuration * shootCooldownModifier) / Time.fixedDeltaTime);
                     shootOnCooldown = true;
-                }
-                else if (powerUpType == 1)
-                {
-                    //Rubber bullets
-                    //Spawn bullet at shipTurret position & rotation
-                    GameObject newBullet = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
-                        turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
-                    Physics.IgnoreCollision(newBullet.GetComponent<Collider>(),
-                        GetComponentInChildren<Collider>());
 
-                    Core_Projectile newBulletScript = newBullet.GetComponent<Core_Projectile>();
-                    newBulletScript.SetProjectileType(Core_Projectile.EProjectileType.RUBBERBULLET);
-                    newBulletScript.SetShipController(this);
-                    newBulletScript.SetProjectileColor(myShipColor);
-
-                    //projectileList.Add(newBulletScript);
-                    //Set shoot on cooldown
-                    shootCooldownFrameTimer = shootCooldownFrames;
-                    shootOnCooldown = true;
-                }
-                else if (powerUpType == 2)
-                {
-                    //Area of effect bombs / black holes?
                 }
             }
+        }
+    }
+
+    protected void DestroyPersistingProjectile()
+    {
+        if (isPersistingProjectile)
+        {
+            Debug.Log("EndShooting: isPersistingProjectile");
+            if (newProjectileScript != null)
+            {
+                newProjectileScript.OnPersistingProjectileDestruction();
+            }
+            persistingProjectileOnline = false;
         }
     }
     #endregion
@@ -458,31 +412,26 @@ public class Core_ShipController : MonoBehaviour {
         canShoot = state;
     }
 
-    public void SetPowerUpType(int newType, float newDuration)
+    public void SetPowerUpType(int newPowerUpType, float newDuration, 
+        int newProjectileType, bool newIsPersistingProjectileState, float newSpeedModifier, 
+        float newDamageTakenModifier,float newShootCooldownModifier, bool newCanShootState, 
+        bool newIsMoveableState, bool newIsVulnerableState)
     {
-        //TODO: Remove juice
-        powerUpType = newType;
+        if (isPoweredUp)
+        {
+            EndPowerUp();
+        }
+
+        powerUpType = newPowerUpType;
         powerUpTimer = Mathf.RoundToInt(newDuration / Time.fixedDeltaTime);
-        if (powerUpType == rubberBulletsIndex)
-        {
-            //TODO: Use this for something?
-        }
-        else if(powerUpType == blazingRamIndex)
-        {
-            movementSpeed = defaultMovementSpeed * 2.5f;
-            damageTakenModifier = 0.5f;
-            canShoot = false;
-            blazingRam = Instantiate(Resources.Load("PowerUps/BlazingRam", typeof(GameObject)), shipTurret.transform) as GameObject;
-            blazingRam.GetComponent<TrailRenderer>().material.SetColor("_TintColor", myShipColor);
-        }
-        else if (powerUpType == beamCannonIndex)
-        {
-            //TODO: Use this for something?
-        }
-        else if (powerUpType == bombsIndex)
-        {
-            //TODO: Use this for something?
-        }
+        projectileType = newProjectileType;
+        isPersistingProjectile = newIsPersistingProjectileState;
+        speedModifier = newSpeedModifier;
+        damageTakenModifier = newDamageTakenModifier;
+        shootCooldownModifier = newShootCooldownModifier;
+        canShoot = newCanShootState;
+        isMovable = newIsMoveableState;
+        isVulnerable = newIsVulnerableState;
         isPoweredUp = true;
     }
 

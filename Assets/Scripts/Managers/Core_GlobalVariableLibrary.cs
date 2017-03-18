@@ -37,6 +37,8 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
     public Input_Variables inputVariables;
     public GameSetting_Variables gameSettingVariables;
     public Ship_Variables shipVariables;
+    public Projectile_Variables projectileVariables;
+    public PowerUp_Variables powerUpVariables;
     public Scene_Variables sceneVariables;
     public UI_Variables uiVariables;
     public AI_Variables aiVariables;
@@ -46,6 +48,8 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         inputVariables = new Input_Variables();
         gameSettingVariables = new GameSetting_Variables();
         shipVariables = new Ship_Variables();
+        projectileVariables = new Projectile_Variables();
+        powerUpVariables = new PowerUp_Variables();
         sceneVariables = new Scene_Variables();
         uiVariables = new UI_Variables();
         aiVariables = new AI_Variables();
@@ -78,33 +82,94 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float maxHealth = 100;
         public float shipTurretRotationSpeed = 10;
         public float shipHullRotationSpeed = 10;
-        public float shootCooldownTime = 0.25f;
-        public float bulletDamage = 10;
-        public float blazingRamDamage = 20;
+        public float shootCooldownDuration = 0.25f;
         public float healthBarMinValue = 0.01f;
         public float healthBarMaxValue = 1;
         public float healthBarLerpDuration = 0.5f;
-        public float bulletSpeed = 60;
-        public float bulletRange = 200;
-        public float rubberBulletSpeed = 180;
-        public float rubberBulletRange = 600;
-        public float powerUpCooldown = 10;
-        public float rubberBulletsDuration = 8f;
-        public float blazingRamDuration = 8f;
-        public float beamCannonDuration = 8f;
-        public float bombsDuration = 8f;
+        public float cameraSpectatingHeight = 45;
+        public float cameraFollowDistance = 0;
+        public float cameraFollowHeight = 20;
+    }
+
+    [System.Serializable]
+    public class Projectile_Variables
+    {
+        public float bulletDamage = 10;
+        public float bulletSpeed = 30;
+        public float bulletRange = 70;
+        public int bulletRicochetNumber = 0;
+        public float rubberBulletDamage = 5;
+        public float rubberBulletSpeed = 90;
+        public float rubberBulletRange = 200;
         public int rubberBulletRicochetNumber = 3;
+        public float blazingRamDamage = 20;
+        public float blazingRamSpeed = 0;
+        public float blazingRamRange = 0;
+        public int blazingRamRicochetNumber = 0;
+    }
+
+    [System.Serializable]
+    public class PowerUp_Variables
+    {
+        public float powerUpCooldown = 10;
+
         public int rubberBulletsIndex = 1;
         public int blazingRamIndex = 2;
         public int beamCannonIndex = 3;
         public int bombsIndex = 4;
-        public float cameraSpectatingHeight = 45;
-        public float cameraFollowDistance = 0;
-        public float cameraFollowHeight = 20;
+
         public bool rubberBulletsAvailable = true;
         public bool blazingRamAvailable = false;
         public bool beamCannonAvailable = false;
         public bool bombsAvailable = false;
+
+        #region RubberBullets variables
+        public float rubberBulletsDuration = 8;
+        public int rubberBulletsProjectileType = 1;
+        public bool rubberBulletsIsPersistingProjectileState = false;
+        public float rubberBulletsShipSpeedModifier = 1;
+        public float rubberBulletsShipDamageTakenModifier = 1;
+        public float rubberBulletsShootCooldownModifier = 1;
+        public bool rubberBulletsCanShootState = true;
+        public bool rubberBulletsIsMovableState = true;
+        public bool rubberBulletsIsVulnerableState = true;
+        #endregion
+
+        #region BlazingRam variables
+        public float blazingRamDuration = 0;
+        public int blazingRamProjectileType = 2;
+        public bool blazingRamIsPersistingProjectileState = true;
+        public float blazingRamShipSpeedModifier = 2.5f;
+        public float blazingRamShipDamageTakenModifier = 0.5f;
+        public float blazingRamShootCooldownModifier = 1;
+        public bool blazingRamCanShootState = true;
+        public bool blazingRamIsMovableState = true;
+        public bool blazingRamIsVulnerableState = true;
+        #endregion
+
+        #region BeamCannon variables
+        public float beamCannonDuration = -1;
+        public int beamCannonProjectileType = -1;
+        public bool beamCannonIsPersistingProjectileState = false;
+        public float beamCannonShipSpeedModifier = -1;
+        public float beamCannonShipDamageTakenModifier = -1;
+        public float beamCannonShootCooldownModifier = -1;
+        public bool beamCannonCanShootState = false;
+        public bool beamCannonIsMovableState = false;
+        public bool beamCannonIsVulnerableState = false;
+        #endregion
+
+        #region Bombs variables
+        public float bombsDuration = -1;
+        public int bombsProjectileType = -1;
+        public bool bombsIsPersistingProjectileState = false;
+        public float bombsShipSpeedModifier = -1;
+        public float bombsShipDamageTakenModifier = -1;
+        public float bombsShootCooldownModifier = -1;
+        public bool bombsCanShootState = false;
+        public bool bombsIsMovableState = false;
+        public bool bombsIsVulnerableState = false;
+        #endregion
     }
 
     [System.Serializable]
@@ -131,6 +196,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
     [System.Serializable]
     public class AI_Variables
     {
+        public bool aiDisabled = false;
         //public float preferredMinDistanceToTarget = 5;
         public float closestTargetTimerDuration = 1;
         public float changeDirectionTimerDuration = 4;

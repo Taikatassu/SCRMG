@@ -84,68 +84,6 @@ public class Core_LocalPlayerController : Core_ShipController {
         }
     }
     #endregion
-    #endregion
-
-    #region Update
-    protected override void Update()
-    {
-        if (buildPlatform == 1 && rotatingTurret)
-        {
-            //Rotate turret
-            SetLookTargetPosition(transform.position + new Vector3(turretJoystickValue.x, 0, turretJoystickValue.y));
-        }
-
-        #region [NOT CURRENTLY IN USE] AutoAim
-        //if (!debugMode)
-        //{
-        //    if (matchStarted)
-        //    {
-        //        if (shipList.Count > 0)
-        //        {
-        //            for (int i = 0; i < shipList.Count; i++)
-        //            {
-        //                if (shipList[i] == null)
-        //                {
-        //                    shipList.RemoveAt(i);
-        //                    i--;
-        //                }
-        //                else if (closestTarget == null)
-        //                {
-        //                    closestTarget = shipList[i];
-        //                }
-        //                else
-        //                {
-        //                    if (DistanceToObject(shipList[i].position) < DistanceToObject(closestTarget.position))
-        //                    {
-        //                        closestTarget = shipList[i];
-        //                    }
-        //                }
-        //            }
-        //            if (closestTarget != null)
-        //            {
-        //                SetLookTargetPosition(closestTarget.position);
-        //            }
-        //        }
-
-        //    }
-        //}
-        #endregion
-
-        if (isShooting)
-        {
-            Shoot();
-        }
-
-        base.Update();
-    }
-    #endregion
-
-    #region DistanceToObject
-    private float DistanceToObject(Vector3 objectPosition)
-    {
-        return Vector3.Distance(transform.position, objectPosition);
-    }
-    #endregion
 
     #region Subscribers
     #region Input subscribers
@@ -160,7 +98,7 @@ public class Core_LocalPlayerController : Core_ShipController {
                 movementDirection.y = 0;
             }
         }
-    } 
+    }
 
     private void OnMousePosition(int controllerIndex, Vector2 mousePosition)
     {
@@ -191,6 +129,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     private void OnMouseButtonLeftUp(int controllerIndex)
     {
         isShooting = false;
+        DestroyPersistingProjectile();
     }
 
     private void OnMouseButtonRightDown(int controllerIndex)
@@ -249,5 +188,74 @@ public class Core_LocalPlayerController : Core_ShipController {
     //}
     #endregion
     #endregion
+    #endregion
+
+    #region Update
+    protected override void Update()
+    {
+        if (buildPlatform == 1 && rotatingTurret)
+        {
+            //Rotate turret
+            SetLookTargetPosition(transform.position + new Vector3(turretJoystickValue.x, 0, turretJoystickValue.y));
+        }
+
+        #region [NOT CURRENTLY IN USE] AutoAim
+        //if (!debugMode)
+        //{
+        //    if (matchStarted)
+        //    {
+        //        if (shipList.Count > 0)
+        //        {
+        //            for (int i = 0; i < shipList.Count; i++)
+        //            {
+        //                if (shipList[i] == null)
+        //                {
+        //                    shipList.RemoveAt(i);
+        //                    i--;
+        //                }
+        //                else if (closestTarget == null)
+        //                {
+        //                    closestTarget = shipList[i];
+        //                }
+        //                else
+        //                {
+        //                    if (DistanceToObject(shipList[i].position) < DistanceToObject(closestTarget.position))
+        //                    {
+        //                        closestTarget = shipList[i];
+        //                    }
+        //                }
+        //            }
+        //            if (closestTarget != null)
+        //            {
+        //                SetLookTargetPosition(closestTarget.position);
+        //            }
+        //        }
+
+        //    }
+        //}
+        #endregion
+
+        base.Update();
+    }
+
+    protected override void FixedUpdate()
+    {
+        base.FixedUpdate();
+
+        if (isShooting)
+        {
+            Shoot();
+        }
+
+    }
+    #endregion
+
+    #region DistanceToObject
+    private float DistanceToObject(Vector3 objectPosition)
+    {
+        return Vector3.Distance(transform.position, objectPosition);
+    }
+    #endregion
+
 
 }
