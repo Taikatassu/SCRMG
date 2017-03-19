@@ -102,10 +102,18 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float rubberBulletSpeed = 90;
         public float rubberBulletRange = 200;
         public int rubberBulletRicochetNumber = 3;
-        public float blazingRamDamage = 20;
+        public float blazingRamDamage = 80;
         public float blazingRamSpeed = 0;
         public float blazingRamRange = 0;
         public int blazingRamRicochetNumber = 0;
+        public float beamCannonDamage = 10;
+        public float beamCannonSpeed = 0;
+        public float beamCannonRange = 0;
+        public int beamCannonRicochetNumber = 0;
+        public float bombsDamage = 50;
+        public float bombsSpeed = 15;
+        public float bombsRange = 70;
+        public int bombsRicochetNumber = 0;
     }
 
     [System.Serializable]
@@ -119,8 +127,8 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public int bombsIndex = 4;
 
         public bool rubberBulletsAvailable = true;
-        public bool blazingRamAvailable = false;
-        public bool beamCannonAvailable = false;
+        public bool blazingRamAvailable = true;
+        public bool beamCannonAvailable = true;
         public bool bombsAvailable = false;
 
         #region RubberBullets variables
@@ -136,7 +144,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         #endregion
 
         #region BlazingRam variables
-        public float blazingRamDuration = 0;
+        public float blazingRamDuration = 9;
         public int blazingRamProjectileType = 2;
         public bool blazingRamIsPersistingProjectileState = true;
         public float blazingRamShipSpeedModifier = 2.5f;
@@ -148,15 +156,15 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         #endregion
 
         #region BeamCannon variables
-        public float beamCannonDuration = -1;
-        public int beamCannonProjectileType = -1;
-        public bool beamCannonIsPersistingProjectileState = false;
-        public float beamCannonShipSpeedModifier = -1;
-        public float beamCannonShipDamageTakenModifier = -1;
-        public float beamCannonShootCooldownModifier = -1;
-        public bool beamCannonCanShootState = false;
-        public bool beamCannonIsMovableState = false;
-        public bool beamCannonIsVulnerableState = false;
+        public float beamCannonDuration = 8;
+        public int beamCannonProjectileType = 3;
+        public bool beamCannonIsPersistingProjectileState = true;
+        public float beamCannonShipSpeedModifier = 1;
+        public float beamCannonShipDamageTakenModifier = 1;
+        public float beamCannonShootCooldownModifier = 1;
+        public bool beamCannonCanShootState = true;
+        public bool beamCannonIsMovableState = true;
+        public bool beamCannonIsVulnerableState = true;
         #endregion
 
         #region Bombs variables

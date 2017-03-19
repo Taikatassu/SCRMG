@@ -4,8 +4,15 @@ using UnityEngine;
 
 public class Core_Projectile : MonoBehaviour {
 
-    //TODO: Add fading effect when projectile runs out of lifetime
-    //          before hitting anything
+    /*TODO: 
+     * - Add fading effect when projectile runs out of lifetime
+     *      before hitting anything?
+     *      
+     * - Make string variables for projectile visual's names (so the names don't have to be hard-coded)
+     * 
+     * - Rename projectiles / powerUps as "projectileOne" / "powerUpOne" (or similar)
+     *      and create variables for projectile / powerUp names (same reason as above)
+    */
 
     #region References & variables
     //References
@@ -16,7 +23,7 @@ public class Core_Projectile : MonoBehaviour {
     Rigidbody rb;
     BoxCollider projectileCollider;
     //Variables coming from within the script 
-    public enum EProjectileType { DEFAULT, BULLET, RUBBERBULLET, BLAZINGRAM, BEAMCANNON }
+    public enum EProjectileType { DEFAULT, BULLET, RUBBERBULLET, BLAZINGRAM, BEAMCANNON, BOMBS }
     EProjectileType projectileType = EProjectileType.DEFAULT;
     Color projectileColor;
     bool isPaused = false;
@@ -49,6 +56,10 @@ public class Core_Projectile : MonoBehaviour {
     float beamCannonSpeed = -1;
     float beamCannonRange = -1;
     int beamCannonRicochetNumber = -1;
+    float bombsDamage = -1;
+    float bombsSpeed = -1;
+    float bombsRange = -1;
+    int bombsRicochetNumber = -1;
     #endregion
 
     #region Initialization
@@ -81,6 +92,16 @@ public class Core_Projectile : MonoBehaviour {
         blazingRamSpeed = lib.projectileVariables.blazingRamSpeed;
         blazingRamRange = lib.projectileVariables.blazingRamRange;
         blazingRamRicochetNumber = lib.projectileVariables.blazingRamRicochetNumber;
+
+        beamCannonDamage = lib.projectileVariables.beamCannonDamage;
+        beamCannonSpeed = lib.projectileVariables.beamCannonSpeed;
+        beamCannonRange = lib.projectileVariables.beamCannonRange;
+        beamCannonRicochetNumber = lib.projectileVariables.beamCannonRicochetNumber;
+
+        bombsDamage = lib.projectileVariables.bombsDamage;
+        bombsSpeed = lib.projectileVariables.bombsSpeed;
+        bombsRange = lib.projectileVariables.bombsRange;
+        bombsRicochetNumber = lib.projectileVariables.bombsRicochetNumber;
     }
     #endregion
 
@@ -95,10 +116,6 @@ public class Core_Projectile : MonoBehaviour {
 
     void OnDisable()
     {
-        if (projectileType == EProjectileType.BLAZINGRAM)
-        {
-            Debug.Log("BlazingRam destroyed");
-        }
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
         em.OnGameRestart -= OnGameRestart;
@@ -136,6 +153,7 @@ public class Core_Projectile : MonoBehaviour {
         projectileColor = myShipController.GetShipColor();
         switch (newProjectileType)
         {
+            //TODO: Get collider sizes and positions, and persistingStates from GVL instead of hardcoding!
             case 0:
                 projectileType = EProjectileType.BULLET;
                 projectileDamage = bulletDamage;
@@ -153,6 +171,7 @@ public class Core_Projectile : MonoBehaviour {
                 projectileCollider.center = new Vector3(0, 0, 0);
                 isPersistingProjectile = false;
                 break;
+
             case 1:
                 projectileType = EProjectileType.RUBBERBULLET;
                 projectileDamage = rubberBulletDamage;
@@ -165,16 +184,17 @@ public class Core_Projectile : MonoBehaviour {
                 Instantiate(Resources.Load("Projectiles/Visuals/RubberBulletVisuals", typeof(GameObject)), transform);
                 SetProjectileVisualsColor();
                 SetProjectileTrailColor();
+                SetProjectileParticleEffectsColor();
 
                 projectileCollider = GetComponent<BoxCollider>();
                 projectileCollider.size = new Vector3(0.8f, 0.8f, 0.8f);
                 projectileCollider.center = new Vector3(0, 0, 0);
                 isPersistingProjectile = false;
                 break;
+
             case 2:
                 projectileType = EProjectileType.BLAZINGRAM;
                 projectileDamage = blazingRamDamage * Time.fixedDeltaTime;
-                Debug.Log("BlazingRam created, damage: " + projectileDamage);
                 projectileSpeed = blazingRamSpeed;
                 projectileLifetimeFrames = Mathf.RoundToInt((blazingRamRange / projectileSpeed) / Time.fixedDeltaTime);
                 projectileLifetimeTimer = projectileLifetimeFrames;
@@ -182,17 +202,19 @@ public class Core_Projectile : MonoBehaviour {
                 projectileRicochetNumber = blazingRamRicochetNumber;
 
                 Instantiate(Resources.Load("Projectiles/Visuals/BlazingRamVisuals", typeof(GameObject)), transform);
+                SetProjectileVisualsColor();
                 SetProjectileTrailColor();
+                SetProjectileParticleEffectsColor();
 
                 projectileCollider = GetComponent<BoxCollider>();
-                projectileCollider.size = new Vector3(2f, 1f, 1.5f);
-                projectileCollider.center = new Vector3(0, 0, 0.7f);
+                projectileCollider.size = new Vector3(3.5f, 1f, 2f);
+                projectileCollider.center = new Vector3(0, 0, 1.3f);
                 isPersistingProjectile = true;
                 break;
+
             case 3:
                 projectileType = EProjectileType.BEAMCANNON;
                 projectileDamage = beamCannonDamage * Time.fixedDeltaTime;
-                Debug.Log("BeamCannon created, damage: " + projectileDamage);
                 projectileSpeed = beamCannonSpeed;
                 projectileLifetimeFrames = Mathf.RoundToInt((beamCannonRange / projectileSpeed) / Time.fixedDeltaTime);
                 projectileLifetimeTimer = projectileLifetimeFrames;
@@ -200,13 +222,36 @@ public class Core_Projectile : MonoBehaviour {
                 projectileRicochetNumber = beamCannonRicochetNumber;
 
                 Instantiate(Resources.Load("Projectiles/Visuals/BeamCannonVisuals", typeof(GameObject)), transform);
+                SetProjectileVisualsColor();
                 SetProjectileTrailColor();
+                SetProjectileParticleEffectsColor();
 
                 projectileCollider = GetComponent<BoxCollider>();
                 projectileCollider.size = new Vector3(1f, 1f, 15f);
                 projectileCollider.center = new Vector3(0, 0, 8.4f);
                 isPersistingProjectile = true;
                 break;
+            
+            /*
+            case 4:
+                projectileType = EProjectileType.BOMBS;
+                projectileDamage = bombsDamage * Time.fixedDeltaTime;
+                projectileSpeed = bombsSpeed;
+                projectileLifetimeFrames = Mathf.RoundToInt((bombsRange / projectileSpeed) / Time.fixedDeltaTime);
+                projectileLifetimeTimer = projectileLifetimeFrames;
+                projectileRicochetCounter = 0;
+                projectileRicochetNumber = bombsRicochetNumber;
+
+                Instantiate(Resources.Load("Projectiles/Visuals/BombsVisuals", typeof(GameObject)), transform);
+                //TODO: Properly set up bomb color and collider size / location
+                //SetProjectileTrailColor();
+
+                //projectileCollider = GetComponent<BoxCollider>();
+                //projectileCollider.size = new Vector3(1f, 1f, 15f);
+                //projectileCollider.center = new Vector3(0, 0, 8.4f);
+                isPersistingProjectile = false;
+                break;
+            */
         }
 
         if (isPersistingProjectile)
@@ -234,6 +279,13 @@ public class Core_Projectile : MonoBehaviour {
             {
                 child.GetComponent<Renderer>().material.SetColor("_TintColor", projectileColor);
             }
+            foreach (Transform grandChild in child)
+            {
+                if (grandChild.GetComponent<Renderer>())
+                {
+                    grandChild.GetComponent<Renderer>().material.SetColor("_TintColor", projectileColor);
+                }
+            }
         }
     }
 
@@ -245,6 +297,13 @@ public class Core_Projectile : MonoBehaviour {
             {
                 child.GetComponent<TrailRenderer>().material.SetColor("_TintColor", projectileColor);
             }
+            foreach (Transform grandChild in child)
+            {
+                if (grandChild.GetComponent<TrailRenderer>())
+                {
+                    grandChild.GetComponent<TrailRenderer>().material.SetColor("_TintColor", projectileColor);
+                }
+            }
         }
     }
 
@@ -254,8 +313,23 @@ public class Core_Projectile : MonoBehaviour {
         {
             if (child.GetComponent<ParticleSystem>())
             {
-                ParticleSystem.MainModule psMain = child.GetComponentInChildren<ParticleSystem>().main;
+                ParticleSystem ps = child.GetComponentInChildren<ParticleSystem>();
+                ps.Stop();
+                ParticleSystem.MainModule psMain = ps.main;
                 psMain.startColor = new Color(projectileColor.r, projectileColor.g, projectileColor.b, psMain.startColor.color.a);
+                ps.Play();
+            }
+
+            foreach (Transform grandChild in child)
+            {
+                if (grandChild.GetComponent<ParticleSystem>())
+                {
+                    ParticleSystem ps = grandChild.GetComponentInChildren<ParticleSystem>();
+                    ps.Stop();
+                    ParticleSystem.MainModule psMain = ps.main;
+                    psMain.startColor = new Color(projectileColor.r, projectileColor.g, projectileColor.b, psMain.startColor.color.a);
+                    ps.Play();
+                }
             }
         }
     }
@@ -321,7 +395,6 @@ public class Core_Projectile : MonoBehaviour {
     #region Projectile destruction
     public void OnPersistingProjectileDestruction()
     {
-        Debug.Log("OnPersistingProjectileDestruction");
         Destroy(gameObject);
     }
 
@@ -354,7 +427,9 @@ public class Core_Projectile : MonoBehaviour {
             }
             else
             {
-                Debug.Log("Persisting projectile collision with ship");
+                GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                    collidedObject.transform.position, Quaternion.identity) as GameObject;
+                bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
             }
         }
         else if (collidedObjectTag == environmentTag)
@@ -363,7 +438,24 @@ public class Core_Projectile : MonoBehaviour {
             {
                 projectileRicochetCounter++;
                 Vector3 originalRotation = transform.eulerAngles;
-                //TODO: Calculat proper reflection angle
+
+                //TODO: Finish implementing proper projectile reflection
+                //Remember to add proper reflection calculations to OnTriggerEnter as well
+
+                //RaycastHit hit;
+                //Vector3 rayDirection = transform.forward;
+                //Vector3 startPoint = transform.position;
+                //if (Physics.Raycast(startPoint, rayDirection, out hit))
+                //{
+                //    //float newYAngle = Vector3.Angle(hit.normal, transform.forward) + 90;
+                //    Vector3 reflection = Vector3.Reflect(transform.forward, hit.normal);
+                //    Debug.Log("reflection: " + reflection);
+                //    float newYAngle = Vector3.Angle(Vector3.zero, reflection);
+                //    Debug.Log("newYAngle: " + newYAngle);
+
+                //    transform.eulerAngles = new Vector3(originalRotation.x, newYAngle, originalRotation.z);
+                //}
+
                 transform.eulerAngles = new Vector3(originalRotation.x, originalRotation.y + 180, originalRotation.z);
                 ricochetCooldownTimer = Mathf.RoundToInt(ricochetCooldown / Time.fixedDeltaTime);
                 ricohetOnCooldown = true;
@@ -392,7 +484,9 @@ public class Core_Projectile : MonoBehaviour {
             }
             else
             {
-                Debug.Log("Persisting projectile collision with ship, damage: " + projectileDamage);
+                GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                    collidedObject.transform.position, Quaternion.identity) as GameObject;
+                bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
             }
         }
         else if (collidedObjectTag == environmentTag)
@@ -401,8 +495,11 @@ public class Core_Projectile : MonoBehaviour {
             {
                 projectileRicochetCounter++;
                 Vector3 originalRotation = transform.eulerAngles;
-                //TODO: Calculat proper reflection angle
                 transform.eulerAngles = new Vector3(originalRotation.x, originalRotation.y + 180, originalRotation.z);
+
+                //TODO: Make this identical to OnCollisionEnter
+
+
                 ricochetCooldownTimer = Mathf.RoundToInt(ricochetCooldown / Time.fixedDeltaTime);
                 ricohetOnCooldown = true;
             }

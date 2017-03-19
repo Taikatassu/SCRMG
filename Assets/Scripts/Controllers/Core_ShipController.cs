@@ -11,6 +11,7 @@ public class Core_ShipController : MonoBehaviour {
      *      
      * Figure out a way of blocking ship from moving outside of arena bounds, and
      *      return it to arena if somehow managing to get outside of it
+     *      [Temporary fix implemented, remove and properly fix at some point]
     */
 
     #region References & variables
@@ -70,10 +71,11 @@ public class Core_ShipController : MonoBehaviour {
     protected int buildPlatform = -1; //0 = PC, 1 = Android
     int projectileType = -1;
     int powerUpTimer = -1;
-    int rubberBulletsIndex = -1;
-    int blazingRamIndex = -1;
-    int beamCannonIndex = -1;
-    int bombsIndex = -1;
+    //TODO: Remove if deemed permanently obsolete
+    //int rubberBulletsIndex = -1;
+    //int blazingRamIndex = -1;
+    //int beamCannonIndex = -1;
+    //int bombsIndex = -1;
     #endregion
 
     #region Initialization
@@ -109,10 +111,11 @@ public class Core_ShipController : MonoBehaviour {
         gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
         gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
         gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
-        rubberBulletsIndex = -lib.powerUpVariables.rubberBulletsIndex;
-        blazingRamIndex = lib.powerUpVariables.blazingRamIndex;
-        beamCannonIndex = lib.powerUpVariables.beamCannonIndex;
-        bombsIndex = lib.powerUpVariables.bombsIndex;
+        //TODO: Remove if deemed permanently obsolete
+        //rubberBulletsIndex = -lib.powerUpVariables.rubberBulletsIndex;
+        //blazingRamIndex = lib.powerUpVariables.blazingRamIndex;
+        //beamCannonIndex = lib.powerUpVariables.beamCannonIndex;
+        //bombsIndex = lib.powerUpVariables.bombsIndex;
     }
     #endregion
 
@@ -250,6 +253,11 @@ public class Core_ShipController : MonoBehaviour {
         {
             if (isMovable && movementDirection != Vector3.zero)
             {
+                float movementDirectionMagnitude = movementDirection.magnitude;
+                if (movementDirectionMagnitude > 1)
+                {
+                    movementDirection = movementDirection / movementDirectionMagnitude;
+                }
                 rb.MovePosition(transform.position + movementDirection * (movementSpeed * speedModifier) * Time.fixedDeltaTime);
                 if (movementDirection == Vector3.zero)
                 {
@@ -261,6 +269,35 @@ public class Core_ShipController : MonoBehaviour {
                 shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
                     Time.fixedDeltaTime * shipHullRotationSpeed);
             }
+
+            //TODO: Implement a proper way to detect if ship is outside of arena bounds, and returning it back to arena
+            Vector3 currentPosition = transform.position;
+            if (currentPosition.x > 25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.x = 25;
+                transform.position = newPosition;
+            }
+            else if (currentPosition.x < -25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.x = -25;
+                transform.position = newPosition;
+
+            }
+            else if (currentPosition.z > 25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.z = 25;
+                transform.position = newPosition;
+            }
+            else if (currentPosition.z < -25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.z = -25;
+                transform.position = newPosition;
+            }
+
         }
         #endregion
 
@@ -311,9 +348,8 @@ public class Core_ShipController : MonoBehaviour {
     #region PowerUp management
     private void EndPowerUp()
     {
-        Debug.Log("EndPowerUp");
         em.BroadcastPowerUpEnded(index, powerUpType);
-        DestroyPersistingProjectile();
+        EndPersistingProjectile();
         powerUpType = 0;
         powerUpTimer = 0;
         projectileType = 0;
@@ -369,11 +405,10 @@ public class Core_ShipController : MonoBehaviour {
         }
     }
 
-    protected void DestroyPersistingProjectile()
+    protected void EndPersistingProjectile()
     {
         if (isPersistingProjectile)
         {
-            Debug.Log("EndShooting: isPersistingProjectile");
             if (newProjectileScript != null)
             {
                 newProjectileScript.OnPersistingProjectileDestruction();

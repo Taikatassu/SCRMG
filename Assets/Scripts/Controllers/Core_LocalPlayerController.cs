@@ -129,7 +129,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     private void OnMouseButtonLeftUp(int controllerIndex)
     {
         isShooting = false;
-        DestroyPersistingProjectile();
+        EndPersistingProjectile();
     }
 
     private void OnMouseButtonRightDown(int controllerIndex)
@@ -156,6 +156,7 @@ public class Core_LocalPlayerController : Core_ShipController {
         if (joystickIndex == 2)
         {
             isShooting = false;
+            EndPersistingProjectile();
             rotatingTurret = false;
         }
     }

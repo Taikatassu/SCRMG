@@ -27,6 +27,8 @@ public class Core_PowerUpController : MonoBehaviour {
     bool powerUpIsMovableState = false;
     bool powerUpIsVulnerableState = false;
     bool powerUpOnline = false;
+    bool isPaused = false;
+    bool matchStarted = false;
 
     //Values coming from GlobalVariableLibrary
     float powerUpCooldown = -1;
@@ -190,38 +192,72 @@ public class Core_PowerUpController : MonoBehaviour {
     #region OnEnable & OnDisable
     private void OnEnable()
     {
+        em.OnPauseOn += OnPauseOn;
+        em.OnPauseOff += OnPauseOff;
         em.OnMatchStarted += OnMatchStarted;
         em.OnMatchEnded += OnMatchEnded;
+        em.OnGameRestart += OnGameRestart;
+        em.OnNewSceneLoading += OnNewSceneLoading;
         SetPowerUpState(false);
     }
 
     private void OnDisable()
     {
+        em.OnPauseOn -= OnPauseOn;
+        em.OnPauseOff -= OnPauseOff;
         em.OnMatchStarted -= OnMatchStarted;
         em.OnMatchEnded -= OnMatchEnded;
+        em.OnGameRestart -= OnGameRestart;
+        em.OnNewSceneLoading -= OnNewSceneLoading;
     }
     #endregion
 
     #region Subscribers
+    private void OnPauseOn()
+    {
+        isPaused = true;
+    }
+
+    private void OnPauseOff()
+    {
+        isPaused = false;
+    }
+
     private void OnMatchStarted()
     {
         SetPowerUpState(true);
+        matchStarted = true;
     }
+
     private void OnMatchEnded(int winnerIndex)
     {
         SetPowerUpState(false);
+        matchStarted = false;
+    }
+
+    private void OnGameRestart()
+    {
+        matchStarted = false;
+    }
+
+    private void OnNewSceneLoading(int sceneIndex)
+    {
+        matchStarted = false;
     }
     #endregion
 
     void FixedUpdate ()
     {
-		if (!powerUpOnline)
+        if (!isPaused)
         {
-            powerUpCooldownTimer--;
-            if (powerUpCooldownTimer <= 0)
+            if (matchStarted && !powerUpOnline)
             {
-                powerUpCooldownTimer = 0;
-                SetPowerUpState(true);
+                powerUpCooldownTimer--;
+                if (powerUpCooldownTimer <= 0)
+                {
+                    powerUpCooldownTimer = 0;
+                    SetPowerUpState(true);
+                }
             }
         }
 	}
@@ -283,6 +319,11 @@ public class Core_PowerUpController : MonoBehaviour {
                 powerUpIsMovableState = bombsIsMovableState;
                 powerUpIsVulnerableState = bombsIsVulnerableState;
             }
+            else
+            {
+                Debug.LogError("PowerUpController: Invalid powerUp type!");
+            }
+
 
             em.BroadcastPowerUpOnline(powerUpPlatformIndex, powerUpType);
             powerUpPlatformEffect.Play();
@@ -296,7 +337,6 @@ public class Core_PowerUpController : MonoBehaviour {
     public void SetPowerUpPlatformIndex(int newIndex)
     {
         powerUpPlatformIndex = newIndex;
-        Debug.Log("My powerUpPlatformIndex: " + powerUpPlatformIndex);
     }
 
     private void OnTriggerEnter(Collider collider)

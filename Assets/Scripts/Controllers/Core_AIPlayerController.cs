@@ -25,6 +25,7 @@ public class Core_AIPlayerController : Core_ShipController {
     bool currentTargetNoLongerClosest = false;
     bool directionChangeLerping = false;
     bool isPaused = false;
+    bool isShooting = false;
     //Values coming from GlobalVariableLibrary
     //float preferredMinDistanceToTarget = 5;
     float closestTargetTimerDuration = -1;
@@ -217,7 +218,7 @@ public class Core_AIPlayerController : Core_ShipController {
             {
                 if (changeDirectionTimer <= 0)
                 {
-                    newMovementDirection = RandomizeDirection(-180, 180).normalized;
+                    newMovementDirection = RandomizeDirection(-180, 180);
                     changeDirectionTimer = changeDirectionTimerFrames;
 
                     oldMovementDirection = movementDirection;
@@ -241,7 +242,7 @@ public class Core_AIPlayerController : Core_ShipController {
             //If target is too far
             if (currentTarget != null && DistanceToObject(currentTarget.position) > preferredMaxDistanceToTarget)
             {
-                newMovementDirection = (currentTarget.position - transform.position).normalized;
+                newMovementDirection = currentTarget.position - transform.position;
                 changeDirectionTimer = changeDirectionTimerFrames;
 
                 oldMovementDirection = movementDirection;
@@ -255,7 +256,12 @@ public class Core_AIPlayerController : Core_ShipController {
             {
                 if (currentTarget != null && DistanceToObject(currentTarget.position) < shootingRange)
                 {
-                    Shoot();
+                    isShooting = true;
+                }
+                else
+                {
+                    isShooting = false;
+                    EndPersistingProjectile();
                 }
             }
             #endregion
@@ -300,6 +306,11 @@ public class Core_AIPlayerController : Core_ShipController {
         #endregion
 
         base.FixedUpdate();
+
+        if (isShooting)
+        {
+            Shoot();
+        }
     }
 
     private void OnCollisionEnter(Collision collision)
