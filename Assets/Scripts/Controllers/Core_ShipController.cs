@@ -22,7 +22,7 @@ public class Core_ShipController : MonoBehaviour {
     protected Rigidbody rb;
     protected Vector3 movementDirection;
     protected Vector3 lookTargetPosition;
-    Transform shipHull;
+    protected Transform shipHull;
     Transform shipTurret;
     Transform turretOutputMarker;
     GameObject healthBar;

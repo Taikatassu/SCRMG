@@ -4,12 +4,14 @@ using UnityEngine;
 
 public class Core_AIPlayerController : Core_ShipController {
 
-    // TODO: Implement an AI that evaluates the game situation decides 
-    // actions based on it and controls the ship accordingly
+    /* TODO: 
+     * - Implement an AI that evaluates the game situation decides 
+     *      actions based on it and controls the ship accordingly
+     *      
+     * - AI sometimes stop at random times (find the reason and fix)
+    */
 
     #region References & variables
-    // TODO: Use this to pause AI behaviour while game is paused
-
     //References
     Transform closestTarget;
     Transform currentTarget;
@@ -18,16 +20,13 @@ public class Core_AIPlayerController : Core_ShipController {
     Vector3 newMovementDirection = Vector3.zero;
     Vector3 oldMovementDirection = Vector3.zero;
     int closestTargetTimer = -1;
-    int closestTargetTimerFrames = -1;
     int changeDirectionTimer = -1;
-    int changeDirectionTimerFrames = -1;
     float directionChangeLerpStartTime = -1;
     bool currentTargetNoLongerClosest = false;
     bool directionChangeLerping = false;
     bool isPaused = false;
     bool isShooting = false;
     //Values coming from GlobalVariableLibrary
-    //float preferredMinDistanceToTarget = 5;
     float closestTargetTimerDuration = -1;
     float changeDirectionTimerDuration = -1;
     float directionChangeLerpDuration = -1;
@@ -52,9 +51,6 @@ public class Core_AIPlayerController : Core_ShipController {
         changeDirectionTimerDuration = lib.aiVariables.changeDirectionTimerDuration;
         directionChangeLerpDuration = lib.aiVariables.directionChangeLerpDuration;
         shootingRange = lib.aiVariables.shootingRange;
-        //preferredMinDistanceToTarget = lib.aiVariables.preferredMinDistanceToTarget;
-        closestTargetTimerFrames = Mathf.RoundToInt(closestTargetTimerDuration / Time.fixedDeltaTime);
-        changeDirectionTimerFrames = Mathf.RoundToInt(changeDirectionTimerDuration / Time.fixedDeltaTime);
         changeDirectionTimer = 0;
         preferredMaxDistanceToTarget = lib.aiVariables.preferredMaxDistanceToTarget;
     }
@@ -98,19 +94,18 @@ public class Core_AIPlayerController : Core_ShipController {
     }
     #endregion
 
-    private Vector3 RandomizeDirection(int minAngle, int maxAngle)
+    private Vector3 GetRandomDirection()
     {
-        //int x = Random.Range(-1, 1);
-        //int z = Random.Range(-1, 1);
 
-        //Vector3 randomizedDirection = new Vector3(x, 0, z);
-        //randomizedDirection.Normalize();
-        //movementDirection = randomizedDirection;
-        int newAngle = Random.Range(minAngle, maxAngle);
+        int x = Random.Range(-1, 1);
+        int z = Random.Range(-1, 1);
+        Vector3 randomizedDirection = new Vector3(x, 0, z);
+        randomizedDirection.Normalize();
 
-        return Quaternion.AngleAxis(newAngle, Vector3.up) * transform.forward;
+        return randomizedDirection;
     }
 
+    #region Update & FixedUpdate
     protected override void Update()
     {
         if (!aiDisabled)
@@ -152,7 +147,7 @@ public class Core_AIPlayerController : Core_ShipController {
                         if (closestTarget.gameObject == currentTarget.gameObject)
                         {
                             currentTargetNoLongerClosest = false;
-                            closestTargetTimer = closestTargetTimerFrames;
+                            closestTargetTimer = Mathf.RoundToInt(closestTargetTimerDuration / Time.fixedDeltaTime);
                         }
                         else
                         {
@@ -174,52 +169,13 @@ public class Core_AIPlayerController : Core_ShipController {
             }
             #endregion
 
-            #region [WIP] Experimental Movement behaviour
-            //if (matchStarted && !isPaused)
-            //{
-
-            //    if (currentTarget != null)
-            //    {
-            //        Vector3 direction = currentTarget.position - transform.position;
-            //        float distanceToTarget = direction.magnitude;
-            //        if (distanceToTarget < preferredMinDistanceToTarget)
-            //        {
-            //            Debug.Log("AI " + index + "distanceToTarget < preferredMinDistanceToTarget, changeDirectionTimer: " + changeDirectionTimer);
-            //            //Move to random direction
-            //            if (changeDirectionTimer <= 0)
-            //            {
-            //                float angle = Vector3.Angle(movementDirection, currentTarget.position);
-            //                Debug.Log("AI " + index + ": angle: " + angle);
-            //                RandomizeDirection((int)angle - 90, (int)angle + 90);
-            //                changeDirectionTimer = changeDirectionTimerFrames;
-            //                changeDirectionTimerOn = true;
-            //            }
-            //        }
-            //        else
-            //        {
-            //            if (distanceToTarget > 1)
-            //            {
-            //                //Debug.Log("AI " + index + "distanceToTarget > 1");
-            //                direction = new Vector3(direction.x / distanceToTarget, 
-            //                    direction.y / distanceToTarget, direction.z / distanceToTarget);
-            //            }
-            //            movementDirection = direction;
-            //        }
-            //    }
-            //    else
-            //    {
-            //        Debug.Log("AI " + index + ": currentTarget == null");
-            //    }
-            //}
-            #endregion
-
             #region Movement behaviour
             if (!isPaused)
             {
                 if (changeDirectionTimer <= 0)
                 {
-                    newMovementDirection = RandomizeDirection(-180, 180);
-                    changeDirectionTimer = changeDirectionTimerFrames;
+                    newMovementDirection = GetRandomDirection();
+                    changeDirectionTimer = Mathf.RoundToInt(changeDirectionTimerDuration / Time.fixedDeltaTime);
 
                     oldMovementDirection = movementDirection;
                     directionChangeLerpStartTime = Time.time;
@@ -243,7 +199,7 @@ public class Core_AIPlayerController : Core_ShipController {
             if (currentTarget != null && DistanceToObject(currentTarget.position) > preferredMaxDistanceToTarget)
             {
                 newMovementDirection = currentTarget.position - transform.position;
-                changeDirectionTimer = changeDirectionTimerFrames;
+                changeDirectionTimer = Mathf.RoundToInt(changeDirectionTimerDuration / Time.fixedDeltaTime);
 
                 oldMovementDirection = movementDirection;
                 directionChangeLerpStartTime = Time.time;
@@ -268,11 +224,6 @@ public class Core_AIPlayerController : Core_ShipController {
         }
 
         base.Update();
-    }
-
-    private float DistanceToObject(Vector3 objectPosition)
-    {
-        return Vector3.Distance(transform.position, objectPosition);
     }
 
     protected override void FixedUpdate()
@@ -307,24 +258,37 @@ public class Core_AIPlayerController : Core_ShipController {
 
         base.FixedUpdate();
 
+        #region Shooting
         if (isShooting)
         {
             Shoot();
         }
+        #endregion
+    }
+    #endregion
+
+    private float DistanceToObject(Vector3 objectPosition)
+    {
+        return Vector3.Distance(transform.position, objectPosition);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.collider.gameObject.CompareTag("Environment"))
         {
-            //float angle = Vector3.Angle(transform.forward, movementDirection);
-            //newMovementDirection = RandomizeDirection((int)-angle - 45, (int)-angle + 45);
-            //changeDirectionTimer = changeDirectionTimerFrames;
-
-            //oldMovementDirection = movementDirection;
-            //directionChangeLerpStartTime = Time.time;
-            //directionChangeLerping = true;
-            movementDirection = -movementDirection;
+            RaycastHit hit;
+            Vector3 originalDirection = shipHull.forward;
+            Vector3 startPoint = shipHull.position;
+            if (Physics.Raycast(startPoint, originalDirection, out hit))
+            {
+                Vector3 newDirection = Vector3.Reflect(originalDirection, hit.normal);
+                movementDirection = newDirection;
+                changeDirectionTimer = Mathf.RoundToInt(changeDirectionTimerDuration / Time.fixedDeltaTime);
+            }
+            else
+            {
+                movementDirection = -movementDirection;
+            }
         }
     }
 }
