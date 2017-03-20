@@ -9,7 +9,7 @@ public class Core_ShipController : MonoBehaviour {
      *      -When game is started, ONE player controller is assigned to ONE ship 
      *      -Other ships are controlled by AI or through network by other players
      *      
-     * Figure out a way of blocking ship from moving outside of arena bounds, and
+     * Figure out a proper way to block ship from moving outside of arena bounds and
      *      return it to arena if somehow managing to get outside of it
      *      [Temporary fix implemented, remove and properly fix at some point]
     */
@@ -29,11 +29,10 @@ public class Core_ShipController : MonoBehaviour {
     Color myShipColor;
     Core_ShipColorablePartTag[] shipColorableParts;
     Core_Projectile newProjectileScript;
-    //List<Core_Projectile> projectileList = new List<Core_Projectile>();
 
     //Variables coming from within the script
-    protected int index = -1; //Set by gameManager when instantiating ships
-    float currentHealth = -1; //Set to full by calling Resurrect() when instantiated
+    protected int index = -1;
+    float currentHealth = -1;
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
     float healthBarLerpStartTime = -1;
@@ -58,7 +57,6 @@ public class Core_ShipController : MonoBehaviour {
     bool isPaused = false;
     bool isPoweredUp = false;
     protected bool rotatingTurret = false;
-
     //Values coming from GlobalVariableLibrary
     protected float maxHealth = -1;
     float movementSpeed = -1;
@@ -227,8 +225,7 @@ public class Core_ShipController : MonoBehaviour {
     #region Update & FixedUpdate
     protected virtual void Update()
     {
-        //ManageProjectileList();
-
+        #region Circular health bar updating
         if (updatingHealthBar)
         {
             float timeSinceStarted = Time.time - healthBarLerpStartTime;
@@ -242,11 +239,11 @@ public class Core_ShipController : MonoBehaviour {
                 updatingHealthBar = false;
             }
         }
+        #endregion
     }
 
     protected virtual void FixedUpdate()
     {
-
         #region Movement
         //TODO: Add lerp to movement?
         if (!isPaused)
@@ -297,7 +294,6 @@ public class Core_ShipController : MonoBehaviour {
                 newPosition.z = -25;
                 transform.position = newPosition;
             }
-
         }
         #endregion
 
@@ -569,7 +565,8 @@ public class Core_ShipController : MonoBehaviour {
     }
     #endregion
 
-    #region Collision detection
+    #region [Currently obsolete] Collision detection
+    //TODO: Remove if deemed permanently obsolete
     //private void OnCollisionEnter()
     //{
     //    Debug.Log("OnCollisionEnter");

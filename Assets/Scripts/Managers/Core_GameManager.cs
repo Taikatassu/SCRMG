@@ -45,6 +45,7 @@ public class Core_GameManager : MonoBehaviour {
     int matchStartTimerLength = -1;
     int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
+    bool powerUpsDisabled = false;
     #endregion
 
     #region Initialization
@@ -84,6 +85,7 @@ public class Core_GameManager : MonoBehaviour {
         numberOfShips = lib.sceneVariables.numberOfShips;
         sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
+        powerUpsDisabled = lib.powerUpVariables.powerUpsDisabled;
     }
     #endregion
 
@@ -398,14 +400,17 @@ public class Core_GameManager : MonoBehaviour {
         #endregion
 
         #region Instantiate PowerUps
-        int powerUpBaseIndexCounter = 0;
-        foreach (Transform position in powerUpPositions)
+        if (!powerUpsDisabled)
         {
-            powerUpBaseIndexCounter++;
-            GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpPlatform", typeof(GameObject)), position.position,
-                Quaternion.identity) as GameObject;
-            currentlyExistingPowerUps.Add(newPowerUp);
-            newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpPlatformIndex(powerUpBaseIndexCounter);
+            int powerUpBaseIndexCounter = 0;
+            foreach (Transform position in powerUpPositions)
+            {
+                powerUpBaseIndexCounter++;
+                GameObject newPowerUp = Instantiate(Resources.Load("PowerUps/PowerUpPlatform", typeof(GameObject)), position.position,
+                    Quaternion.identity) as GameObject;
+                currentlyExistingPowerUps.Add(newPowerUp);
+                newPowerUp.GetComponent<Core_PowerUpController>().SetPowerUpPlatformIndex(powerUpBaseIndexCounter);
+            }
         }
         #endregion
     }

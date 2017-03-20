@@ -97,29 +97,46 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float bulletDamage = 10;
         public float bulletSpeed = 30;
         public float bulletRange = 70;
+        public float bulletTickRate = 1; //Default at 1
+        public float bulletRicochetCooldown = 0;
         public int bulletRicochetNumber = 0;
+
         public float rubberBulletDamage = 5;
         public float rubberBulletSpeed = 90;
         public float rubberBulletRange = 200;
+        public float rubberBulletTickRate = 1; //Default at 1
+        public float rubberBulletRicochetCooldown = 0;
         public int rubberBulletRicochetNumber = 3;
+
         public float blazingRamDamage = 80;
         public float blazingRamSpeed = 0;
         public float blazingRamRange = 0;
+        public float blazingRamTickRate = 25; //Default at 1
+        public float blazingRamRicochetCooldown = 0;
         public int blazingRamRicochetNumber = 0;
+
         public float beamCannonDamage = 10;
         public float beamCannonSpeed = 0;
         public float beamCannonRange = 0;
+        public float beamCannonTickRate = 25; //Default at 1
+        public float beamCannonRicochetCooldown = 0;
         public int beamCannonRicochetNumber = 0;
+
         public float bombsDamage = 50;
         public float bombsSpeed = 15;
         public float bombsRange = 70;
+        public float bombsTickRate = 1; //Default at 1
+        public float bombsRicochetCooldown = 0;
         public int bombsRicochetNumber = 0;
     }
 
     [System.Serializable]
     public class PowerUp_Variables
     {
+        public bool powerUpsDisabled = false;
+
         public float powerUpCooldown = 10;
+        public float powerUpPlatformColliderTickRate = 15;
 
         public int rubberBulletsIndex = 1;
         public int blazingRamIndex = 2;

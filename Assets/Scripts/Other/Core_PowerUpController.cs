@@ -11,6 +11,7 @@ public class Core_PowerUpController : MonoBehaviour {
     ParticleSystem powerUpPlatformEffect;
     ParticleSystem powerUpPickupEffect;
     GameObject powerUpObject;
+    Collider powerUpPlatformCollider;
 
     //Values coming from within the script
     List<int> availablePowerUps = new List<int>();
@@ -18,10 +19,12 @@ public class Core_PowerUpController : MonoBehaviour {
     int powerUpCooldownTimer = -1;
     int powerUpType = -1;
     int powerUpProjectileType = -1;
+    int powerUpPlatformColliderTickRateCounter = -1;
     float powerUpDuration = -1;
     float powerUpShipSpeedModifier = -1;
     float powerUpShipDamageTakenModifier = -1;
     float powerUpShootCooldownModifier = -1;
+    float powerUpPlatformColliderTickInterval = -1;
     bool powerUpIsPersistingProjectile = false;
     bool powerUpCanShootState = false;
     bool powerUpIsMovableState = false;
@@ -29,11 +32,9 @@ public class Core_PowerUpController : MonoBehaviour {
     bool powerUpOnline = false;
     bool isPaused = false;
     bool matchStarted = false;
-
     //Values coming from GlobalVariableLibrary
     float powerUpCooldown = -1;
-
-    #region PowerUp indices & availability
+    float powerUpPlatformColliderTickRate = -1;
     int rubberBulletsIndex = -1;
     int blazingRamIndex = -1;
     int beamCannonIndex = -1;
@@ -42,55 +43,6 @@ public class Core_PowerUpController : MonoBehaviour {
     bool blazingRamAvailable = false;
     bool beamCannonAvailable = false;
     bool bombsAvailable = false;
-    #endregion
-
-    #region RubberBullets variables
-    float rubberBulletsDuration = -1;
-    int rubberBulletsProjectileType = -1;
-    bool rubberBulletsIsPersistingProjectileState = false;
-    float rubberBulletsShipSpeedModifier = -1;
-    float rubberBulletsShipDamageTakenModifier = -1;
-    float rubberBulletsShootCooldownModifier = -1;
-    bool rubberBulletsCanShootState = false;
-    bool rubberBulletsIsMovableState = false;
-    bool rubberBulletsIsVulnerableState = false;
-    #endregion
-
-    #region BlazingRam variables
-    float blazingRamDuration = -1;
-    int blazingRamProjectileType = -1;
-    bool blazingRamIsPersistingProjectileState = false;
-    float blazingRamShipSpeedModifier = -1;
-    float blazingRamShipDamageTakenModifier = -1;
-    float blazingRamShootCooldownModifier = -1;
-    bool blazingRamCanShootState = false;
-    bool blazingRamIsMovableState = false;
-    bool blazingRamIsVulnerableState = false;
-    #endregion
-
-    #region BeamCannon variables
-    float beamCannonDuration = -1;
-    int beamCannonProjectileType = -1;
-    bool beamCannonIsPersistingProjectileState = false;
-    float beamCannonShipSpeedModifier = -1;
-    float beamCannonShipDamageTakenModifier = -1;
-    float beamCannonShootCooldownModifier = -1;
-    bool beamCannonCanShootState = false;
-    bool beamCannonIsMovableState = false;
-    bool beamCannonIsVulnerableState = false;
-    #endregion
-
-    #region Bombs variables
-    float bombsDuration = -1;
-    int bombsProjectileType = -1;
-    bool bombsIsPersistingProjectileState = false;
-    float bombsShipSpeedModifier = -1;
-    float bombsShipDamageTakenModifier = -1;
-    float bombsShootCooldownModifier = -1;
-    bool bombsCanShootState = false;
-    bool bombsIsMovableState = false;
-    bool bombsIsVulnerableState = false;
-    #endregion
     #endregion
 
     #region Awake & GetStats
@@ -102,6 +54,7 @@ public class Core_PowerUpController : MonoBehaviour {
         powerUpPlatformEffect = transform.GetChild(1).GetComponent<ParticleSystem>();
         powerUpPickupEffect = transform.GetChild(2).GetComponent<ParticleSystem>();
         powerUpObject = GetComponentInChildren<Core_PowerUpAnimator>().gameObject;
+        powerUpPlatformCollider = transform.GetComponent<Collider>();
 
         GetStats();
     }
@@ -109,6 +62,8 @@ public class Core_PowerUpController : MonoBehaviour {
     private void GetStats()
     {
         powerUpCooldown = lib.powerUpVariables.powerUpCooldown;
+        powerUpPlatformColliderTickRate = lib.powerUpVariables.powerUpPlatformColliderTickRate;
+        powerUpPlatformColliderTickInterval = 1 / powerUpPlatformColliderTickRate;
 
         #region PowerUp indices & availability
         rubberBulletsIndex = lib.powerUpVariables.rubberBulletsIndex;
@@ -137,55 +92,7 @@ public class Core_PowerUpController : MonoBehaviour {
         {
             availablePowerUps.Add(bombsIndex);
         }
-        #endregion
-
-        #region RubberBullets variables
-        rubberBulletsDuration = lib.powerUpVariables.rubberBulletsDuration;
-        rubberBulletsProjectileType = lib.powerUpVariables.rubberBulletsProjectileType;
-        rubberBulletsIsPersistingProjectileState = lib.powerUpVariables.rubberBulletsIsPersistingProjectileState;
-        rubberBulletsShipSpeedModifier = lib.powerUpVariables.rubberBulletsShipSpeedModifier;
-        rubberBulletsShipDamageTakenModifier = lib.powerUpVariables.rubberBulletsShipDamageTakenModifier;
-        rubberBulletsShootCooldownModifier = lib.powerUpVariables.rubberBulletsShootCooldownModifier;
-        rubberBulletsCanShootState = lib.powerUpVariables.rubberBulletsCanShootState;
-        rubberBulletsIsMovableState = lib.powerUpVariables.rubberBulletsIsMovableState;
-        rubberBulletsIsVulnerableState = lib.powerUpVariables.rubberBulletsIsVulnerableState;
-        #endregion
-
-        #region BlazingRam variables
-        blazingRamDuration = lib.powerUpVariables.blazingRamDuration;
-        blazingRamProjectileType = lib.powerUpVariables.blazingRamProjectileType;
-        blazingRamIsPersistingProjectileState = lib.powerUpVariables.blazingRamIsPersistingProjectileState;
-        blazingRamShipSpeedModifier = lib.powerUpVariables.blazingRamShipSpeedModifier;
-        blazingRamShipDamageTakenModifier = lib.powerUpVariables.blazingRamShipDamageTakenModifier;
-        blazingRamShootCooldownModifier = lib.powerUpVariables.blazingRamShootCooldownModifier;
-        blazingRamCanShootState = lib.powerUpVariables.blazingRamCanShootState;
-        blazingRamIsMovableState = lib.powerUpVariables.blazingRamIsMovableState;
-        blazingRamIsVulnerableState = lib.powerUpVariables.blazingRamIsVulnerableState;
-        #endregion
-
-        #region BeamCannon variables
-        beamCannonDuration = lib.powerUpVariables.beamCannonDuration;
-        beamCannonProjectileType = lib.powerUpVariables.beamCannonProjectileType;
-        beamCannonIsPersistingProjectileState = lib.powerUpVariables.beamCannonIsPersistingProjectileState;
-        beamCannonShipSpeedModifier = lib.powerUpVariables.beamCannonShipSpeedModifier;
-        beamCannonShipDamageTakenModifier = lib.powerUpVariables.beamCannonShipDamageTakenModifier;
-        beamCannonShootCooldownModifier = lib.powerUpVariables.beamCannonShootCooldownModifier;
-        beamCannonCanShootState = lib.powerUpVariables.beamCannonCanShootState;
-        beamCannonIsMovableState = lib.powerUpVariables.beamCannonIsMovableState;
-        beamCannonIsVulnerableState = lib.powerUpVariables.beamCannonIsVulnerableState;
-        #endregion
-
-        #region Bombs variables
-        bombsDuration = lib.powerUpVariables.bombsDuration;
-        bombsProjectileType = lib.powerUpVariables.bombsProjectileType;
-        bombsIsPersistingProjectileState = lib.powerUpVariables.bombsIsPersistingProjectileState;
-        bombsShipSpeedModifier = lib.powerUpVariables.bombsShipSpeedModifier;
-        bombsShipDamageTakenModifier = lib.powerUpVariables.bombsShipDamageTakenModifier;
-        bombsShootCooldownModifier = lib.powerUpVariables.bombsShootCooldownModifier;
-        bombsCanShootState = lib.powerUpVariables.bombsCanShootState;
-        bombsIsMovableState = lib.powerUpVariables.bombsIsMovableState;
-        bombsIsVulnerableState = lib.powerUpVariables.bombsIsVulnerableState;
-        #endregion
+        #endregion       
     }
     #endregion
 
@@ -246,7 +153,8 @@ public class Core_PowerUpController : MonoBehaviour {
     }
     #endregion
 
-    void FixedUpdate ()
+    #region FixedUpdate
+    void FixedUpdate()
     {
         if (!isPaused)
         {
@@ -259,12 +167,34 @@ public class Core_PowerUpController : MonoBehaviour {
                     SetPowerUpState(true);
                 }
             }
-        }
-	}
 
+            //Manage tick rate
+            if (powerUpOnline)
+            {
+                if (powerUpPlatformCollider.enabled == true)
+                {
+                    powerUpPlatformCollider.enabled = false;
+                }
+
+                powerUpPlatformColliderTickRateCounter--;
+                if (powerUpPlatformColliderTickRateCounter <= 0)
+                {
+                    powerUpPlatformColliderTickRateCounter =
+                        Mathf.RoundToInt(powerUpPlatformColliderTickInterval / Time.fixedDeltaTime);
+
+                    powerUpPlatformCollider.enabled = true;
+                }
+            }
+        }
+    }
+    #endregion
+
+    #region Setters
     private void SetPowerUpState(bool state)
     {
         powerUpOnline = state;
+        powerUpPlatformColliderTickRateCounter = 
+            Mathf.RoundToInt(powerUpPlatformColliderTickInterval / Time.fixedDeltaTime);
         powerUpObject.SetActive(state);
 
         if (state)
@@ -273,57 +203,56 @@ public class Core_PowerUpController : MonoBehaviour {
 
             if (powerUpType == rubberBulletsIndex)
             {
-                powerUpDuration = rubberBulletsDuration;
-                powerUpProjectileType = rubberBulletsProjectileType;
-                powerUpIsPersistingProjectile = rubberBulletsIsPersistingProjectileState;
-                powerUpShipSpeedModifier = rubberBulletsShipSpeedModifier;
-                powerUpShipDamageTakenModifier = rubberBulletsShipDamageTakenModifier;
-                powerUpShootCooldownModifier = rubberBulletsShootCooldownModifier;
-                powerUpCanShootState = rubberBulletsCanShootState;
-                powerUpIsMovableState = rubberBulletsIsMovableState;
-                powerUpIsVulnerableState = rubberBulletsIsVulnerableState;
+                powerUpDuration = lib.powerUpVariables.rubberBulletsDuration;
+                powerUpProjectileType = lib.powerUpVariables.rubberBulletsProjectileType;
+                powerUpIsPersistingProjectile = lib.powerUpVariables.rubberBulletsIsPersistingProjectileState;
+                powerUpShipSpeedModifier = lib.powerUpVariables.rubberBulletsShipSpeedModifier;
+                powerUpShipDamageTakenModifier = lib.powerUpVariables.rubberBulletsShipDamageTakenModifier;
+                powerUpShootCooldownModifier = lib.powerUpVariables.rubberBulletsShootCooldownModifier;
+                powerUpCanShootState = lib.powerUpVariables.rubberBulletsCanShootState;
+                powerUpIsMovableState = lib.powerUpVariables.rubberBulletsIsMovableState;
+                powerUpIsVulnerableState = lib.powerUpVariables.rubberBulletsIsVulnerableState;
             }
             else if (powerUpType == blazingRamIndex)
             {
-                powerUpDuration = blazingRamDuration;
-                powerUpProjectileType = blazingRamProjectileType;
-                powerUpIsPersistingProjectile = blazingRamIsPersistingProjectileState;
-                powerUpShipSpeedModifier = blazingRamShipSpeedModifier;
-                powerUpShipDamageTakenModifier = blazingRamShipDamageTakenModifier;
-                powerUpShootCooldownModifier = blazingRamShootCooldownModifier;
-                powerUpCanShootState = blazingRamCanShootState;
-                powerUpIsMovableState = blazingRamIsMovableState;
-                powerUpIsVulnerableState = blazingRamIsVulnerableState;
+                powerUpDuration = lib.powerUpVariables.blazingRamDuration;
+                powerUpProjectileType = lib.powerUpVariables.blazingRamProjectileType;
+                powerUpIsPersistingProjectile = lib.powerUpVariables.blazingRamIsPersistingProjectileState;
+                powerUpShipSpeedModifier = lib.powerUpVariables.blazingRamShipSpeedModifier;
+                powerUpShipDamageTakenModifier = lib.powerUpVariables.blazingRamShipDamageTakenModifier;
+                powerUpShootCooldownModifier = lib.powerUpVariables.blazingRamShootCooldownModifier;
+                powerUpCanShootState = lib.powerUpVariables.blazingRamCanShootState;
+                powerUpIsMovableState = lib.powerUpVariables.blazingRamIsMovableState;
+                powerUpIsVulnerableState = lib.powerUpVariables.blazingRamIsVulnerableState;
             }
             else if (powerUpType == beamCannonIndex)
             {
-                powerUpDuration = beamCannonDuration;
-                powerUpProjectileType = beamCannonProjectileType;
-                powerUpIsPersistingProjectile = beamCannonIsPersistingProjectileState;
-                powerUpShipSpeedModifier = beamCannonShipSpeedModifier;
-                powerUpShipDamageTakenModifier = beamCannonShipDamageTakenModifier;
-                powerUpShootCooldownModifier = beamCannonShootCooldownModifier;
-                powerUpCanShootState = beamCannonCanShootState;
-                powerUpIsMovableState = beamCannonIsMovableState;
-                powerUpIsVulnerableState = beamCannonIsVulnerableState;
+                powerUpDuration = lib.powerUpVariables.beamCannonDuration;
+                powerUpProjectileType = lib.powerUpVariables.beamCannonProjectileType;
+                powerUpIsPersistingProjectile = lib.powerUpVariables.beamCannonIsPersistingProjectileState;
+                powerUpShipSpeedModifier = lib.powerUpVariables.beamCannonShipSpeedModifier;
+                powerUpShipDamageTakenModifier = lib.powerUpVariables.beamCannonShipDamageTakenModifier;
+                powerUpShootCooldownModifier = lib.powerUpVariables.beamCannonShootCooldownModifier;
+                powerUpCanShootState = lib.powerUpVariables.beamCannonCanShootState;
+                powerUpIsMovableState = lib.powerUpVariables.beamCannonIsMovableState;
+                powerUpIsVulnerableState = lib.powerUpVariables.beamCannonIsVulnerableState;
             }
             else if (powerUpType == bombsIndex)
             {
-                powerUpDuration = bombsDuration;
-                powerUpProjectileType = bombsProjectileType;
-                powerUpIsPersistingProjectile = bombsIsPersistingProjectileState;
-                powerUpShipSpeedModifier = bombsShipSpeedModifier;
-                powerUpShipDamageTakenModifier = bombsShipDamageTakenModifier;
-                powerUpShootCooldownModifier = bombsShootCooldownModifier;
-                powerUpCanShootState = bombsCanShootState;
-                powerUpIsMovableState = bombsIsMovableState;
-                powerUpIsVulnerableState = bombsIsVulnerableState;
+                powerUpDuration = lib.powerUpVariables.bombsDuration;
+                powerUpProjectileType = lib.powerUpVariables.bombsProjectileType;
+                powerUpIsPersistingProjectile = lib.powerUpVariables.bombsIsPersistingProjectileState;
+                powerUpShipSpeedModifier = lib.powerUpVariables.bombsShipSpeedModifier;
+                powerUpShipDamageTakenModifier = lib.powerUpVariables.bombsShipDamageTakenModifier;
+                powerUpShootCooldownModifier = lib.powerUpVariables.bombsShootCooldownModifier;
+                powerUpCanShootState = lib.powerUpVariables.bombsCanShootState;
+                powerUpIsMovableState = lib.powerUpVariables.bombsIsMovableState;
+                powerUpIsVulnerableState = lib.powerUpVariables.bombsIsVulnerableState;
             }
             else
             {
                 Debug.LogError("PowerUpController: Invalid powerUp type!");
             }
-
 
             em.BroadcastPowerUpOnline(powerUpPlatformIndex, powerUpType);
             powerUpPlatformEffect.Play();
@@ -331,6 +260,7 @@ public class Core_PowerUpController : MonoBehaviour {
         else
         {
             powerUpPlatformEffect.Stop();
+            powerUpPlatformCollider.enabled = false;
         }
     }
 
@@ -338,7 +268,9 @@ public class Core_PowerUpController : MonoBehaviour {
     {
         powerUpPlatformIndex = newIndex;
     }
+    #endregion
 
+    #region Collision detection
     private void OnTriggerEnter(Collider collider)
     {
         if (powerUpOnline)
@@ -361,4 +293,5 @@ public class Core_PowerUpController : MonoBehaviour {
             }
         }
     }
+    #endregion
 }
