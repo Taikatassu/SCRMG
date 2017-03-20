@@ -96,12 +96,18 @@ public class Core_AIPlayerController : Core_ShipController {
 
     private Vector3 GetRandomDirection()
     {
-
         int x = Random.Range(-1, 1);
         int z = Random.Range(-1, 1);
+
+        if (x == 0 && z == 0)
+        {
+            int[] validValues = { -1, 1 };
+            x = validValues[Random.Range(0, validValues.Length)];
+            z = validValues[Random.Range(0, validValues.Length)];
+        }
+
         Vector3 randomizedDirection = new Vector3(x, 0, z);
         randomizedDirection.Normalize();
-
         return randomizedDirection;
     }
 
