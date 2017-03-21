@@ -956,7 +956,7 @@ public class Core_UIManager : MonoBehaviour {
                     Transform target = offscreenIndicatorTargets[i];
                     Transform indicator = offscreenIndicatorPool[i];
                     Vector3 screenPosition = Camera.main.WorldToViewportPoint(target.position);
-
+                    
                     if (screenPosition.x >= (-0.08f + offscreenIndicatorSidebuffer) && screenPosition.x <= (1.08f - offscreenIndicatorSidebuffer) && 
                         screenPosition.y >= -0.08f && screenPosition.y <= 1.08f)
                     {
@@ -1043,6 +1043,41 @@ public class Core_UIManager : MonoBehaviour {
                             (1 - offscreenIndicatorSidebuffer));
                         indicator.position = Camera.main.ViewportToScreenPoint(screenPosition);
 
+                        #region Indicator modifications based on target distance
+                        //Calculating a factor depending on target distance, to modify indicators accordingly
+                        Vector3 screenCenterInWorldSpace = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, 0));
+                        Vector3 cameraPositionOnArena = new Vector3(screenCenterInWorldSpace.x,
+                            screenCenterInWorldSpace.y - 30, screenCenterInWorldSpace.z);
+                        Debug.DrawRay(cameraPositionOnArena, Vector3.up);
+
+                        float indicatorTargetDistance = Vector3.Distance(cameraPositionOnArena, target.position);
+
+                        float maxIndicatorTargetDistance = 60;
+                        float minIndicatorTargetDistance = 20;
+                        float minIndicatorDistanceFactorValue = 0.2f;
+                        float maxIndicatorDistanceFactorValue = 1;
+
+                        indicatorTargetDistance = Mathf.Clamp(indicatorTargetDistance, minIndicatorTargetDistance, 
+                            maxIndicatorTargetDistance);
+                        indicatorTargetDistance -= minIndicatorTargetDistance;
+
+                        float indicatorTargetDistanceFactor = indicatorTargetDistance / 
+                            (maxIndicatorTargetDistance - minIndicatorTargetDistance);
+
+                        indicatorTargetDistanceFactor = Mathf.Clamp((1 - indicatorTargetDistanceFactor),
+                            minIndicatorDistanceFactorValue, maxIndicatorDistanceFactorValue);
+
+                        //Horizontal size scaling depending on target distance
+                        RectTransform indicatorRectTransform = indicator.GetChild(0).GetComponent<RectTransform>();
+                        indicatorRectTransform.localScale = new Vector3(indicatorTargetDistanceFactor,
+                            1, 1);
+
+                        ////Color fade depending on target distance
+                        //Image indicatorImage = indicator.GetChild(0).GetComponent<Image>();
+                        //Color newColor = indicatorImage.color;
+                        //newColor.a = indicatorTargetDistanceFactor;
+                        //indicatorImage.color = newColor;
+                        #endregion
                     }
 
                 }
