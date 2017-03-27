@@ -19,6 +19,7 @@ public class Core_GameManager : MonoBehaviour {
     List<Transform> powerUpPositions = new List<Transform>();
     List<GameObject> currentlyAliveShips = new List<GameObject>();
     List<GameObject> currentlyExistingPowerUps = new List<GameObject>();
+    public List<Core_ShipInfo> shipInfoList = new List<Core_ShipInfo>();
     GameObject currentPlayerCamera;
     //Variables coming from within the script
     List<int> usedSpawnPoints = new List<int>();
