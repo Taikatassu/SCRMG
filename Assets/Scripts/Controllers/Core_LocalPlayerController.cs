@@ -7,6 +7,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     Transform closestTarget;
     //List<Transform> shipList = new List<Transform>();
     LayerMask mouseRayCollisionLayer = -1;
+    Vector3 previousPosition;
     Vector2 turretJoystickValue = Vector2.zero;
     bool isShooting = false;
 
@@ -191,7 +192,7 @@ public class Core_LocalPlayerController : Core_ShipController {
     #endregion
     #endregion
 
-    #region Update
+    #region Update & FixedUpdate
     protected override void Update()
     {
         if (buildPlatform == 1 && rotatingTurret)
@@ -248,6 +249,12 @@ public class Core_LocalPlayerController : Core_ShipController {
             Shoot();
         }
 
+        Vector3 currentPosition = transform.position;
+        if (previousPosition != currentPosition)
+        {
+            em.BroadcastShipPositionUpdate(index, currentPosition);
+            previousPosition = currentPosition;
+        }
     }
     #endregion
 

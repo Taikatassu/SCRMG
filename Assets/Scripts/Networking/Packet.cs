@@ -82,11 +82,15 @@ namespace ServerData
         SHOOTEVENT,
     }
 
+    [Serializable]
     public class Vector_3
     {
-        public float x;
-        public float y;
-        public float z;
+        public Vector_3()
+        {
+            x = 0;
+            y = 0;
+            z = 0;
+        }
 
         public Vector_3(float x, float y, float z)
         {
@@ -95,6 +99,9 @@ namespace ServerData
             this.z = z;
         }
 
+        public float x;
+        public float y;
+        public float z;
     }
 }
 

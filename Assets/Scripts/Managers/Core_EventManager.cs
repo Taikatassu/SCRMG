@@ -33,6 +33,7 @@ public class Core_EventManager : MonoBehaviour
     public delegate void IntIntIntVoid(int integer1, int integer2, int integer3);
     public delegate void Vector2Void(Vector2 vec2);
     public delegate void IntVector2Void(int integer, Vector2 vec2);
+    public delegate void IntVector3Void(int integer, Vector3 vec3);
     public delegate void GameObjectVoid(GameObject gameObject);
     #endregion
 
@@ -404,6 +405,17 @@ public class Core_EventManager : MonoBehaviour
         if(OnPowerUpEnded != null)
         {
             OnPowerUpEnded(shipIndex, powerUpType);
+        }
+    }
+    #endregion
+
+    #region ShipInfo
+    public event IntVector3Void OnShipPositionUpdate;
+    public void BroadcastShipPositionUpdate(int shipIndex, Vector3 currentPosition)
+    {
+        if (OnShipPositionUpdate != null)
+        {
+            OnShipPositionUpdate(shipIndex, currentPosition);
         }
     }
     #endregion

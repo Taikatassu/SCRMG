@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Core_ShipInfo : MonoBehaviour {
+public class Core_ShipInfo {
 
     public Vector3 shipPosition;
     public Vector3 hullRotation;

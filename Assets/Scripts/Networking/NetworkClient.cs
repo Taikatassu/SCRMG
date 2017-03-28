@@ -29,7 +29,7 @@ namespace Client
 
         void Start()
         {
-            string ip = "172.31.16.131";
+            string ip = Packet.GetIP4Address();
 
             master = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
@@ -96,16 +96,12 @@ namespace Client
                     {
                         Debug.Log("gm.shipInfoList.Count > 0");
                         Packet p = new Packet(PacketType.MOVEMENT, id);
-                        //string input = "Hello from the client side " + DateTime.Now.ToLongTimeString();
+                        //string input = "Hello from the client side " +
+                        //DateTime.Now.ToLongTimeString();
                         //p.GdataStrings.Add(input);
-                        List<Core_ShipInfo> shipInfoList = gm.shipInfoList;
-                        Vector3 shipPosition;
-                        shipPosition = shipInfoList[0].shipPosition;
-                        Vector_3 _shipPosition = new Vector_3(0, 0, 0);
-                        _shipPosition.x = shipPosition.x;
-                        _shipPosition.y = shipPosition.y;
-                        _shipPosition.z = shipPosition.z;
-
+                        Vector3 shipPosition = gm.shipInfoList[0].shipPosition;
+                        Vector_3 _shipPosition = new Vector_3(shipPosition.x, 
+                            shipPosition.y, shipPosition.z);
                         p.GdataVectors.Add(_shipPosition);
 
                         master.Send(p.ToBytes());

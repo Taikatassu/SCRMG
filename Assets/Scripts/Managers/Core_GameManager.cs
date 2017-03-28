@@ -104,6 +104,7 @@ public class Core_GameManager : MonoBehaviour {
         em.OnPauseOff += OnPauseOff;
         em.OnPowerUpPickedUp += OnPowerUpPickedUp;
         em.OnPowerUpOnline += OnPowerUpOnline;
+        em.OnShipPositionUpdate += OnShipPositionUpdate;
     }
 
     private void OnDisable()
@@ -119,6 +120,7 @@ public class Core_GameManager : MonoBehaviour {
         em.OnPauseOff -= OnPauseOff;
         em.OnPowerUpPickedUp -= OnPowerUpPickedUp;
         em.OnPowerUpOnline -= OnPowerUpOnline;
+        em.OnShipPositionUpdate -= OnShipPositionUpdate;
     }
     #endregion
     #endregion
@@ -132,6 +134,7 @@ public class Core_GameManager : MonoBehaviour {
     private void OnMatchEnded(int winnerIndex)
     {
         matchStarted = false;
+        shipInfoList.Clear();
     }
 
     private void OnPauseOn()
@@ -175,6 +178,7 @@ public class Core_GameManager : MonoBehaviour {
         {
             matchStarted = false;
             inGame = false;
+            shipInfoList.Clear();
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
@@ -208,6 +212,7 @@ public class Core_GameManager : MonoBehaviour {
         //Reset all
         resetUsedShipColors = true;
         resetUsedSpawnPointsList = true;
+        shipInfoList.Clear();
         //Respawn everything
         InitializeGame();
         StartMatchStartTimer();
@@ -242,6 +247,41 @@ public class Core_GameManager : MonoBehaviour {
     {
         //TODO: Do something with this
         //Debug.Log("GameManager: PowerUp index: " + powerUpBaseIndex + " back online with type: " + powerUpType);
+    }
+
+    private void OnShipPositionUpdate(int shipIndex, Vector3 currentPosition)
+    {
+        if (shipInfoList.Count > 0)
+        {
+            bool shipInfoFound = false;
+            foreach (Core_ShipInfo shipInfo in shipInfoList)
+            {
+                if(shipInfo.shipIndex == shipIndex)
+                {
+                    Debug.Log("Ship info found with index");
+                    shipInfo.shipPosition = currentPosition;
+                    shipInfoFound = true;
+                    break;
+                }
+            }
+
+            if (shipInfoFound == false)
+            {
+                Debug.Log("Ship info NOT found with index, creating new shipInfo");
+                Core_ShipInfo newShipInfo = new Core_ShipInfo();
+                newShipInfo.shipIndex = shipIndex;
+                newShipInfo.shipPosition = currentPosition;
+                shipInfoList.Add(newShipInfo);
+            } 
+        }
+        else
+        {
+            Debug.Log("ShipInfoList empty, creating new shipInfo");
+            Core_ShipInfo newShipInfo = new Core_ShipInfo();
+            newShipInfo.shipIndex = shipIndex;
+            newShipInfo.shipPosition = currentPosition;
+            shipInfoList.Add(newShipInfo);
+        }
     }
     #endregion
 
