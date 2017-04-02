@@ -249,6 +249,7 @@ public class Core_LocalPlayerController : Core_ShipController {
             Shoot();
         }
 
+        //Testing network functionality
         Vector3 currentPosition = transform.position;
         if (previousPosition != currentPosition)
         {
