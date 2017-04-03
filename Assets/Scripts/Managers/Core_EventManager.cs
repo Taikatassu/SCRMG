@@ -35,6 +35,7 @@ public class Core_EventManager : MonoBehaviour
     public delegate void IntVector2Void(int integer, Vector2 vec2);
     public delegate void IntVector3Void(int integer, Vector3 vec3);
     public delegate void GameObjectVoid(GameObject gameObject);
+    public delegate void StringVoid(string string1);
     #endregion
 
     #region Events
@@ -416,6 +417,44 @@ public class Core_EventManager : MonoBehaviour
         if (OnShipPositionUpdate != null)
         {
             OnShipPositionUpdate(shipIndex, currentPosition);
+        }
+    }
+    #endregion
+
+    #region Network events
+    public event StringVoid OnTryConnectToNetwork;
+    public void BroadcastTryConnectToNetwork(string ip)
+    {
+        if(OnTryConnectToNetwork != null)
+        {
+            OnTryConnectToNetwork(ip);
+        }
+    }
+
+    public event StringVoid OnConnectingToNetworkSucceeded;
+    public void BroadcastConnectingToNetworkSucceeded(string ip)
+    {
+        if (OnConnectingToNetworkSucceeded != null)
+        {
+            OnConnectingToNetworkSucceeded(ip);
+        }
+    }
+
+    public event StringVoid OnConnectingToNetworkFailed;
+    public void BroadcastConnectingToNetworkFailed(string ip)
+    {
+        if (OnConnectingToNetworkFailed != null)
+        {
+            OnConnectingToNetworkFailed(ip);
+        }
+    }
+
+    public event StringVoid OnConnectionToNetworkLost;
+    public void BroadcastConnectionToNetworkLost(string ip)
+    {
+        if (OnConnectionToNetworkLost != null)
+        {
+            OnConnectionToNetworkLost(ip);
         }
     }
     #endregion

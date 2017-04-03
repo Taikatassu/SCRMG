@@ -91,6 +91,7 @@ public class Core_UIManager : MonoBehaviour {
     Vector3 offscreenIndicatorDefaultPosition;
     bool isFadingFromLoadingScreen = false;
     bool matchStarted = false;
+    bool connectedToNetwork = false;
     int matchStartTimerValue = -1;
     int currentGameModeIndex = -1;
     float loadingScreenFadeStartTime = -1;
@@ -109,6 +110,7 @@ public class Core_UIManager : MonoBehaviour {
     float offscreenIndicatorSidebufferPC = -1;
     float offscreenIndicatorSidebufferAndroid = -1;
     bool invertedHUD = false;
+    bool networkFunctionalityDisabled = false;
     #endregion
 
     #region Initialization
@@ -222,6 +224,7 @@ public class Core_UIManager : MonoBehaviour {
         lossText = lib.uiVariables.lossText;
         offscreenIndicatorSidebufferPC = lib.uiVariables.offscreenIndicatorSidebufferPC;
         offscreenIndicatorSidebufferAndroid = lib.uiVariables.offscreenIndicatorSidebufferAndroid;
+        networkFunctionalityDisabled = lib.networkingVariables.networkFunctionalityDisabled;
     }
     #endregion
 
@@ -238,6 +241,8 @@ public class Core_UIManager : MonoBehaviour {
         em.OnMatchEnded += OnMatchEnded;
         em.OnShipReference += OnShipReference;
         em.OnMatchTimerValueChange += OnMatchTimerValueChange;
+        em.OnConnectingToNetworkSucceeded += OnConnectingToNetworkSucceeded;
+        em.OnConnectionToNetworkLost += OnConnectionToNetworkLost;
     }
 
     private void OnDisable()
@@ -252,10 +257,24 @@ public class Core_UIManager : MonoBehaviour {
         em.OnMatchEnded -= OnMatchEnded;
         em.OnShipReference -= OnShipReference;
         em.OnMatchTimerValueChange -= OnMatchTimerValueChange;
+        em.OnConnectingToNetworkSucceeded -= OnConnectingToNetworkSucceeded;
+        em.OnConnectionToNetworkLost -= OnConnectionToNetworkLost;
     }
     #endregion
 
     #region Subscribers
+    #region Network event subscribers
+    private void OnConnectingToNetworkSucceeded(string ip)
+    {
+        connectedToNetwork = true;
+    }
+
+    private void OnConnectionToNetworkLost(string ip)
+    {
+        connectedToNetwork = false;
+    }
+    #endregion
+
     #region GameEvent subscribers
     private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
@@ -632,16 +651,32 @@ public class Core_UIManager : MonoBehaviour {
     private void OnMainMenuGameModeSinglePlayerButtonPressed()
     {
         em.BroadcastSetGameMode(gameModeSingleplayerIndex);
+        Debug.Log("Game mode set to SinglePlayer");
         OpenLoadingScreen();
         em.BroadcastRequestSceneSingleLevel01();
     }
 
     private void OnMainMenuGameModeNetworkMultiplayerButtonPressed()
     {
-        em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
-        Debug.Log("Game mode changed to Network Multiplayer");
-        //OpenLoadingScreen();
-        //em.BroadcastRequestSceneSingleLevel01();
+        if (!networkFunctionalityDisabled)
+        {
+            if (connectedToNetwork)
+            {
+                Debug.Log("Connected to network: Starting Network Multiplayer game");
+                em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
+                OpenLoadingScreen();
+                em.BroadcastRequestSceneSingleLevel01();
+            }
+            else
+            {
+                Debug.Log("Not connected to network: Cannot start Network Multiplayer game");
+            }
+        }
+        else
+        {
+            em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
+            Debug.Log("Game mode set to Network Multiplayer(networkFunctionality disabled)");
+        }
     }
 
     private void OnMainMenuGameModeLocalMultiplayerButtonPressed()

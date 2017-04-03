@@ -42,6 +42,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
     public Scene_Variables sceneVariables;
     public UI_Variables uiVariables;
     public AI_Variables aiVariables;
+    public Networking_Variables networkingVariables;
 
     public Core_GlobalVariableLibrary()
     {
@@ -53,6 +54,7 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         sceneVariables = new Scene_Variables();
         uiVariables = new UI_Variables();
         aiVariables = new AI_Variables();
+        networkingVariables = new Networking_Variables();
     }
 
     [System.Serializable]
@@ -228,5 +230,11 @@ public class Core_GlobalVariableLibrary : MonoBehaviour {
         public float directionChangeLerpDuration = 1f;
         public float shootingRange = 18;
         public float preferredMaxDistanceToTarget = 35;
+    }
+
+    [System.Serializable]
+    public class Networking_Variables
+    {
+        public bool networkFunctionalityDisabled = false;
     }
 }

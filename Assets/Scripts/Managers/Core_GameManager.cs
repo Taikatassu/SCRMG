@@ -235,6 +235,17 @@ public class Core_GameManager : MonoBehaviour {
     private void OnSetGameMode(int newGameModeIndex)
     {
         currentGameModeIndex = newGameModeIndex;
+
+        if(currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            powerUpsDisabled = true;
+            Debug.Log("Disabling powerUps for Network Multiplayer mode");
+        }
+        else if (currentGameModeIndex == gameModeSingleplayerIndex)
+        {
+            powerUpsDisabled = lib.powerUpVariables.powerUpsDisabled;
+            Debug.Log("PowerUpsDisabled state reset for Singleplayer mode");
+        }
     }
 
     private void OnPowerUpPickedUp(int shipIndex, int powerUpBaseIndex, int powerUpType)
@@ -375,18 +386,18 @@ public class Core_GameManager : MonoBehaviour {
                 if (i == 0)
                 {
                     newShipController =
-                           newShip.AddComponent<Core_LocalPlayerController>();
-                    GameObject newPlayerIndicator = Instantiate(Resources.Load("PlayerIndicator",
+                        newShip.AddComponent<Core_LocalPlayerController>();
+                    GameObject newPlayerIndicator = Instantiate(Resources.Load("Effects/PlayerIndicator",
                         typeof(GameObject)), newShip.transform.position, Quaternion.identity,
                         newShip.transform) as GameObject;
                     //Set playerIndicator color
                     ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
                     pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
-                    GameObject newPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
+                    currentPlayerCamera = Instantiate(Resources.Load("Cameras/PlayerCamera",
                         typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
-                    Core_CameraController newCameraScript = newPlayerCamera.GetComponentInChildren<Core_CameraController>();
-                    newCameraScript.SetTarget(newShip.transform);
-                    newCameraScript.SetMyShipIndex(i + 1);
+                    Core_CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<Core_CameraController>();
+                    currentCameraScript.SetTarget(newShip.transform);
+                    currentCameraScript.SetMyShipIndex(i + 1);
                 }
                 else
                 {
@@ -406,17 +417,17 @@ public class Core_GameManager : MonoBehaviour {
                 //TODO: Below is completely WIP
                 newShipController =
                         newShip.AddComponent<Core_LocalPlayerController>();
-                GameObject newPlayerIndicator = Instantiate(Resources.Load("PlayerIndicator",
+                GameObject newPlayerIndicator = Instantiate(Resources.Load("Effects/PlayerIndicator",
                     typeof(GameObject)), newShip.transform.position, Quaternion.identity,
                     newShip.transform) as GameObject;
                 //Set playerIndicator color
                 ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
                 pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
-                GameObject newPlayerCamera = Instantiate(Resources.Load("PlayerCamera",
+                currentPlayerCamera = Instantiate(Resources.Load("Cameras/PlayerCamera",
                     typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
-                Core_CameraController newCameraScript = newPlayerCamera.GetComponentInChildren<Core_CameraController>();
-                newCameraScript.SetTarget(newShip.transform);
-                newCameraScript.SetMyShipIndex(i + 1);
+                Core_CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<Core_CameraController>();
+                currentCameraScript.SetTarget(newShip.transform);
+                currentCameraScript.SetMyShipIndex(i + 1);
 
                 //Set currentGameMode in shipController
                 newShipController.SetGameMode(currentGameModeIndex);
