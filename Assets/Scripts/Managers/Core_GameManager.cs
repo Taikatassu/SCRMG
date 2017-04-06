@@ -278,21 +278,21 @@ public class Core_GameManager : MonoBehaviour {
 
             if (shipInfoFound == false)
             {
-                Debug.Log("Ship info NOT found with index, creating new shipInfo");
-                Core_ShipInfo newShipInfo = new Core_ShipInfo();
-                newShipInfo.shipIndex = shipIndex;
-                newShipInfo.shipPosition = currentPosition;
-                shipInfoList.Add(newShipInfo);
+                Debug.LogError("Ship info NOT found with index!");
+                //Core_ShipInfo newShipInfo = new Core_ShipInfo();
+                //newShipInfo.shipIndex = shipIndex;
+                //newShipInfo.shipPosition = currentPosition;
+                //shipInfoList.Add(newShipInfo);
             } 
         }
-        else
-        {
-            Debug.Log("ShipInfoList empty, creating new shipInfo");
-            Core_ShipInfo newShipInfo = new Core_ShipInfo();
-            newShipInfo.shipIndex = shipIndex;
-            newShipInfo.shipPosition = currentPosition;
-            shipInfoList.Add(newShipInfo);
-        }
+        //else
+        //{
+        //    Debug.Log("ShipInfoList empty, creating new shipInfo");
+        //    Core_ShipInfo newShipInfo = new Core_ShipInfo();
+        //    newShipInfo.shipIndex = shipIndex;
+        //    newShipInfo.shipPosition = currentPosition;
+        //    shipInfoList.Add(newShipInfo);
+        //}
     }
     #endregion
 
@@ -343,6 +343,7 @@ public class Core_GameManager : MonoBehaviour {
         currentlyAliveShipIndices.Clear();
         for (int i = 0; i < numberOfShips; i++ )
         {
+            int newShipIndex = i + 1;
             Transform spawnPoint = FindAvailableSpawnPoint();
             GameObject newShip = Instantiate(Resources.Load("Ships/Ship", typeof(GameObject)),
                 spawnPoint.position, spawnPoint.rotation) as GameObject;
@@ -366,7 +367,7 @@ public class Core_GameManager : MonoBehaviour {
                         typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
                     Core_CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<Core_CameraController>();
                     currentCameraScript.SetTarget(newShip.transform);
-                    currentCameraScript.SetMyShipIndex(i + 1);
+                    currentCameraScript.SetMyShipIndex(newShipIndex);
                 }
                 else
                 {
@@ -376,7 +377,7 @@ public class Core_GameManager : MonoBehaviour {
                 //Set currentGameMode in shipController
                 newShipController.SetGameMode(currentGameModeIndex);
                 //Give ship an index and color
-                newShipController.GiveIndex(i + 1);
+                newShipController.GiveIndex(newShipIndex);
                 newShipController.SetShipColor(newShipColor);
                 #endregion
             }
@@ -397,7 +398,7 @@ public class Core_GameManager : MonoBehaviour {
                         typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
                     Core_CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<Core_CameraController>();
                     currentCameraScript.SetTarget(newShip.transform);
-                    currentCameraScript.SetMyShipIndex(i + 1);
+                    currentCameraScript.SetMyShipIndex(newShipIndex);
                 }
                 else
                 {
@@ -407,7 +408,7 @@ public class Core_GameManager : MonoBehaviour {
                 //Set currentGameMode in shipController
                 newShipController.SetGameMode(currentGameModeIndex);
                 //Give ship an index and color
-                newShipController.GiveIndex(i + 1);
+                newShipController.GiveIndex(newShipIndex);
                 newShipController.SetShipColor(newShipColor);
                 #endregion
             }
@@ -427,28 +428,28 @@ public class Core_GameManager : MonoBehaviour {
                     typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
                 Core_CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<Core_CameraController>();
                 currentCameraScript.SetTarget(newShip.transform);
-                currentCameraScript.SetMyShipIndex(i + 1);
+                currentCameraScript.SetMyShipIndex(newShipIndex);
 
                 //Set currentGameMode in shipController
                 newShipController.SetGameMode(currentGameModeIndex);
                 //Give ship an index and color
-                newShipController.GiveIndex(i + 1);
+                newShipController.GiveIndex(newShipIndex);
                 newShipController.SetShipColor(newShipColor);
                 #endregion
             }
-            currentlyAliveShipIndices.Add(i + 1);
+            currentlyAliveShipIndices.Add(newShipIndex);
             currentlyAliveShips.Add(newShip);
+
+            Core_ShipInfo newShipInfo = new Core_ShipInfo();
+            newShipInfo.shipIndex = newShipIndex;
+            newShipInfo.shipPosition = spawnPoint.position;
+            shipInfoList.Add(newShipInfo);
         }
 
-        foreach(GameObject ship in currentlyAliveShips)
+        foreach (GameObject ship in currentlyAliveShips)
         {
             em.BroadcastShipReference(ship);
         }
-
-        //for (int j = 0; j < currentlyAliveShips.Count; j++)
-        //{
-        //    em.BroadcastShipReference(currentlyAliveShips[j]);
-        //}
         #endregion
 
         #region Instantiate PowerUps
@@ -563,6 +564,12 @@ public class Core_GameManager : MonoBehaviour {
     {
         if(inGame)
         {
+            foreach(Core_ShipInfo shipInfo in shipInfoList)
+            {
+                Debug.Log("shipInfo.shipIndex: " + shipInfo.shipIndex 
+                    + ", shipInfo.shipPosition: " + shipInfo.shipPosition);
+            }
+
             #region MatchStartTimer
             if (!isPaused)
             {

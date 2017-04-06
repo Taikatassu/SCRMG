@@ -9,6 +9,46 @@ using UnityEngine;
 
 namespace Client
 {
+    /* TODO:
+     * - There is a connection button and indicator (separated or combined) in the main menu 
+     *      (top left corner)
+     * - The game tries to connect to the server automatically when the application starts
+     * - If the game is connected to the server, the connection indicator displays succesful 
+     *      connection to the server
+     * - If the game is not able to connect to the server initially, the user can press the 
+     *      connection button to re-try connecting to the server
+     * - When succesfully connecting to the sever, a registration packet is sent (from the 
+     *      client to the server and then back) from the server to the client with an id to 
+     *      identify the clients future packets
+     * 
+     * - To start a network multiplayer game, the client is required a connection to the 
+     *      server
+     * - When a client starts a network multiplayer game, they are transferred to the lobby 
+     *      to wait for more participants
+     * - Lobby displays the number of clients in the lobby, time spent in the lobby as well 
+     *      as options to returning to main menu and quitting the game
+     * - Once enough players are connected, server sends "ready" notification to all 
+     *      participating clients
+     * - The clients are then transferred to the match scene
+     * 
+     * - The server then begins initializing the match
+     * - The server spawns ships, gives them indices and sends the info to clients
+     * - The server then starts the matchStartTimer
+     * - Once the timer runs out, the clients have control of their respective ships
+     * - Ship movement, aim, shootEvent, etc info is sent from client to server to other 
+     *      clients
+     * - Pause menu is available in network multiplayer, though it does not pause the game
+     *
+     * - When the game ends, server sends notification to the clients
+     * - If the clients want to restart the game, they can through unanimous vote in the 
+     *      gameEnd menu
+     * - If one or more clients decides otherwise, the remaining clients are returned to 
+     *      the lobby
+     * - (Or if a client disconnects, or exits the match through the pause menu)
+     * - When ever a client is returned in the lobby, they are notified for the reason of 
+     *      the transfer
+     */
+
     public class NetworkClient : MonoBehaviour
     {
         Core_Toolbox toolbox;
@@ -161,8 +201,8 @@ namespace Client
         }
         #endregion
 
-        #region Update
-        void Update()
+        #region FixedUpdate
+        void FixedUpdate()
         {
             if (connected)
             {
@@ -236,6 +276,39 @@ namespace Client
         static void DataManager(Packet p)
         {
             Debug.Log("DataManager called");
+
+            switch (p.packetType)
+            {
+                case PacketType.REGISTRATION:
+                    Debug.Log("Registration packet managed");
+                    break;
+
+                case PacketType.DEBUG:
+                    Debug.Log("Debug packet managed");
+                    break;
+
+                case PacketType.SPAWNEVENT:
+                    Debug.Log("SpawnEvent packet managed");
+                    break;
+
+                case PacketType.DEATHEVENT:
+                    Debug.Log("DeathEvent packet managed");
+                    break;
+
+                case PacketType.MOVEMENT:
+                    Debug.Log("Movement packet managed");
+                    break;
+
+                case PacketType.AIM:
+                    Debug.Log("Aim packet managed");
+                    break;
+
+                case PacketType.SHOOTEVENT:
+                    Debug.Log("ShootEvent packet managed");
+                    break;
+
+            }
+
         }
     }
 
