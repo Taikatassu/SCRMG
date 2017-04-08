@@ -1,1 +1,0 @@
-﻿using System.Collections;using System.Collections.Generic;using UnityEngine;public class Core_PowerUpPositionsHolderTag : MonoBehaviour {	// Used as a tag for PowerUpPositionsHolder}
