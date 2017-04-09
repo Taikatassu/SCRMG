@@ -20,6 +20,7 @@ namespace ServerData
         public List<Vector_3> GdataVectors;
         public List<float> GdataFloats;
         public List<string> GdataStrings;
+        public List<int> GdataInts;
 
         public Packet(PacketType type, string senderID)
         {
@@ -29,6 +30,7 @@ namespace ServerData
             GdataVectors = new List<Vector_3>();
             GdataFloats = new List<float>();
             GdataStrings = new List<string>();
+            GdataInts = new List<int>();
         }
 
         public Packet(byte[] packetBytes)
@@ -44,6 +46,7 @@ namespace ServerData
             this.GdataVectors = p.GdataVectors;
             this.GdataFloats = p.GdataFloats;
             this.GdataStrings = p.GdataStrings;
+            this.GdataInts = p.GdataInts;
         }
 
         public byte[] ToBytes()
@@ -75,7 +78,7 @@ namespace ServerData
     {
         REGISTRATION,
         DEBUG,
-        LOBBYJOIN,
+        LOBBYEVENT,
         YES,
         NO,
         GAMESTART,

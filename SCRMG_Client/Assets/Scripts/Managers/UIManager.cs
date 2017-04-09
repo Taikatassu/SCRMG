@@ -4,16 +4,18 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-public class UIManager : MonoBehaviour {
+public class UIManager : MonoBehaviour
+{
 
     #region References & variables
     public static UIManager instance;
-    
+
     Toolbox toolbox;
     GlobalVariableLibrary lib;
     EventManager em;
     GameObject canvas;
     GameObject uiNotification;
+    GameObject loadingIcon;
 
     //MainMenu UI
     GameObject mainMenuHolder;
@@ -28,11 +30,13 @@ public class UIManager : MonoBehaviour {
     GameObject mainMenuReturnButton;
     GameObject settingsInvertedHUDButtonHolder;
     GameObject settingsInvertHUDToggleMarkOnImage;
-    GameObject mainMenuGameModeSinglePlayerButton;
-    GameObject mainMenuGameModeNetworkMultiplayerButton;
-    GameObject mainMenuStartOnlineMatchButton;
-    GameObject mainMenuOnlineLobbyParticipantCountDisplay;
-    GameObject mainMenuGameModeLocalMultiplayerButton;
+    GameObject gameModeSinglePlayerButton;
+    GameObject gameModeNetworkMultiplayerButton;
+    GameObject gameModeLocalMultiplayerButton;
+    GameObject lobbyReadyButtonHolder;
+    GameObject lobbyReadyToggleMarkOnImage;
+    GameObject lobbyStartMatchButton;
+    GameObject lobbyParticipantCountDisplay;
     Transform mainMenuLeftSlotTop;
     Transform mainMenuLeftSlotBot;
     Transform mainMenuRightSlotTop;
@@ -89,9 +93,13 @@ public class UIManager : MonoBehaviour {
     bool isFadingFromLoadingScreen = false;
     bool matchStarted = false;
     bool connectedToNetwork = false;
+    bool invertedHUD = false;
+    bool lobbyReadyButtonPressed = false;
+    bool loading = false;
     int matchStartTimerValue = -1;
     int currentGameModeIndex = -1;
     int numberOfPlayersInLobby = -1;
+    int numberOfLobbyParticipantsReady = -1;
     float loadingScreenFadeStartTime = -1;
     float offscreenIndicatorSidebuffer = -1;
     float matchTimer = -1;
@@ -109,13 +117,12 @@ public class UIManager : MonoBehaviour {
     float loadingScreenFadeTime = -1;
     float offscreenIndicatorSidebufferPC = -1;
     float offscreenIndicatorSidebufferAndroid = -1;
-    bool invertedHUD = false;
     bool networkFunctionalityDisabled = false;
     #endregion
 
     #region Initialization
     #region Awake
-    void Awake ()
+    void Awake()
     {
         #region Singletonization
         if (instance == null)
@@ -142,10 +149,13 @@ public class UIManager : MonoBehaviour {
         canvas = transform.GetComponentInChildren<Canvas>(true).gameObject;
         loadingScreenImage = canvas.GetComponentInChildren<LoadingScreenImageTag>(true).
             GetComponent<Image>();
+        loadingIcon = Instantiate(Resources.Load("UI/LoadingIcon", typeof(GameObject)),
+            canvas.transform) as GameObject;
+        CloseLoadingIcon();
 
         //MainMenu
         mainMenuHolder = canvas.GetComponentInChildren<MainMenuHolderTag>(true).gameObject;
-        
+
 
         mainMenuCenter = Instantiate(Resources.Load("UI/MainMenu/MainMenuCenter", typeof(GameObject)),
                 mainMenuHolder.transform) as GameObject;
@@ -189,7 +199,7 @@ public class UIManager : MonoBehaviour {
             Debug.Log("UIManager: BuildPlatform set to Android");
             hudLeftPanel = Instantiate(Resources.Load("UI/HUD/HUDLeftPanel", typeof(GameObject)),
                 hudHolder.transform) as GameObject;
-            
+
             hudRightPanel = Instantiate(Resources.Load("UI/HUD/HUDRightPanel", typeof(GameObject)),
                 hudHolder.transform) as GameObject;
 
@@ -248,6 +258,11 @@ public class UIManager : MonoBehaviour {
         em.OnConnectionToNetworkLost += OnConnectionToNetworkLost;
         em.OnPlayerCountInLobbyChanged += OnPlayerCountInLobbyChanged;
         em.OnRequestUINotification += OnRequestUINotification;
+        em.OnLobbyEnterSuccessful += OnLobbyEnterSuccessful;
+        em.OnLobbyEnterDenied += OnLobbyEnterDenied;
+        em.OnConnectingToNetworkFailed += OnConnectingToNetworkFailed;
+        em.OnRequestLoadingIconOn += OnRequestLoadingIconOn;
+        em.OnRequestLoadingIconOff += OnRequestLoadingIconOff;
     }
 
     private void OnDisable()
@@ -266,6 +281,11 @@ public class UIManager : MonoBehaviour {
         em.OnConnectionToNetworkLost -= OnConnectionToNetworkLost;
         em.OnPlayerCountInLobbyChanged -= OnPlayerCountInLobbyChanged;
         em.OnRequestUINotification -= OnRequestUINotification;
+        em.OnLobbyEnterSuccessful -= OnLobbyEnterSuccessful;
+        em.OnLobbyEnterDenied -= OnLobbyEnterDenied;
+        em.OnConnectingToNetworkFailed -= OnConnectingToNetworkFailed;
+        em.OnRequestLoadingIconOn -= OnRequestLoadingIconOn;
+        em.OnRequestLoadingIconOff -= OnRequestLoadingIconOff;
     }
     #endregion
 
@@ -273,12 +293,18 @@ public class UIManager : MonoBehaviour {
     #region Network event subscribers
     private void OnConnectingToNetworkSucceeded(string ip)
     {
+        Debug.Log("OnConnectingToNetworkSucceeded");
         connectedToNetwork = true;
 
         if (mainMenuConnectButton != null)
         {
             mainMenuConnectButton.transform.GetChild(1).gameObject.SetActive(false);
         }
+    }
+    
+    private void OnConnectingToNetworkFailed(string ip)
+    {
+        //TODO: Remove if deemed permanently obsolete
     }
 
     private void OnConnectionToNetworkLost()
@@ -290,7 +316,7 @@ public class UIManager : MonoBehaviour {
             mainMenuConnectButton.transform.GetChild(1).gameObject.SetActive(true);
         }
 
-        if(uiState == UIState.MAINMENUONLINELOBBY)
+        if (uiState == UIState.MAINMENUONLINELOBBY)
         {
             CloseMainMenuOnlineLobbyView();
             OpenMainMenuGameModeView();
@@ -301,12 +327,39 @@ public class UIManager : MonoBehaviour {
     {
         numberOfPlayersInLobby = newCount;
     }
+
+    private void OnLobbyEnterSuccessful()
+    {
+        Debug.Log("OnLobbyEnterSuccessful: Opening online lobby, Game mode changed to Network Multiplayer");
+        em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
+        CloseMainMenuDefaultView();
+        CloseMainMenuSettingsView();
+        CloseMainMenuGameModeView();
+        OpenMainMenuOnlineLobbyView();
+        CloseLoadingIcon();
+    }
+
+    private void OnLobbyEnterDenied()
+    {
+        Debug.Log("OnLobbyEnterDenied: Closing loading icon");
+        CloseLoadingIcon();
+    }
     #endregion
 
     #region GameEvent subscribers
+    private void OnRequestLoadingIconOn()
+    {
+        OpenLoadingIcon();
+    }
+
+    private void OnRequestLoadingIconOff()
+    {
+        CloseLoadingIcon();
+    }
+
     private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
-        UpdateMatchStartTimer(currentTimerValue);      
+        UpdateMatchStartTimer(currentTimerValue);
     }
 
     private void OnGameRestart()
@@ -325,11 +378,13 @@ public class UIManager : MonoBehaviour {
         if (sceneIndex == sceneIndexMainMenu)
         {
             OpenLoadingScreen();
+            OpenLoadingIcon();
             matchStarted = false;
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
             OpenLoadingScreen();
+            OpenLoadingIcon();
         }
     }
 
@@ -340,6 +395,7 @@ public class UIManager : MonoBehaviour {
         {
             CloseInGameUI();
             OpenMainMenuUI();
+            CloseLoadingIcon();
             CloseLoadingScreen();
         }
         else if (sceneIndex == sceneIndexLevel01)
@@ -347,6 +403,7 @@ public class UIManager : MonoBehaviour {
             OpenLoadingScreen();
             CloseMainMenuUI();
             OpenInGameUI();
+            CloseLoadingIcon();
             StartFadeFromLoadingScreen();
         }
     }
@@ -416,7 +473,7 @@ public class UIManager : MonoBehaviour {
 
         string t = string.Format("{0:00}:{1:00}:{2:00}", minutes, seconds, milliseconds);
 
-        if(hudTimerText != null)
+        if (hudTimerText != null)
             hudTimerText.text = t.ToString();
     }
 
@@ -504,7 +561,7 @@ public class UIManager : MonoBehaviour {
     {
         if (notificationQueue.Count > 0)
         {
-            if(uiNotification == null)
+            if (uiNotification == null)
             {
                 uiNotification = Instantiate(Resources.Load("UI/UINotification", typeof(GameObject)),
                     canvas.transform) as GameObject;
@@ -532,6 +589,20 @@ public class UIManager : MonoBehaviour {
             Destroy(uiNotification);
             uiNotification = null;
         }
+    }
+
+    private void OpenLoadingIcon()
+    {
+        Debug.Log("OpenLoadingIcon");
+        loadingIcon.SetActive(true);
+        loading = true;
+    }
+
+    private void CloseLoadingIcon()
+    {
+        Debug.Log("CloseLoadingIcon");
+        loadingIcon.SetActive(false);
+        loading = false;
     }
     #endregion
 
@@ -593,13 +664,13 @@ public class UIManager : MonoBehaviour {
             Destroy(mainMenuPlayButton);
         }
 
-        if(mainMenuExitButton != null)
+        if (mainMenuExitButton != null)
         {
             mainMenuExitButton.GetComponent<Button>().onClick.RemoveAllListeners();
             Destroy(mainMenuExitButton);
         }
 
-        if(mainMenuSettingsButton != null)
+        if (mainMenuSettingsButton != null)
         {
             mainMenuSettingsButton.GetComponent<Button>().onClick.RemoveAllListeners();
             Destroy(mainMenuSettingsButton);
@@ -627,6 +698,7 @@ public class UIManager : MonoBehaviour {
         else
             settingsInvertHUDToggleMarkOnImage.SetActive(false);
         settingsInvertedHUDButtonHolder.GetComponentInChildren<Button>(true).onClick.AddListener(OnSettingsInvertHUDButtonPressed);
+
         mainMenuReturnButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuReturnButton", typeof(GameObject)),
                 mainMenuRightSlotBot.transform) as GameObject;
         mainMenuReturnButton.GetComponent<Button>().onClick.AddListener(OnMainMenuReturnButtonPressed);
@@ -634,7 +706,7 @@ public class UIManager : MonoBehaviour {
 
     private void CloseMainMenuSettingsView()
     {
-        if(settingsInvertedHUDButtonHolder != null)
+        if (settingsInvertedHUDButtonHolder != null)
         {
             settingsInvertedHUDButtonHolder.GetComponentInChildren<Button>().onClick.RemoveAllListeners();
             Destroy(settingsInvertedHUDButtonHolder);
@@ -650,20 +722,20 @@ public class UIManager : MonoBehaviour {
     {
         uiState = UIState.MAINMENUGAMEMODE;
 
-        mainMenuGameModeSinglePlayerButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
+        gameModeSinglePlayerButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
                 mainMenuCenter.transform) as GameObject;
-        mainMenuGameModeSinglePlayerButton.GetComponentInChildren<Text>().text = "SINGLEPLAYER";
-        mainMenuGameModeSinglePlayerButton.GetComponent<Button>().onClick.AddListener(OnMainMenuGameModeSinglePlayerButtonPressed);
+        gameModeSinglePlayerButton.GetComponentInChildren<Text>().text = "SINGLEPLAYER";
+        gameModeSinglePlayerButton.GetComponent<Button>().onClick.AddListener(OnGameModeSinglePlayerButtonPressed);
 
-        mainMenuGameModeNetworkMultiplayerButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
+        gameModeNetworkMultiplayerButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
                 mainMenuCenter.transform) as GameObject;
-        mainMenuGameModeNetworkMultiplayerButton.GetComponentInChildren<Text>().text = "ONLINE MULTIPLAYER";
-        mainMenuGameModeNetworkMultiplayerButton.GetComponent<Button>().onClick.AddListener(OnMainMenuGameModeNetworkMultiplayerButtonPressed);
+        gameModeNetworkMultiplayerButton.GetComponentInChildren<Text>().text = "ONLINE MULTIPLAYER";
+        gameModeNetworkMultiplayerButton.GetComponent<Button>().onClick.AddListener(OnGameModeNetworkMultiplayerButtonPressed);
 
-        mainMenuGameModeLocalMultiplayerButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
+        gameModeLocalMultiplayerButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
                 mainMenuCenter.transform) as GameObject;
-        mainMenuGameModeLocalMultiplayerButton.GetComponentInChildren<Text>().text = "LOCAL MULTIPLAYER";
-        mainMenuGameModeLocalMultiplayerButton.GetComponent<Button>().onClick.AddListener(OnMainMenuGameModeLocalMultiplayerButtonPressed);
+        gameModeLocalMultiplayerButton.GetComponentInChildren<Text>().text = "LOCAL MULTIPLAYER";
+        gameModeLocalMultiplayerButton.GetComponent<Button>().onClick.AddListener(OnGameModeLocalMultiplayerButtonPressed);
 
         mainMenuReturnButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuReturnButton", typeof(GameObject)),
                 mainMenuRightSlotBot.transform) as GameObject;
@@ -688,22 +760,22 @@ public class UIManager : MonoBehaviour {
 
     private void CloseMainMenuGameModeView()
     {
-        if (mainMenuGameModeSinglePlayerButton != null)
+        if (gameModeSinglePlayerButton != null)
         {
-            mainMenuGameModeSinglePlayerButton.GetComponent<Button>().onClick.RemoveAllListeners();
-            Destroy(mainMenuGameModeSinglePlayerButton);
+            gameModeSinglePlayerButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(gameModeSinglePlayerButton);
         }
 
-        if (mainMenuGameModeNetworkMultiplayerButton != null)
+        if (gameModeNetworkMultiplayerButton != null)
         {
-            mainMenuGameModeNetworkMultiplayerButton.GetComponent<Button>().onClick.RemoveAllListeners();
-            Destroy(mainMenuGameModeNetworkMultiplayerButton);
+            gameModeNetworkMultiplayerButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(gameModeNetworkMultiplayerButton);
         }
 
-        if (mainMenuGameModeLocalMultiplayerButton != null)
+        if (gameModeLocalMultiplayerButton != null)
         {
-            mainMenuGameModeLocalMultiplayerButton.GetComponent<Button>().onClick.RemoveAllListeners();
-            Destroy(mainMenuGameModeLocalMultiplayerButton);
+            gameModeLocalMultiplayerButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(gameModeLocalMultiplayerButton);
         }
 
         if (mainMenuReturnButton != null)
@@ -723,32 +795,57 @@ public class UIManager : MonoBehaviour {
     {
         uiState = UIState.MAINMENUONLINELOBBY;
 
-        mainMenuOnlineLobbyParticipantCountDisplay = Instantiate(Resources.Load("UI/MainMenu/MainMenuInfoDisplay", typeof(GameObject)),
-                mainMenuCenter.transform) as GameObject;
-        mainMenuOnlineLobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PLAYERS IN LOBBY: " + Mathf.Clamp(numberOfPlayersInLobby, 1, maxNumberOfPlayersInLobby);
+        numberOfPlayersInLobby = Mathf.Clamp(numberOfPlayersInLobby, 1, maxNumberOfPlayersInLobby);
+        numberOfLobbyParticipantsReady = Mathf.Clamp(numberOfLobbyParticipantsReady, 0, numberOfPlayersInLobby);
 
-        mainMenuStartOnlineMatchButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
+        lobbyParticipantCountDisplay = Instantiate(Resources.Load("UI/MainMenu/MainMenuInfoDisplay", typeof(GameObject)),
                 mainMenuCenter.transform) as GameObject;
-        mainMenuStartOnlineMatchButton.GetComponentInChildren<Text>().text = "START MATCH";
-        mainMenuStartOnlineMatchButton.GetComponent<Button>().onClick.AddListener(OnMainMenuStartOnlineMatchButtonPressed);
+        lobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PARTICIPANTS READY: " 
+            + numberOfLobbyParticipantsReady + "/" + numberOfPlayersInLobby;
 
+        lobbyReadyButtonHolder = Instantiate(Resources.Load("UI/MainMenu/MainMenuButtonWithToggleMark", typeof(GameObject)),
+                mainMenuCenter.transform) as GameObject;
+        lobbyReadyButtonHolder.GetComponentInChildren<Text>().text = "READY";
+        lobbyReadyToggleMarkOnImage = lobbyReadyButtonHolder.GetComponentInChildren<ToggleMarkTag>().transform.
+            GetChild(1).gameObject;
+        if (lobbyReadyButtonPressed)
+            lobbyReadyToggleMarkOnImage.SetActive(true);
+        else
+            lobbyReadyToggleMarkOnImage.SetActive(false);
+        lobbyReadyButtonHolder.GetComponentInChildren<Button>(true).onClick.AddListener(OnLobbyReadyButtonPressed);
+        
         mainMenuReturnButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuReturnButton", typeof(GameObject)),
                 mainMenuRightSlotBot.transform) as GameObject;
         mainMenuReturnButton.GetComponent<Button>().onClick.AddListener(OnMainMenuReturnButtonPressed);
     }
 
+    private void UpdateParticipantCountDisplay()
+    {
+        numberOfPlayersInLobby = Mathf.Clamp(numberOfPlayersInLobby, 1, maxNumberOfPlayersInLobby);
+        numberOfLobbyParticipantsReady = Mathf.Clamp(numberOfLobbyParticipantsReady, 0, numberOfPlayersInLobby);
+
+        lobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PARTICIPANTS READY: "
+            + numberOfLobbyParticipantsReady + "/" + numberOfPlayersInLobby;
+    }
+
     private void CloseMainMenuOnlineLobbyView()
     {
-        if (mainMenuOnlineLobbyParticipantCountDisplay != null)
+        if (lobbyParticipantCountDisplay != null)
         {
-            Destroy(mainMenuOnlineLobbyParticipantCountDisplay);
+            Destroy(lobbyParticipantCountDisplay);
         }
 
-        if (mainMenuStartOnlineMatchButton != null)
+        if (lobbyReadyButtonHolder != null)
         {
-            mainMenuStartOnlineMatchButton.GetComponent<Button>().onClick.RemoveAllListeners();
-            Destroy(mainMenuStartOnlineMatchButton);
+            if (lobbyReadyButtonHolder.GetComponent<Button>())
+            {
+                lobbyReadyButtonHolder.GetComponent<Button>().onClick.RemoveAllListeners();
+            }
+            Destroy(lobbyReadyButtonHolder);
+            lobbyReadyButtonPressed = false;
         }
+
+        CloseLobbyStartMatchButton();
 
         if (mainMenuReturnButton != null)
         {
@@ -756,13 +853,40 @@ public class UIManager : MonoBehaviour {
             Destroy(mainMenuReturnButton);
         }
     }
+
+    private void OpenLobbyStartMatchButton()
+    {
+        if(uiState == UIState.MAINMENUONLINELOBBY)
+        {
+            lobbyStartMatchButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
+                    mainMenuCenter.transform) as GameObject;
+            lobbyStartMatchButton.GetComponentInChildren<Text>().text = "START MATCH";
+            lobbyStartMatchButton.GetComponent<Button>().onClick.AddListener(OnLobbyStartMatchButtonPressed);
+        }
+        else
+        {
+            Debug.LogError("Cannot spawn LobbyStartMatchButton if not in lobby!");
+        }
+    }
+
+    private void CloseLobbyStartMatchButton()
+    {
+        if (lobbyStartMatchButton != null)
+        {
+            lobbyStartMatchButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(lobbyStartMatchButton);
+        }
+    }
     #endregion
 
     #region Button functions
     private void OnMainMenuPlayButtonPressed()
     {
-        CloseMainMenuDefaultView();
-        OpenMainMenuGameModeView();
+        if (!loading)
+        {
+            CloseMainMenuDefaultView();
+            OpenMainMenuGameModeView();
+        }
     }
 
     private void OnMainMenuExitButtonPressed()
@@ -772,33 +896,43 @@ public class UIManager : MonoBehaviour {
 
     private void OnMainMenuSettingsButtonPressed()
     {
-        CloseMainMenuDefaultView();
-        OpenMainMenuSettingsView();
+        if (!loading)
+        {
+            CloseMainMenuDefaultView();
+            OpenMainMenuSettingsView();
+        }
     }
 
     private void OnMainMenuConnectButtonPressed()
     {
-        if (!connectedToNetwork)
+        if (!loading)
         {
-            string serverIPAddress = em.BroadcastRequestServerIPAddress();
-            Debug.Log("UIManager, OnMainMenuConnectButtonPressed serverIPAddress: " + serverIPAddress);
-            em.BroadcastRequestConnectToNetwork(serverIPAddress);
-        }
-        else
-        {
-            em.BroadcastRequestDisconnectFromNetwork();
+            if (!connectedToNetwork)
+            {
+                string serverIPAddress = em.BroadcastRequestServerIPAddress();
+                Debug.Log("UIManager, OnMainMenuConnectButtonPressed serverIPAddress: " + serverIPAddress);
+                em.BroadcastRequestConnectToNetwork(serverIPAddress);
+            }
+            else
+            {
+                Debug.Log("connected to network, requesting disconnect");
+                em.BroadcastRequestDisconnectFromNetwork();
+            }
         }
     }
 
     private void OnSettingsInvertHUDButtonPressed()
     {
-        //TODO: Broadcast invertedHUD change and save it to GVL
-        invertedHUD = !invertedHUD;
+        if (!loading)
+        {
+            //TODO: Broadcast invertedHUD change and save it to GVL
+            invertedHUD = !invertedHUD;
 
-        if (invertedHUD)
-            settingsInvertHUDToggleMarkOnImage.SetActive(true);
-        else
-            settingsInvertHUDToggleMarkOnImage.SetActive(false);
+            if (invertedHUD)
+                settingsInvertHUDToggleMarkOnImage.SetActive(true);
+            else
+                settingsInvertHUDToggleMarkOnImage.SetActive(false);
+        }
     }
 
     private void OnMainMenuReturnButtonPressed()
@@ -813,71 +947,112 @@ public class UIManager : MonoBehaviour {
             CloseMainMenuGameModeView();
             OpenMainMenuDefaultView();
         }
-        else if(uiState == UIState.MAINMENUONLINELOBBY)
+        else if (uiState == UIState.MAINMENUONLINELOBBY)
         {
+            em.BroadcastRequestLobbyExit();
             CloseMainMenuOnlineLobbyView();
             OpenMainMenuGameModeView();
         }
     }
 
-    private void OnMainMenuGameModeSinglePlayerButtonPressed()
+    private void OnGameModeSinglePlayerButtonPressed()
     {
-        em.BroadcastSetGameMode(gameModeSingleplayerIndex);
-        Debug.Log("Game mode set to SinglePlayer");
-        OpenLoadingScreen();
-        em.BroadcastRequestSceneSingleLevel01();
+        if (!loading)
+        {
+            em.BroadcastSetGameMode(gameModeSingleplayerIndex);
+            Debug.Log("Game mode set to SinglePlayer");
+            OpenLoadingScreen();
+            em.BroadcastRequestSceneSingleLevel01();
+        }
     }
 
-    private void OnMainMenuGameModeNetworkMultiplayerButtonPressed()
+    private void OnGameModeNetworkMultiplayerButtonPressed()
     {
-        if (!networkFunctionalityDisabled)
+        if(!loading)
         {
-            if (connectedToNetwork)
+            if (!networkFunctionalityDisabled)
             {
-                Debug.Log("Connected to network: Opening online lobby, Game mode changed to Network Multiplayer");
+                if (connectedToNetwork)
+                {
+                    Debug.Log("Connected to network: Requesting lobby access");
+                    em.BroadcastRequestLobbyEnter();
+                    OpenLoadingIcon();
+
+                    //em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
+                    //CloseMainMenuGameModeView();
+                    //OpenMainMenuOnlineLobbyView();
+                }
+                else
+                {
+                    Debug.Log("Not connected to network: Cannot open online lobby");
+                }
+            }
+            else
+            {
                 em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
-                CloseMainMenuGameModeView();
-                OpenMainMenuOnlineLobbyView();
+                Debug.Log("Game mode set to Network Multiplayer(networkFunctionality disabled)");
             }
-            else
-            {
-                Debug.Log("Not connected to network: Cannot open online lobby");
-            }
-        }
-        else
-        {
-            em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
-            Debug.Log("Game mode set to Network Multiplayer(networkFunctionality disabled)");
         }
     }
 
-    private void OnMainMenuStartOnlineMatchButtonPressed()
+    private void OnLobbyReadyButtonPressed()
     {
-        if (!networkFunctionalityDisabled)
+        if (!loading)
         {
-            if (connectedToNetwork)
+            lobbyReadyButtonPressed = !lobbyReadyButtonPressed;
+            if (lobbyReadyButtonPressed)
             {
-                Debug.Log("Connected to network: Starting Network Multiplayer game");
-                OpenLoadingScreen();
-                em.BroadcastRequestSceneSingleLevel01();
+                lobbyReadyToggleMarkOnImage.SetActive(true);
+                numberOfLobbyParticipantsReady++;
+                UpdateParticipantCountDisplay();
+                OpenLobbyStartMatchButton();
             }
             else
             {
-                Debug.Log("Not connected to network: Cannot start Network Multiplayer game");
+                lobbyReadyToggleMarkOnImage.SetActive(false);
+                numberOfLobbyParticipantsReady--;
+                UpdateParticipantCountDisplay();
+                CloseLobbyStartMatchButton();
             }
-        }
-        else
-        {
-            Debug.Log("NetworkFunctionality disabled: Cannost start Network Multiplayer game");
+
+            em.BroadcastLobbyReadyStateChange(lobbyReadyButtonPressed);
         }
     }
 
-    private void OnMainMenuGameModeLocalMultiplayerButtonPressed()
+    private void OnLobbyStartMatchButtonPressed()
     {
-        em.BroadcastSetGameMode(gameModeLocalMultiplayerIndex);
-        Debug.Log("Game mode changed to Local Multiplayer");
-        //OpenLoadingScreen();
-        //em.BroadcastRequestSceneSingleLevel01();
+        if (!loading)
+        {
+            if (!networkFunctionalityDisabled)
+            {
+                if (connectedToNetwork)
+                {
+                    Debug.Log("Connected to network: Starting Network Multiplayer game");
+                    //OpenLoadingScreen();
+                    //em.BroadcastRequestSceneSingleLevel01();
+                    em.BroadcastRequestOnlineMatchStart();
+                }
+                else
+                {
+                    Debug.Log("Not connected to network: Cannot start Network Multiplayer game");
+                }
+            }
+            else
+            {
+                Debug.Log("NetworkFunctionality disabled: Cannost start Network Multiplayer game");
+            }
+        }
+    }
+
+    private void OnGameModeLocalMultiplayerButtonPressed()
+    {
+        if (!loading)
+        {
+            em.BroadcastSetGameMode(gameModeLocalMultiplayerIndex);
+            Debug.Log("Game mode changed to Local Multiplayer");
+            //OpenLoadingScreen();
+            //em.BroadcastRequestSceneSingleLevel01();
+        }
     }
     #endregion
     #endregion
@@ -1018,8 +1193,8 @@ public class UIManager : MonoBehaviour {
             pauseMenuMainMenuButton.GetComponent<Button>().onClick.RemoveAllListeners();
             Destroy(pauseMenuMainMenuButton);
         }
-        
-        if(pauseMenuHolder != null)
+
+        if (pauseMenuHolder != null)
         {
             pauseMenuHolder.SetActive(false);
         }
@@ -1085,16 +1260,22 @@ public class UIManager : MonoBehaviour {
     #region PauseMenu buttons
     private void PauseMenuResumeButtonPressed()
     {
-        ClosePauseMenu();
+        if (!loading)
+        {
+            ClosePauseMenu();
+        }
     }
 
     private void PauseMenuRestartButtonPressed()
     {
-        OpenLoadingScreen();
-        ClosePauseMenu();
-        ResetOffscreenTargetFollowing();
-        DestroyOffscreenIndicators();
-        em.BroadcastGameRestart();
+        if (!loading)
+        {
+            OpenLoadingScreen();
+            ClosePauseMenu();
+            ResetOffscreenTargetFollowing();
+            DestroyOffscreenIndicators();
+            em.BroadcastGameRestart();
+        }
     }
 
     private void PauseMenuMainMenuButtonPressed()
@@ -1184,8 +1365,8 @@ public class UIManager : MonoBehaviour {
                     Transform target = offscreenIndicatorTargets[i];
                     Transform indicator = offscreenIndicatorPool[i];
                     Vector3 screenPosition = Camera.main.WorldToViewportPoint(target.position);
-                    
-                    if (screenPosition.x >= (-0.08f + offscreenIndicatorSidebuffer) && screenPosition.x <= (1.08f - offscreenIndicatorSidebuffer) && 
+
+                    if (screenPosition.x >= (-0.08f + offscreenIndicatorSidebuffer) && screenPosition.x <= (1.08f - offscreenIndicatorSidebuffer) &&
                         screenPosition.y >= -0.08f && screenPosition.y <= 1.08f)
                     {
                         //Target is within screenspace
@@ -1267,7 +1448,7 @@ public class UIManager : MonoBehaviour {
                         #endregion
 
                         indicator.localEulerAngles = new Vector3(0.0f, 0.0f, -angle * Mathf.Rad2Deg);
-                        screenPosition.x = Mathf.Clamp(screenPosition.x, (0 + offscreenIndicatorSidebuffer), 
+                        screenPosition.x = Mathf.Clamp(screenPosition.x, (0 + offscreenIndicatorSidebuffer),
                             (1 - offscreenIndicatorSidebuffer));
                         indicator.position = Camera.main.ViewportToScreenPoint(screenPosition);
 
@@ -1285,11 +1466,11 @@ public class UIManager : MonoBehaviour {
                         float minIndicatorDistanceFactorValue = 0.2f;
                         float maxIndicatorDistanceFactorValue = 1;
 
-                        indicatorTargetDistance = Mathf.Clamp(indicatorTargetDistance, minIndicatorTargetDistance, 
+                        indicatorTargetDistance = Mathf.Clamp(indicatorTargetDistance, minIndicatorTargetDistance,
                             maxIndicatorTargetDistance);
                         indicatorTargetDistance -= minIndicatorTargetDistance;
 
-                        float indicatorTargetDistanceFactor = indicatorTargetDistance / 
+                        float indicatorTargetDistanceFactor = indicatorTargetDistance /
                             (maxIndicatorTargetDistance - minIndicatorTargetDistance);
 
                         indicatorTargetDistanceFactor = Mathf.Clamp((1 - indicatorTargetDistanceFactor),
@@ -1316,7 +1497,7 @@ public class UIManager : MonoBehaviour {
     private void ResetOffscreenTargetFollowing()
     {
         offscreenIndicatorTargets.Clear();
-        foreach(Transform indicator in offscreenIndicatorPool)
+        foreach (Transform indicator in offscreenIndicatorPool)
         {
             indicator.gameObject.SetActive(false);
             offscreenIndicatorPool[offscreenIndicatorTargets.Count].position = offscreenIndicatorDefaultPosition;

@@ -68,10 +68,14 @@ namespace Client
         GlobalVariableLibrary lib;
         public static Socket master;
         Thread incomingDataThread;
-        public static string id;
+        public static string clientName = "Metsä"; //TODO: Implement client name changing
+        public static string clientID;
+        static string serverIP;
         bool connected = false;
         bool inGame = false;
         static bool requestingDisconnectFromThread = false;
+        static int lobbyJoinedResponse = -1; //-1 = default, 0 = joining denied, 1 = joined successfully, 2 = waiting for response
+        static int registrationResponse = -1; //-1 = default, 1 = registration completed, 2 = waiting for response
         int currentGameModeIndex = -1;
 
         int gameModeSingleplayerIndex = -1;
@@ -100,7 +104,7 @@ namespace Client
             gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
             networkFunctionalityDisabled = lib.networkingVariables.networkFunctionalityDisabled;
         }
-        
+
         void Start()
         {
             string ip = Packet.GetIP4Address();
@@ -117,6 +121,10 @@ namespace Client
             em.OnRequestConnectToNetwork += OnRequestConnectToNetwork;
             em.OnRequestServerIPAddress += Packet.GetIP4Address;
             em.OnRequestDisconnectFromNetwork += OnRequestDisconnectFromNetwork;
+            em.OnRequestLobbyEnter += OnRequestLobbyEnter;
+            em.OnRequestLobbyExit += OnRequestLobbyExit;
+            em.OnLobbyReadyStateChange += OnLobbyReadyStateChange;
+            em.OnRequestOnlineMatchStart += OnRequestOnlineMatchStart;
             inGame = false;
         }
 
@@ -127,6 +135,10 @@ namespace Client
             em.OnRequestConnectToNetwork -= OnRequestConnectToNetwork;
             em.OnRequestServerIPAddress -= Packet.GetIP4Address;
             em.OnRequestDisconnectFromNetwork -= OnRequestDisconnectFromNetwork;
+            em.OnRequestLobbyEnter -= OnRequestLobbyEnter;
+            em.OnRequestLobbyExit -= OnRequestLobbyExit;
+            em.OnLobbyReadyStateChange -= OnLobbyReadyStateChange;
+            em.OnRequestOnlineMatchStart -= OnRequestOnlineMatchStart;
 
             if (incomingDataThread != null)
             {
@@ -145,6 +157,46 @@ namespace Client
         #endregion
 
         #region Subscribers
+        private void OnRequestLobbyEnter()
+        {
+            Debug.Log("Requesting lobby enter from server");
+            lobbyJoinedResponse = 2;
+            Packet p = new Packet(PacketType.LOBBYEVENT, clientID);
+            Debug.Log("Before accessing GdataInts element 0");
+            p.GdataInts.Add(1);
+            p.GdataStrings.Add(clientName);
+            Debug.Log("After accessing GdataInts element 0");
+            try
+            {
+                master.Send(p.ToBytes());
+                Debug.Log("Bytes sent");
+            }
+            catch (SocketException ex)
+            {
+                Debug.Log("SocketException: " + ex);
+                Debug.Log("Connection to server lost.");
+                Disconnect();
+            }
+        }
+
+        private void OnRequestLobbyExit()
+        {
+            Debug.Log("Exiting lobby");
+            Packet p = new Packet(PacketType.LOBBYEVENT, clientID);
+            p.GdataInts.Add(0);
+            try
+            {
+                master.Send(p.ToBytes());
+                Debug.Log("Bytes sent");
+            }
+            catch (SocketException ex)
+            {
+                Debug.Log("SocketException: " + ex);
+                Debug.Log("Connection to server lost.");
+                Disconnect();
+            }
+        }
+
         private void OnSetGameMode(int newGameModeIndex)
         {
             currentGameModeIndex = newGameModeIndex;
@@ -157,7 +209,7 @@ namespace Client
             {
                 inGame = false;
             }
-            else if(sceneIndex == 1)
+            else if (sceneIndex == 1)
             {
                 inGame = true;
             }
@@ -192,29 +244,42 @@ namespace Client
         {
             return connected;
         }
+
+        private void OnLobbyReadyStateChange(bool state)
+        {
+            //TODO: Send ready state information to server
+        }
+
+        private void OnRequestOnlineMatchStart()
+        {
+            //TODO: Send match start request to server
+        }
         #endregion
 
         #region Connecting and disconnecting
         private void TryConnectingToHost(string ip)
         {
+            em.BroadcastRequestLoadingIconOn();
             try
             {
-                IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(ip), 8888);
-                Debug.Log("Trying to connect to ip: " + ip);
+                serverIP = ip;
+                IPEndPoint ipe = new IPEndPoint(IPAddress.Parse(serverIP), 8888);
+                Debug.Log("Trying to connect to IP address: " + serverIP);
                 master.Connect(ipe); //TODO: Find out why this no longer works (until restarting play mode) after disconnecting once
-                
+
                 incomingDataThread = new Thread(DataIN);
                 incomingDataThread.Start();
 
                 Debug.Log("Connected to host.");
                 connected = true;
-                em.BroadcastConnectingToNetworkSucceeded(ip);
+                registrationResponse = 2;
             }
             catch
             {
                 Debug.Log("Could not connect to host.");
                 connected = false;
-                em.BroadcastConnectingToNetworkFailed(ip);
+                em.BroadcastConnectingToNetworkFailed(serverIP);
+                em.BroadcastRequestLoadingIconOff();
             }
         }
 
@@ -248,7 +313,7 @@ namespace Client
         {
             if (connected)
             {
-                if(currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+                if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
                 {
                     if (inGame)
                     {
@@ -259,7 +324,7 @@ namespace Client
                         if (gm.shipInfoList.Count > 0)
                         {
                             Debug.Log("gm.shipInfoList.Count > 0");
-                            Packet p = new Packet(PacketType.MOVEMENT, id);
+                            Packet p = new Packet(PacketType.MOVEMENT, clientID);
                             //string input = "Hello from the client side " +
                             //DateTime.Now.ToLongTimeString();
                             //p.GdataStrings.Add(input);
@@ -282,10 +347,34 @@ namespace Client
                         }
                         #endregion
                     }
-                }          
+                }
+
+                if (lobbyJoinedResponse != -1)
+                {
+                    if (lobbyJoinedResponse == 1)
+                    {
+                        em.BroadcastLobbyEnterSuccessful();
+                        lobbyJoinedResponse = -1;
+                    }
+                    else if (lobbyJoinedResponse == 0)
+                    {
+                        em.BroadcastLobbyEnterDenied();
+                        lobbyJoinedResponse = -1;
+                    }
+                }
+
+                if (registrationResponse != -1)
+                {
+                    if (registrationResponse == 1)
+                    {
+                        em.BroadcastConnectingToNetworkSucceeded(serverIP);
+                        registrationResponse = -1;
+                        em.BroadcastRequestLoadingIconOff();
+                    }
+                }
             }
 
-            #region Disconnect requests from a tread
+            #region Disconnect requests from a thread
             if (requestingDisconnectFromThread)
             {
                 requestingDisconnectFromThread = false;
@@ -295,33 +384,61 @@ namespace Client
         }
         #endregion
 
+        #region Incoming Data thread
         static void DataIN()
         {
             byte[] Buffer;
             int readBytes;
 
-            while (true)
+            //TODO: Find out why the first packet is split in two parts 
+            //(1460 and 169 bytes, instead of the full message's 1629 bytes)
+            //Added two dummy receive calls to clear first split message from buffer
+            Buffer = new byte[master.SendBufferSize];
+            master.Receive(Buffer);
+            master.Receive(Buffer);
+            bool running = true;
+
+            while (running)
             {
                 try
                 {
                     Buffer = new byte[master.SendBufferSize];
                     readBytes = master.Receive(Buffer);
 
-                    if(readBytes > 0)
+                    if (readBytes > 0)
                     {
-                        Debug.Log("NetworkClient, DataIN: readBytes > 0");
-                        DataManager(new Packet(Buffer));
+                        Debug.Log("Before calling DataManager, readBytes: " + readBytes);
+                        //DataManager(new Packet(Buffer));
+                        //Packet p = new Packet(Buffer);
+
+                        try
+                        {
+                            Debug.Log("Trying to create packet from buffer bytes");
+                            Packet packet = new Packet(Buffer);
+                            Debug.Log("Packet created, trying to send packet to data manager");
+                            DataManager(packet);
+                            Debug.Log("Packet sent to data manager");
+                        }
+                        catch
+                        {
+                            Debug.LogWarning("Unable to create packet from buffer bytes!");
+                        }
+
+                        Debug.Log("After calling DataManager");
                     }
                 }
-                catch(SocketException ex)
+                catch (SocketException ex)
                 {
-                    Debug.Log("SocketException: " + ex);
+                    Debug.LogWarning("SocketException: " + ex);
+                    running = false;
                     requestingDisconnectFromThread = true;
                     Thread.CurrentThread.Abort();
                 }
             }
         }
+        #endregion
 
+        #region DataManager
         static void DataManager(Packet p)
         {
             Debug.Log("DataManager called");
@@ -329,36 +446,24 @@ namespace Client
             switch (p.packetType)
             {
                 case PacketType.REGISTRATION:
-                    Debug.Log("Registration packet managed");
+                    clientID = p.GdataStrings[0];
+                    registrationResponse = 1;
+                    Debug.Log("Registration packet managed, my id: " + clientID);
+
                     break;
 
                 case PacketType.DEBUG:
                     Debug.Log("Debug packet managed");
                     break;
 
-                case PacketType.SPAWN:
-                    Debug.Log("SpawnEvent packet managed");
-                    break;
-
-                case PacketType.DEATH:
-                    Debug.Log("DeathEvent packet managed");
-                    break;
-
-                case PacketType.MOVEMENT:
-                    Debug.Log("Movement packet managed");
-                    break;
-
-                case PacketType.AIM:
-                    Debug.Log("Aim packet managed");
-                    break;
-
-                case PacketType.SHOOT:
-                    Debug.Log("ShootEvent packet managed");
+                case PacketType.LOBBYEVENT:
+                    lobbyJoinedResponse = p.GdataInts[0];
+                    Debug.Log("LobbyJoin packet managed, lobbyJoinedResponse: " + lobbyJoinedResponse);
                     break;
 
             }
-
         }
+        #endregion
     }
 
 }

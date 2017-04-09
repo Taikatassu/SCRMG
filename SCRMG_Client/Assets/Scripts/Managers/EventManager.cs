@@ -36,6 +36,7 @@ public class EventManager : MonoBehaviour
     public delegate void IntVector3Void(int integer, Vector3 vec3);
     public delegate void GameObjectVoid(GameObject gameObject);
     public delegate void StringVoid(string string1);
+    public delegate void BoolVoid(bool boolean);
     public delegate string EmptyString();
     public delegate bool EmptyBool();
     public delegate int EmptyInt();
@@ -304,6 +305,24 @@ public class EventManager : MonoBehaviour
     #endregion
 
     #region Gameplay events
+    public event EmptyVoid OnRequestLoadingIconOn;
+    public void BroadcastRequestLoadingIconOn()
+    {
+        if (OnRequestLoadingIconOn != null)
+        {
+            OnRequestLoadingIconOn();
+        }
+    }
+
+    public event EmptyVoid OnRequestLoadingIconOff;
+    public void BroadcastRequestLoadingIconOff()
+    {
+        if (OnRequestLoadingIconOff != null)
+        {
+            OnRequestLoadingIconOff();
+        }
+    }
+
     public event IntVoid OnMatchStartTimerValueChange;
     public void BroadcastMatchStartTimerValueChange(int currentValue)
     {
@@ -446,6 +465,24 @@ public class EventManager : MonoBehaviour
     #endregion
 
     #region Network events
+    public event BoolVoid OnLobbyReadyStateChange;
+    public void BroadcastLobbyReadyStateChange(bool state)
+    {
+        if (OnLobbyReadyStateChange != null)
+        {
+            OnLobbyReadyStateChange(state);
+        }
+    }
+
+    public event EmptyVoid OnRequestOnlineMatchStart;
+    public void BroadcastRequestOnlineMatchStart()
+    {
+        if (OnRequestOnlineMatchStart != null)
+        {
+            OnRequestOnlineMatchStart();
+        }
+    }
+
     public event StringVoid OnRequestConnectToNetwork;
     public void BroadcastRequestConnectToNetwork(string ip)
     {
@@ -519,6 +556,42 @@ public class EventManager : MonoBehaviour
         if(OnPlayerCountInLobbyChanged != null)
         {
             OnPlayerCountInLobbyChanged(newCount);
+        }
+    }
+
+    public event EmptyVoid OnRequestLobbyEnter;
+    public void BroadcastRequestLobbyEnter()
+    {
+        if (OnRequestLobbyEnter != null)
+        {
+            OnRequestLobbyEnter();
+        }
+    }
+
+    public event EmptyVoid OnLobbyEnterSuccessful;
+    public void BroadcastLobbyEnterSuccessful()
+    {
+        if (OnLobbyEnterSuccessful != null)
+        {
+            OnLobbyEnterSuccessful();
+        }
+    }
+
+    public event EmptyVoid OnLobbyEnterDenied;
+    public void BroadcastLobbyEnterDenied()
+    {
+        if (OnLobbyEnterDenied != null)
+        {
+            OnLobbyEnterDenied();
+        }
+    }
+
+    public event EmptyVoid OnRequestLobbyExit;
+    public void BroadcastRequestLobbyExit()
+    {
+        if (OnRequestLobbyExit != null)
+        {
+            OnRequestLobbyExit();
         }
     }
     #endregion

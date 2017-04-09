@@ -30,6 +30,7 @@ public class GameManager : MonoBehaviour
     bool resetUsedSpawnPointsList = false;
     bool resetUsedShipColors = false;
 
+    int maxNumberOfClientsInLobby = 4;
     List<Color> shipColorOptions = new List<Color>();
     #region Initialization
     #region Awake
@@ -45,36 +46,77 @@ public class GameManager : MonoBehaviour
     #region OnEnable & OnDisable
     private void OnEnable()
     {
-        em.OnClientEnterLobby += OnClientEnterLobby;
+        em.OnClientRequestLobbyAccess += OnClientRequestLobbyAccess;
         em.OnClientExitLobby += OnClientExitLobby;
         em.OnRequestMatchStart += OnRequestMatchStart;
         em.OnClientVote += OnClientVote;
+        em.OnClientDisconnected += OnClientDisconnected;
     }
 
     private void OnDisable()
     {
-        em.OnClientEnterLobby -= OnClientEnterLobby;
+        em.OnClientRequestLobbyAccess -= OnClientRequestLobbyAccess;
         em.OnClientExitLobby -= OnClientExitLobby;
         em.OnRequestMatchStart -= OnRequestMatchStart;
         em.OnClientVote -= OnClientVote;
+        em.OnClientDisconnected -= OnClientDisconnected;
     }
     #endregion
     #endregion
 
     #region Subscribers
-    private void OnClientEnterLobby(ClientData newClientID)
+    private void OnClientDisconnected(string newClientID)
     {
-        if (serverState == ServerState.DEFAULT)
+        for(int i = 0; i < clientsInLobby.Count; i++)
         {
-            serverState = ServerState.LOBBY;
+            if(clientsInLobby[i].id == newClientID)
+            {
+                em.BroadcastClientExitLobby(newClientID);
+                break;
+            }
         }
-
-        clientsInLobby.Add(newClientID);
     }
 
-    private void OnClientExitLobby(ClientData disconnectedClientID)
+    private bool OnClientRequestLobbyAccess(ClientData newClientData)
     {
-        clientsInLobby.Remove(disconnectedClientID);
+        foreach (ClientData client in clientsInLobby)
+        {
+            if (client == newClientData)
+            {
+                if (serverState == ServerState.DEFAULT)
+                {
+                    serverState = ServerState.LOBBY;
+                }
+                
+                Debug.LogWarning("Client already in lobby!");
+                return true;
+            }
+        }
+
+        if (maxNumberOfClientsInLobby > clientsInLobby.Count)
+        {
+            if (serverState == ServerState.DEFAULT)
+            {
+                serverState = ServerState.LOBBY;
+            }
+
+            clientsInLobby.Add(newClientData);
+            em.BroadcastClientEnterLobby(newClientData);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void OnClientExitLobby(string disconnectedClientID)
+    {
+        for (int i = 0; i < clientsInLobby.Count; i++)
+        {
+            if (clientsInLobby[i].id == disconnectedClientID)
+            {
+                clientsInLobby.RemoveAt(i);
+            }
+        }
     }
 
     private void OnRequestMatchStart()

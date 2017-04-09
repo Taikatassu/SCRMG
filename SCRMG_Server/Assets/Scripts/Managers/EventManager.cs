@@ -29,21 +29,23 @@ public class EventManager : MonoBehaviour {
     #region Delegates
     public delegate void EmptyVoid();
     public delegate void ClientDataVoid(ClientData clientData);
+    public delegate void StringVoid(string string1);
     public delegate void StringIntVoid(string string1, int integer);
+    public delegate bool ClientDataBool(ClientData clientData);
     #endregion
 
     #region Events
     public event ClientDataVoid OnClientConnected;
-    public void BroadcastClientConnected(ClientData clientID)
+    public void BroadcastClientConnected(ClientData clientData)
     {
         if (OnClientConnected != null)
         {
-            OnClientConnected(clientID);
+            OnClientConnected(clientData);
         }
     }
 
-    public event ClientDataVoid OnClientDisconnected;
-    public void BroadcastClientDisconnected(ClientData clientID)
+    public event StringVoid OnClientDisconnected;
+    public void BroadcastClientDisconnected(string clientID)
     {
         if (OnClientDisconnected != null)
         {
@@ -51,17 +53,28 @@ public class EventManager : MonoBehaviour {
         }
     }
 
+    public event ClientDataBool OnClientRequestLobbyAccess;
+    public bool BroadcastClientRequestLobbyAccess(ClientData clientData)
+    {
+        if (OnClientRequestLobbyAccess != null)
+        {
+            return OnClientRequestLobbyAccess(clientData);
+        }
+
+        return false;
+    }
+
     public event ClientDataVoid OnClientEnterLobby;
-    public void BroadcastClientEnterLobby(ClientData clientID)
+    public void BroadcastClientEnterLobby(ClientData clientData)
     {
         if (OnClientEnterLobby != null)
         {
-            OnClientEnterLobby(clientID);
+            OnClientEnterLobby(clientData);
         }
     }
 
-    public event ClientDataVoid OnClientExitLobby;
-    public void BroadcastClientExitLobby(ClientData clientID)
+    public event StringVoid OnClientExitLobby;
+    public void BroadcastClientExitLobby(string clientID)
     {
         if (OnClientExitLobby != null)
         {
