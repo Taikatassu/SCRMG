@@ -5,10 +5,6 @@ using UnityEngine;
 public class ShipController : MonoBehaviour {
 
     /* TODO:
-     * Implement AIPlayerController & NetworkPlayerController
-     *      -When game is started, ONE player controller is assigned to ONE ship 
-     *      -Other ships are controlled by AI or through network by other players
-     *      
      * Figure out a proper way to block ship from moving outside of arena bounds and
      *      return it to arena if somehow managing to get outside of it
      *      [Temporary fix implemented, remove and properly fix at some point]
@@ -41,6 +37,7 @@ public class ShipController : MonoBehaviour {
     float damageTakenModifier = -1;
     float shootCooldownModifier = -1;
     public int currentGameModeIndex = -1;
+    List<int> currentProjectileIndices = new List<int>();
     int shootCooldownFrameTimer = -1;
     int gameModeSingleplayerIndex = -1;
     int gameModeNetworkMultiplayerIndex = -1;
@@ -389,8 +386,7 @@ public class ShipController : MonoBehaviour {
                         GetComponentInChildren<Collider>());
 
                     newProjectileScript = newProjectile.GetComponent<Projectile>();
-                    newProjectileScript.SetShipController(this);
-                    newProjectileScript.SetProjectileType(projectileType);
+                    newProjectileScript.InitializeProjectile(index, GetNewProjectileIndex(), projectileType, myShipColor);
                     
                     //Set shoot on cooldown
                     shootCooldownFrameTimer = Mathf.RoundToInt((shootCooldownDuration * shootCooldownModifier) / Time.fixedDeltaTime);
@@ -398,6 +394,48 @@ public class ShipController : MonoBehaviour {
 
                 }
             }
+        }
+    }
+    
+    private void RemoveProejctileIndexFromList(int destroyedProjectileIndex)
+    {
+        if (currentProjectileIndices.Contains(destroyedProjectileIndex))
+        {
+            currentProjectileIndices.Remove(destroyedProjectileIndex);
+            Debug.Log("DestroyedProjectileIndex found and removed from list: " + destroyedProjectileIndex);
+        }
+        else
+        {
+            Debug.LogError("DestroyedProjectileIndex NOT found in list: " + destroyedProjectileIndex);
+        }
+    }
+
+    private int GetNewProjectileIndex()
+    {
+        int availableIndex = -1;
+        if (currentProjectileIndices.Count == 0)
+        {
+            availableIndex = 1;
+            Debug.Log("Projectile index list empty, creating new projectile index: " + availableIndex);
+            currentProjectileIndices.Add(availableIndex);
+            return availableIndex;
+        }
+        else
+        {
+            for (int i = 0; i < currentProjectileIndices.Count + 1; i++)
+            {
+                if (!currentProjectileIndices.Contains(i))
+                {
+                    availableIndex = i;
+                    Debug.Log("Available projectile index found: " + availableIndex);
+                    currentProjectileIndices.Add(availableIndex);
+                    return availableIndex;
+                }
+            }
+            availableIndex = currentProjectileIndices.Count + 1;
+            Debug.Log("Creating new projectile index: " + availableIndex);
+            currentProjectileIndices.Add(availableIndex);
+            return availableIndex;
         }
     }
 
@@ -506,6 +544,7 @@ public class ShipController : MonoBehaviour {
             }
             //Update UI
             UpdateHealthBar();
+            em.BroadcastShipHealthChange(index, currentHealth);
         }
     }
 
@@ -520,6 +559,7 @@ public class ShipController : MonoBehaviour {
             }
             //Update UI
             UpdateHealthBar();
+            em.BroadcastShipHealthChange(index, currentHealth);
         }
     }
     #endregion
@@ -563,13 +603,5 @@ public class ShipController : MonoBehaviour {
         healthBarLerpStartTime = Time.time;
         updatingHealthBar = true;
     }
-    #endregion
-
-    #region [Currently obsolete] Collision detection
-    //TODO: Remove if deemed permanently obsolete
-    //private void OnCollisionEnter()
-    //{
-    //    Debug.Log("OnCollisionEnter");
-    //}
     #endregion
 }

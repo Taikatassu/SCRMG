@@ -106,6 +106,7 @@ public class GameManager : MonoBehaviour {
         em.OnPowerUpOnline += OnPowerUpOnline;
         em.OnShipPositionUpdate += OnShipPositionUpdate;
         em.OnConnectionToNetworkLost += OnConnectionToNetworkLost;
+        em.OnShipSpawnByServer += OnShipSpawnByServer;
     }
 
     private void OnDisable()
@@ -123,6 +124,7 @@ public class GameManager : MonoBehaviour {
         em.OnPowerUpOnline -= OnPowerUpOnline;
         em.OnShipPositionUpdate -= OnShipPositionUpdate;
         em.OnConnectionToNetworkLost -= OnConnectionToNetworkLost;
+        em.OnShipSpawnByServer -= OnShipSpawnByServer;
     }
     #endregion
     #endregion
@@ -135,6 +137,18 @@ public class GameManager : MonoBehaviour {
         {
             Debug.Log("GameManager, OnConnectionToNetworkLost: Currently in game, requesting main menu scene");
             em.BroadcastRequestSceneSingleMainMenu();
+        }
+    }
+
+    private void OnShipSpawnByServer(int shipIndex, int spawnPointIndex, int shipColorIndex, string ownerID)
+    {
+        if(currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            SpawnShip(shipIndex, spawnPointIndex, shipColorIndex, ownerID);
+        }
+        else
+        {
+            Debug.LogError("Server tried spawning ship even though not in NetworkMultiplayer gameMode");
         }
     }
     #endregion
@@ -493,9 +507,55 @@ public class GameManager : MonoBehaviour {
         #endregion
     }
     #endregion
-    #endregion
 
-    #region SetVariables
+    #region Network game ship spawning
+    //TODO: Finish implementing ship spawning from server
+    private void SpawnShip(int shipIndex, int spawnPointIndex, int shipColorIndex, string ownerID)
+    {
+        Transform spawnPoint = FindSpawnPointWithIndex(spawnPointIndex);
+        GameObject newShip = Instantiate(Resources.Load("Ships/Ship", typeof(GameObject)),
+            spawnPoint.position, spawnPoint.rotation) as GameObject;
+        ShipController newShipController;
+        Color newShipColor = FindShipColorWithIndex(shipColorIndex);
+        
+            if (ownerID == em.BroadcastRequestMyNetworkID())
+            {
+                newShipController =
+                    newShip.AddComponent<LocalPlayerController>();
+                GameObject newPlayerIndicator = Instantiate(Resources.Load("Effects/PlayerIndicator",
+                    typeof(GameObject)), newShip.transform.position, Quaternion.identity,
+                    newShip.transform) as GameObject;
+                //Set playerIndicator color
+                ParticleSystem.MainModule pIMain = newPlayerIndicator.GetComponentInChildren<ParticleSystem>().main;
+                pIMain.startColor = new Color(newShipColor.r, newShipColor.g, newShipColor.b, 1);
+                currentPlayerCamera = Instantiate(Resources.Load("Cameras/PlayerCamera",
+                    typeof(GameObject)), Vector3.zero, Quaternion.identity) as GameObject;
+                CameraController currentCameraScript = currentPlayerCamera.GetComponentInChildren<CameraController>();
+                currentCameraScript.SetTarget(newShip.transform);
+                currentCameraScript.SetMyShipIndex(shipIndex);
+            }
+            else
+            {
+                newShipController =
+                    newShip.AddComponent<NetworkPlayerController>();
+            }
+            //Set currentGameMode in shipController
+            newShipController.SetGameMode(currentGameModeIndex);
+            //Give ship an index and color
+            newShipController.GiveIndex(shipIndex);
+            newShipController.SetShipColor(newShipColor);
+
+            currentlyAliveShips.Add(newShip);
+
+            ShipInfo newShipInfo = new ShipInfo();
+            newShipInfo.shipIndex = shipIndex;
+            newShipInfo.shipPosition = spawnPoint.position;
+            shipInfoList.Add(newShipInfo);
+        }
+    #endregion
+        #endregion
+
+        #region SetVariables
     public void SetRespawnPoints(List<Transform> newRespawnPoints)
     {
         respawnPoints = newRespawnPoints;
@@ -514,6 +574,26 @@ public class GameManager : MonoBehaviour {
     #endregion
 
     #region Find available ship color
+    private Color FindShipColorWithIndex(int shipColorIndex)
+    {
+        if (resetUsedShipColors)
+        {
+            usedShipColors.Clear();
+            resetUsedShipColors = false;
+        }
+
+        Color shipColor;
+        shipColor = shipColorOptions[shipColorIndex];
+        usedShipColors.Add(shipColorIndex);
+
+        if (usedShipColors.Count == shipColorOptions.Count)
+        {
+            resetUsedShipColors = true;
+        }
+
+        return shipColor;
+    }
+
     private Color FindNewShipColor()
     {
         if (resetUsedShipColors)
@@ -540,6 +620,26 @@ public class GameManager : MonoBehaviour {
     #endregion
 
     #region Find available spawn point
+    private Transform FindSpawnPointWithIndex(int spawnPointIndex)
+    {
+        if (resetUsedSpawnPointsList)
+        {
+            usedSpawnPoints.Clear();
+            resetUsedSpawnPointsList = false;
+        }
+
+        Transform respawnPoint;
+        respawnPoint = respawnPoints[spawnPointIndex];
+        usedSpawnPoints.Add(spawnPointIndex);
+
+        if (usedSpawnPoints.Count == respawnPoints.Count)
+        {
+            resetUsedSpawnPointsList = true;
+        }
+
+        return respawnPoint;
+    }
+
     private Transform FindAvailableSpawnPoint()
     {
         if (resetUsedSpawnPointsList)

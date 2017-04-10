@@ -125,6 +125,7 @@ namespace Client
             em.OnRequestLobbyExit += OnRequestLobbyExit;
             em.OnLobbyReadyStateChange += OnLobbyReadyStateChange;
             em.OnRequestOnlineMatchStart += OnRequestOnlineMatchStart;
+            em.OnRequestMyNetworkID += OnRequestMyNetworkID;
             inGame = false;
         }
 
@@ -139,6 +140,7 @@ namespace Client
             em.OnRequestLobbyExit -= OnRequestLobbyExit;
             em.OnLobbyReadyStateChange -= OnLobbyReadyStateChange;
             em.OnRequestOnlineMatchStart -= OnRequestOnlineMatchStart;
+            em.OnRequestMyNetworkID -= OnRequestMyNetworkID;
 
             if (incomingDataThread != null)
             {
@@ -162,10 +164,8 @@ namespace Client
             Debug.Log("Requesting lobby enter from server");
             lobbyJoinedResponse = 2;
             Packet p = new Packet(PacketType.LOBBYEVENT, clientID);
-            Debug.Log("Before accessing GdataInts element 0");
             p.GdataInts.Add(1);
             p.GdataStrings.Add(clientName);
-            Debug.Log("After accessing GdataInts element 0");
             try
             {
                 master.Send(p.ToBytes());
@@ -248,11 +248,51 @@ namespace Client
         private void OnLobbyReadyStateChange(bool state)
         {
             //TODO: Send ready state information to server
+            Debug.Log("Sending lobby ready state");
+            Packet p = new Packet(PacketType.LOBBYEVENT, clientID);
+            if (state)
+            {
+                p.GdataInts.Add(2);
+            }
+            else
+            {
+                p.GdataInts.Add(3);
+            }
+                        try
+            {
+                master.Send(p.ToBytes());
+                Debug.Log("Bytes sent");
+            }
+            catch (SocketException ex)
+            {
+                Debug.Log("SocketException: " + ex);
+                Debug.Log("Connection to server lost.");
+                Disconnect();
+            }
         }
 
         private void OnRequestOnlineMatchStart()
         {
             //TODO: Send match start request to server
+            Debug.Log("Sending start match request");
+            Packet p = new Packet(PacketType.LOBBYEVENT, clientID);
+            p.GdataInts.Add(4);
+            try
+            {
+                master.Send(p.ToBytes());
+                Debug.Log("Bytes sent");
+            }
+            catch (SocketException ex)
+            {
+                Debug.Log("SocketException: " + ex);
+                Debug.Log("Connection to server lost.");
+                Disconnect();
+            }
+        }
+
+        private string OnRequestMyNetworkID()
+        {
+            return clientID;
         }
         #endregion
 
@@ -393,9 +433,9 @@ namespace Client
             //TODO: Find out why the first packet is split in two parts 
             //(1460 and 169 bytes, instead of the full message's 1629 bytes)
             //Added two dummy receive calls to clear first split message from buffer
-            Buffer = new byte[master.SendBufferSize];
-            master.Receive(Buffer);
-            master.Receive(Buffer);
+            //Buffer = new byte[master.SendBufferSize];
+            //master.Receive(Buffer);
+            //master.Receive(Buffer);
             bool running = true;
 
             while (running)

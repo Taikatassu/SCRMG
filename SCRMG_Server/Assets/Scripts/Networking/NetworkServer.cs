@@ -74,6 +74,8 @@ namespace Server
         public static List<string> newlyDisconnectedClients = new List<string>();
         public static List<ClientData> lobbyQueue = new List<ClientData>();
         public static List<string> clientsExitingLobby = new List<string>();
+        public static List<ClientData> readyQueue = new List<ClientData>();
+        public static List<ClientData> notReadyQueue = new List<ClientData>();
         static string clientName;
         Thread listenThread;
         
@@ -343,32 +345,86 @@ namespace Server
                     break;
 
                 case PacketType.LOBBYEVENT:
-                    #region LobbyJoin packet handling
-                    if(p.GdataInts[0] == 1)
+                    #region Lobby joining handling
+                    if (p.GdataInts[0] == 0 || p.GdataInts[0] == 1)
                     {
-                        foreach (ClientData client in _clients)
+                        if (p.GdataInts[0] == 1)
                         {
-                            Debug.Log("client.id: " + client.id);
-                            Debug.Log("p.senderID: " + p.senderID);
-                            if (client.id == p.senderID)
+                            foreach (ClientData client in _clients)
                             {
-                                client.clientName = p.GdataStrings[0];
-                                lobbyQueue.Add(client);
-                                Debug.Log("Client found and added to lobbyQueue");
-                            }
-                            else
-                            {
-                                Debug.LogWarning("No client found with senderID!");
-                                client.SendRegistrationPacket();
+                                Debug.Log("client.id: " + client.id);
+                                Debug.Log("p.senderID: " + p.senderID);
+                                if (client.id == p.senderID)
+                                {
+                                    client.clientName = p.GdataStrings[0];
+                                    lobbyQueue.Add(client);
+                                    Debug.Log("Client found and added to lobbyQueue");
+                                }
+                                else
+                                {
+                                    Debug.LogWarning("No client found with senderID, resending registration packet!");
+                                    client.SendRegistrationPacket();
+                                }
                             }
                         }
-                    }
-                    else if (p.GdataInts[0] == 0)
-                    {
-                        clientsExitingLobby.Add(p.senderID);
-                    }
+                        else if (p.GdataInts[0] == 0)
+                        {
+                            clientsExitingLobby.Add(p.senderID);
+                        }
 
-                    Debug.Log("LobbyJoin packet managed");
+                        Debug.Log("Lobby join packet managed");
+                    }
+                    #endregion
+
+                    #region Lobby ready state handling
+                    //TODO: Finish implementing this (add queue size checks in FixedUpdate)
+                    else if (p.GdataInts[0] == 2 || p.GdataInts[0] == 3)
+                    {
+                        if (p.GdataInts[0] == 2)
+                        {
+                            foreach (ClientData client in _clients)
+                            {
+                                Debug.Log("client.id: " + client.id);
+                                Debug.Log("p.senderID: " + p.senderID);
+                                if (client.id == p.senderID)
+                                {
+                                    readyQueue.Add(client);
+                                    Debug.Log("Client found and added to readyQueue");
+                                }
+                                else
+                                {
+                                    Debug.LogWarning("No client found with senderID, resending registration packet!");
+                                    client.SendRegistrationPacket();
+                                }
+                            }
+                        }
+                        else if (p.GdataInts[0] == 3)
+                        {
+                            foreach (ClientData client in _clients)
+                            {
+                                Debug.Log("client.id: " + client.id);
+                                Debug.Log("p.senderID: " + p.senderID);
+                                if (client.id == p.senderID)
+                                {
+                                    notReadyQueue.Add(client);
+                                    Debug.Log("Client found and added to notReadyQueue");
+                                }
+                                else
+                                {
+                                    Debug.LogWarning("No client found with senderID, resending registration packet!");
+                                    client.SendRegistrationPacket();
+                                }
+                            }
+
+                            clientsExitingLobby.Add(p.senderID);
+                        }
+
+                        Debug.Log("Lobby ready state packet managed");
+                    }
+                    #endregion
+
+                    #region Lobby start match request handling
+                    //TODO: Implement this
                     #endregion
                     break;
 
@@ -443,7 +499,8 @@ namespace Server
             Debug.Log("SendRegistrationPacket");
             Packet p = new Packet(PacketType.REGISTRATION, "Server");
             p.GdataStrings.Add(id);
-            clientSocket.Send(p.ToBytes());           
+            clientSocket.Send(p.ToBytes());
+            Debug.Log("Registration packet sent");      
         }
     }
     #endregion
