@@ -1,0 +1,42 @@
+match stats:
+-match id				1
+-date&time			11.11.2017-14:28
+-length				123:59:59
+-winner (player or AI)		player
+-power ups used (combined)	215	
+-player id1			1
+-player id2			2
+-player id3			3
+-player id4			4
+
+
+match player stats:
+-player id
+-match id
+-power ups used
+-accuracy
+-damage done overall
+-damage done by projectile type1
+-damage done by projectile type2
+-damage done by projectile type3
+-damage done by projectile type4
+
+
+lifetime player stats:
+-id
+-power ups used
+-accuracy
+-damage done
+
+
+
+--------------------------------
+game stats:
+-human player winrate
+-longest match
+-shortest match
+-client session time
+
+
+
+
