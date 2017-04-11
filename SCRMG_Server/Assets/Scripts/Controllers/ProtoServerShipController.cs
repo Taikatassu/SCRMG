@@ -5,13 +5,13 @@ using UnityEngine;
 
 public class ProtoServerShipController : MonoBehaviour {
 
-    static ProtoServerShipManager shipManager;
+    //static ProtoServerShipManager shipManager;
     public Vector3 newMovementPosition;
     NetworkServer serverScript;
 
     void Awake()
     {
-        shipManager = FindObjectOfType<ProtoServerShipManager>();
+        //shipManager = FindObjectOfType<ProtoServerShipManager>();
         serverScript = FindObjectOfType<NetworkServer>();
     }
     

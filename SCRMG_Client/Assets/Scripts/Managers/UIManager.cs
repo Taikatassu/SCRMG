@@ -238,6 +238,10 @@ public class UIManager : MonoBehaviour
         maxNumberOfPlayersInLobby = lib.networkingVariables.maxNumberOfPlayerInOnlineMatch;
 
         connectedToNetwork = em.BroadcastRequestNetworkConnectionStatus();
+
+
+        numberOfPlayersInLobby = 0;
+        numberOfLobbyParticipantsReady = 0;
     }
     #endregion
 
@@ -256,13 +260,15 @@ public class UIManager : MonoBehaviour
         em.OnMatchTimerValueChange += OnMatchTimerValueChange;
         em.OnConnectingToNetworkSucceeded += OnConnectingToNetworkSucceeded;
         em.OnConnectionToNetworkLost += OnConnectionToNetworkLost;
-        em.OnPlayerCountInLobbyChanged += OnPlayerCountInLobbyChanged;
+        em.OnClientCountInLobbyChange += OnClientCountInLobbyChange;
+        em.OnReadyCountInLobbyChange += OnReadyCountInLobbyChange;
         em.OnRequestUINotification += OnRequestUINotification;
         em.OnLobbyEnterSuccessful += OnLobbyEnterSuccessful;
         em.OnLobbyEnterDenied += OnLobbyEnterDenied;
         em.OnConnectingToNetworkFailed += OnConnectingToNetworkFailed;
         em.OnRequestLoadingIconOn += OnRequestLoadingIconOn;
         em.OnRequestLoadingIconOff += OnRequestLoadingIconOff;
+        em.OnStartingMatchByServer += OnStartingMatchByServer;
     }
 
     private void OnDisable()
@@ -279,18 +285,27 @@ public class UIManager : MonoBehaviour
         em.OnMatchTimerValueChange -= OnMatchTimerValueChange;
         em.OnConnectingToNetworkSucceeded -= OnConnectingToNetworkSucceeded;
         em.OnConnectionToNetworkLost -= OnConnectionToNetworkLost;
-        em.OnPlayerCountInLobbyChanged -= OnPlayerCountInLobbyChanged;
+        em.OnClientCountInLobbyChange -= OnClientCountInLobbyChange;
+        em.OnReadyCountInLobbyChange -= OnReadyCountInLobbyChange;
         em.OnRequestUINotification -= OnRequestUINotification;
         em.OnLobbyEnterSuccessful -= OnLobbyEnterSuccessful;
         em.OnLobbyEnterDenied -= OnLobbyEnterDenied;
         em.OnConnectingToNetworkFailed -= OnConnectingToNetworkFailed;
         em.OnRequestLoadingIconOn -= OnRequestLoadingIconOn;
         em.OnRequestLoadingIconOff -= OnRequestLoadingIconOff;
+        em.OnStartingMatchByServer -= OnStartingMatchByServer;
     }
     #endregion
 
     #region Subscribers
     #region Network event subscribers
+    private void OnStartingMatchByServer()
+    {
+        OpenLoadingScreen();
+        OpenLoadingIcon();
+        CloseMainMenuOnlineLobbyView();
+    }
+
     private void OnConnectingToNetworkSucceeded(string ip)
     {
         Debug.Log("OnConnectingToNetworkSucceeded");
@@ -323,9 +338,18 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    private void OnPlayerCountInLobbyChanged(int newCount)
+    private void OnClientCountInLobbyChange(int newCount)
     {
+        Debug.Log("OnClientCountInLobbyChange");
         numberOfPlayersInLobby = newCount;
+        UpdateParticipantCountDisplay();
+    }
+
+    private void OnReadyCountInLobbyChange(int newCount)
+    {
+        Debug.Log("OnReadyCountInLobbyChange");
+        numberOfLobbyParticipantsReady = newCount;
+        UpdateParticipantCountDisplay();
     }
 
     private void OnLobbyEnterSuccessful()
@@ -398,13 +422,24 @@ public class UIManager : MonoBehaviour
             CloseLoadingIcon();
             CloseLoadingScreen();
         }
-        else if (sceneIndex == sceneIndexLevel01)
+        else if (sceneIndex == sceneIndexLevel01 
+            && em.BroadcastRequestCurrentGameModeIndex() == gameModeSingleplayerIndex)
         {
             OpenLoadingScreen();
             CloseMainMenuUI();
             OpenInGameUI();
             CloseLoadingIcon();
             StartFadeFromLoadingScreen();
+        }
+        else if (sceneIndex == sceneIndexLevel01
+            && em.BroadcastRequestCurrentGameModeIndex() == gameModeNetworkMultiplayerIndex)
+        {
+            OpenLoadingScreen();
+            CloseMainMenuUI();
+            OpenInGameUI();
+
+            CloseLoadingIcon();
+            CloseLoadingScreen();
         }
     }
 
@@ -821,11 +856,15 @@ public class UIManager : MonoBehaviour
 
     private void UpdateParticipantCountDisplay()
     {
-        numberOfPlayersInLobby = Mathf.Clamp(numberOfPlayersInLobby, 1, maxNumberOfPlayersInLobby);
-        numberOfLobbyParticipantsReady = Mathf.Clamp(numberOfLobbyParticipantsReady, 0, numberOfPlayersInLobby);
+        //numberOfPlayersInLobby = Mathf.Clamp(numberOfPlayersInLobby, 1, maxNumberOfPlayersInLobby);
+        //numberOfLobbyParticipantsReady = Mathf.Clamp(numberOfLobbyParticipantsReady, 0, numberOfPlayersInLobby);
 
-        lobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PARTICIPANTS READY: "
-            + numberOfLobbyParticipantsReady + "/" + numberOfPlayersInLobby;
+        if (lobbyParticipantCountDisplay != null)
+        {
+            lobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PARTICIPANTS READY: "
+                + numberOfLobbyParticipantsReady + "/" + numberOfPlayersInLobby;
+        }
+        Debug.Log("LobbyParticipantCountDisplay updated");
     }
 
     private void CloseMainMenuOnlineLobbyView()
@@ -1003,14 +1042,14 @@ public class UIManager : MonoBehaviour
             if (lobbyReadyButtonPressed)
             {
                 lobbyReadyToggleMarkOnImage.SetActive(true);
-                numberOfLobbyParticipantsReady++;
+                //numberOfLobbyParticipantsReady++;
                 UpdateParticipantCountDisplay();
                 OpenLobbyStartMatchButton();
             }
             else
             {
                 lobbyReadyToggleMarkOnImage.SetActive(false);
-                numberOfLobbyParticipantsReady--;
+                //numberOfLobbyParticipantsReady--;
                 UpdateParticipantCountDisplay();
                 CloseLobbyStartMatchButton();
             }

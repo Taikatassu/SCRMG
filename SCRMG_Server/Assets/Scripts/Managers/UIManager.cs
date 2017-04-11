@@ -60,11 +60,11 @@ public class UIManager : MonoBehaviour {
         connectedClientInfos.Add(newClientInfo);
     }
 
-    private void OnClientDisconnected(string disconnectedClientID)
+    private void OnClientDisconnected(ClientData disconnectedClientData)
     {
         for (int i = 0; i < connectedClientInfos.Count; i++)
         {
-            if (connectedClientInfos[i].transform.GetChild(0).GetComponent<Text>().text == disconnectedClientID)
+            if (connectedClientInfos[i].transform.GetChild(0).GetComponent<Text>().text == disconnectedClientData.id)
             {
                 Destroy(connectedClientInfos[i]);
                 connectedClientInfos.RemoveAt(i);
@@ -83,11 +83,11 @@ public class UIManager : MonoBehaviour {
         lobbyClientInfos.Add(newClientInfo);
     }
 
-    private void OnClientExitLobby(string disconnectedClientID)
+    private void OnClientExitLobby(ClientData disconnectedClientData)
     {
         for (int i = 0; i < lobbyClientInfos.Count; i++)
         {
-            if (lobbyClientInfos[i].transform.GetChild(0).GetComponent<Text>().text == disconnectedClientID)
+            if (lobbyClientInfos[i].transform.GetChild(0).GetComponent<Text>().text == disconnectedClientData.id)
             {
                 Destroy(lobbyClientInfos[i]);
                 lobbyClientInfos.RemoveAt(i);

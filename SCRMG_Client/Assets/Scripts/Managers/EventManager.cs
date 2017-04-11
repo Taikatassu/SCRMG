@@ -308,6 +308,17 @@ public class EventManager : MonoBehaviour
     #endregion
 
     #region Gameplay events
+    public event EmptyInt OnRequestCurrentGameModeIndex;
+    public int BroadcastRequestCurrentGameModeIndex()
+    {
+        if (OnRequestCurrentGameModeIndex != null)
+        {
+            return OnRequestCurrentGameModeIndex();
+        }
+
+        return -1;
+    }
+
     public event EmptyVoid OnRequestLoadingIconOn;
     public void BroadcastRequestLoadingIconOn()
     {
@@ -505,6 +516,15 @@ public class EventManager : MonoBehaviour
     #endregion
 
     #region Network events
+    public event EmptyVoid OnStartingMatchByServer;
+    public void BroadcastStartingMatchByServer()
+    {
+        if (OnStartingMatchByServer != null)
+        {
+            OnStartingMatchByServer();
+        }
+    }
+
     public event EmptyString OnRequestMyNetworkID;
     public string BroadcastRequestMyNetworkID()
     {
@@ -521,6 +541,15 @@ public class EventManager : MonoBehaviour
         if (OnLobbyReadyStateChange != null)
         {
             OnLobbyReadyStateChange(state);
+        }
+    }
+
+    public event IntVoid OnReadyCountInLobbyChange;
+    public void BroadcastReadyCountInLobbyChange(int newCount)
+    {
+        if (OnReadyCountInLobbyChange != null)
+        {
+            OnReadyCountInLobbyChange(newCount);
         }
     }
 
@@ -600,12 +629,12 @@ public class EventManager : MonoBehaviour
         return false;
     }
 
-    public event IntVoid OnPlayerCountInLobbyChanged;
-    public void BraodcastPlayercountInLobbyChanged(int newCount)
+    public event IntVoid OnClientCountInLobbyChange;
+    public void BroadcastClientCountInLobbyChange(int newCount)
     {
-        if(OnPlayerCountInLobbyChanged != null)
+        if(OnClientCountInLobbyChange != null)
         {
-            OnPlayerCountInLobbyChanged(newCount);
+            OnClientCountInLobbyChange(newCount);
         }
     }
 

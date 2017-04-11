@@ -250,12 +250,12 @@ public class LocalPlayerController : ShipController {
         }
 
         //Testing network functionality
-        Vector3 currentPosition = transform.position;
-        if (previousPosition != currentPosition)
-        {
-            em.BroadcastShipPositionUpdate(index, currentPosition);
-            previousPosition = currentPosition;
-        }
+        //Vector3 currentPosition = transform.position;
+        //if (previousPosition != currentPosition)
+        //{
+        //    em.BroadcastShipPositionUpdate(index, currentPosition);
+        //    previousPosition = currentPosition;
+        //}
     }
     #endregion
 

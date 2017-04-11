@@ -12,6 +12,8 @@ public class Projectile : MonoBehaviour {
      * 
      * - Rename projectiles / powerUps as "projectileOne" / "powerUpOne" (or similar)
      *      and create variables for projectile / powerUp names (same reason as above)
+     *      
+     * - Broadcast projectile destruction!
     */
 
     #region References & variables

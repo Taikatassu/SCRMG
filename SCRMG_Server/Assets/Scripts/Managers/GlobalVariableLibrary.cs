@@ -34,6 +34,7 @@ public class GlobalVariableLibrary : MonoBehaviour {
     [System.Serializable]
     public class ServerVariables
     {
-
+        public int maxNumberOfClientsInLobby = 4;
+        public List<Color> shipColorOptions = new List<Color>();
     }
 }

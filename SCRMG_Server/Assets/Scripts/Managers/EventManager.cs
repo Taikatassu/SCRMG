@@ -32,6 +32,10 @@ public class EventManager : MonoBehaviour {
     public delegate void StringVoid(string string1);
     public delegate void StringIntVoid(string string1, int integer);
     public delegate bool ClientDataBool(ClientData clientData);
+    public delegate int EmptyInt();
+    public delegate void IntIntIntStringVoid(int integer1, int integer2, int integer3, string string1);
+    public delegate void GameObjectVoid(GameObject gameObject);
+    public delegate void IntVector3Void(int integer, Vector3 vec3);
     #endregion
 
     #region Events
@@ -44,24 +48,13 @@ public class EventManager : MonoBehaviour {
         }
     }
 
-    public event StringVoid OnClientDisconnected;
-    public void BroadcastClientDisconnected(string clientID)
+    public event ClientDataVoid OnClientDisconnected;
+    public void BroadcastClientDisconnected(ClientData clientData)
     {
         if (OnClientDisconnected != null)
         {
-            OnClientDisconnected(clientID);
+            OnClientDisconnected(clientData);
         }
-    }
-
-    public event ClientDataBool OnClientRequestLobbyAccess;
-    public bool BroadcastClientRequestLobbyAccess(ClientData clientData)
-    {
-        if (OnClientRequestLobbyAccess != null)
-        {
-            return OnClientRequestLobbyAccess(clientData);
-        }
-
-        return false;
     }
 
     public event ClientDataVoid OnClientEnterLobby;
@@ -73,12 +66,12 @@ public class EventManager : MonoBehaviour {
         }
     }
 
-    public event StringVoid OnClientExitLobby;
-    public void BroadcastClientExitLobby(string clientID)
+    public event ClientDataVoid OnClientExitLobby;
+    public void BroadcastClientExitLobby(ClientData clientData)
     {
         if (OnClientExitLobby != null)
         {
-            OnClientExitLobby(clientID);
+            OnClientExitLobby(clientData);
         }
     }
 
@@ -91,12 +84,60 @@ public class EventManager : MonoBehaviour {
         }
     }
 
+    public event EmptyVoid OnStartingMatchByServer;
+    public void BroadcastStartingMatchByServer()
+    {
+        if (OnStartingMatchByServer != null)
+        {
+            OnStartingMatchByServer();
+        }
+    }
+
     public event StringIntVoid OnClientVote;
     public void BroadcastClientVote(string clientID, int vote)
     {
         if (OnClientVote != null)
         {
             OnClientVote(clientID, vote);
+        }
+    }
+
+    public event EmptyInt OnRequestReadyClientCount;
+    public int BroadcastRequestReadyClientCount()
+    {
+        if (OnRequestReadyClientCount != null)
+        {
+            return OnRequestReadyClientCount();
+        }
+
+        return 0;
+    }
+
+    public event IntIntIntStringVoid OnShipSpawnByServer;
+    public void BroadcastShipSpawnByServer(int shipIndex, int spawnPointIndex, int shipColorIndex, string ownerID)
+    {
+        if (OnShipSpawnByServer != null)
+        {
+
+            OnShipSpawnByServer(shipIndex, spawnPointIndex, shipColorIndex, ownerID);
+        }
+    }
+    
+    public event GameObjectVoid OnShipReference;
+    public void BroadcastShipReference(GameObject newShip)
+    {
+        if (OnShipReference != null)
+        {
+            OnShipReference(newShip);
+        }
+    }
+
+    public event IntVector3Void OnShipPositionUpdate;
+    public void BroadcastShipPositionUpdate(int shipIndex, Vector3 shipPosition)
+    {
+        if (OnShipPositionUpdate != null)
+        {
+            OnShipPositionUpdate(shipIndex, shipPosition);
         }
     }
     #endregion

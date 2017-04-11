@@ -467,7 +467,7 @@ public class ShipController : MonoBehaviour {
             shipColorableParts[i].GetComponent<Renderer>().material.SetColor("_TintColor", myShipColor);
         }
         //Set circularHealthBarColor
-        healthBar.GetComponent<Renderer>().material.SetColor("_EmissionColor", myShipColor);
+        //healthBar.GetComponent<Renderer>().material.SetColor("_EmissionColor", myShipColor);
     }
     #endregion
 

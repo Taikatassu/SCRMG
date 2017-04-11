@@ -117,6 +117,7 @@ public class ShipController : MonoBehaviour {
     #region OnEnable & OnDisable
     protected virtual void OnEnable()
     {
+        Debug.Log("ShipController OnEnable");
         em.OnGameRestart += OnGameRestart;
         em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
         em.OnMatchStarted += OnMatchStarted;
@@ -139,6 +140,7 @@ public class ShipController : MonoBehaviour {
 
     protected virtual void OnDisable()
     {
+        Debug.Log("ShipController OnDisable");
         //DestroyAllProjectiles();
         em.OnGameRestart -= OnGameRestart;
         em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
@@ -397,6 +399,7 @@ public class ShipController : MonoBehaviour {
         }
     }
     
+    //TODO: Broadcast projectile destruction with projectile index and owner index!
     private void RemoveProejctileIndexFromList(int destroyedProjectileIndex)
     {
         if (currentProjectileIndices.Contains(destroyedProjectileIndex))
@@ -567,6 +570,7 @@ public class ShipController : MonoBehaviour {
     #region Die, Resurrect
     private void Die()
     {
+        Debug.Log("ShipController Die");
         isDead = true;
         isVulnerable = false;
         isMovable = false;

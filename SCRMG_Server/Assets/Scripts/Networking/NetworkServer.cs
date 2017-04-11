@@ -66,27 +66,35 @@ namespace Server
 
         Toolbox toolbox;
         EventManager em;
-
-        static ProtoServerShipManager shipManager;
+        GlobalVariableLibrary lib;
+        
         static Socket listenerSocket;
+        Thread listenThread;
         public static List<ClientData> _clients = new List<ClientData>();
+        public static List<ClientData> _clientsInLobby = new List<ClientData>();
+
         public static List<ClientData> newlyConnectedClients = new List<ClientData>();
-        public static List<string> newlyDisconnectedClients = new List<string>();
+        public static List<ClientData> newlyDisconnectedClients = new List<ClientData>();
         public static List<ClientData> lobbyQueue = new List<ClientData>();
-        public static List<string> clientsExitingLobby = new List<string>();
+        public static List<ClientData> clientsExitingLobby = new List<ClientData>();
         public static List<ClientData> readyQueue = new List<ClientData>();
         public static List<ClientData> notReadyQueue = new List<ClientData>();
-        static string clientName;
-        Thread listenThread;
+        public static bool requestMatchStart = false;
+        public static List<ShipInfo> newestShipMovementInfo = new List<ShipInfo>();
+        public static bool matchRunning = false;
         
+        bool inGame = false; //TODO: Set this to true when starting a match
+        int maxNumberOfClientsInLobby = -1;
 
+
+        #region Initialization
         #region Awake & Start
         void Awake()
         {
             toolbox = FindObjectOfType<Toolbox>();
             em = toolbox.GetComponent<EventManager>();
-
-            shipManager = FindObjectOfType<ProtoServerShipManager>();
+            lib = toolbox.GetComponent<GlobalVariableLibrary>();
+            GetStats();
         }
 
         void Start()
@@ -105,41 +113,71 @@ namespace Server
         }
         #endregion
 
-        #region OnDisable
-        void OnDisable()
+        #region GetStats
+        private void GetStats()
         {
+            maxNumberOfClientsInLobby = lib.serverVariables.maxNumberOfClientsInLobby;
+        }
+        #endregion
+
+        #region OnEnable & OnDisable
+        private void OnEnable()
+        {
+            em.OnShipSpawnByServer += OnShipSpawnByServer;
+            em.OnStartingMatchByServer += OnStartingMatchByServer;
+        }
+
+        private void OnDisable()
+        {
+            em.OnShipSpawnByServer -= OnShipSpawnByServer;
+            em.OnStartingMatchByServer -= OnStartingMatchByServer;
+
+            #region Clear all connections
             if (listenThread != null)
             {
                 listenThread.Abort();
                 Debug.Log("ListenThread aborted");
             }
-            
+
             if (listenerSocket != null)
             {
                 Debug.Log("ListenerSocket closed");
                 listenerSocket.Close();
             }
 
-            if(_clients.Count > 0)
-            {
-                foreach(ClientData clientData in _clients)
-                {
-                    if (clientData.clientThread != null)
-                    {
-                        clientData.clientThread.Abort();
-                        Debug.Log("ClientThread aborted");
-                    }
+            ResetClientList();
+            #endregion
+        }
+        #endregion
 
-                    if(clientData.clientSocket != null)
-                    {
-                        clientData.clientSocket.Close();
-                        Debug.Log("ClientSocket closed");
-                    }
-                }
-                _clients.Clear();
-                Debug.Log("ClientList cleared");
+        #region Subscribers
+        private void OnStartingMatchByServer()
+        {
+            Debug.Log("OnStartingMatchByServer");
+            matchRunning = true;
+            foreach (ClientData client in _clientsInLobby)
+            {
+                Debug.Log("Sending match start event to a client");
+                Packet p = new Packet(PacketType.GAMESTART, "Server");
+                client.clientSocket.Send(p.ToBytes());
             }
         }
+
+        private void OnShipSpawnByServer(int shipIndex, int spawnPointIndex, int shipColorIndex, string ownerID)
+        {
+            Packet p = new Packet(PacketType.SPAWN, "Server");
+            p.GdataInts.Add(shipIndex);
+            p.GdataInts.Add(spawnPointIndex);
+            p.GdataInts.Add(shipColorIndex);
+            p.GdataStrings.Add(ownerID);
+
+            foreach (ClientData client in _clientsInLobby)
+            {
+                client.clientSocket.Send(p.ToBytes());
+            }
+
+        }
+        #endregion
         #endregion
 
         #region FixedUpdate
@@ -169,41 +207,198 @@ namespace Server
             }
             #endregion
 
+            #region Lobby events
             #region Entering and exiting lobby
-            if(lobbyQueue.Count > 0)
+            #region Entering Lobby
+            if (lobbyQueue.Count > 0)
             {
                 Debug.Log("LobbyQueue.Count > 0");
                 for(int i = 0; i < lobbyQueue.Count; i++)
                 {
                     Debug.Log("Inside lobbyQueue for loop");
                     Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
-                    if (em.BroadcastClientRequestLobbyAccess(lobbyQueue[0]))
+                    if (RequestLobbyAccess(lobbyQueue[i]))
                     {
-                        p.GdataInts.Add(1);
+                        //_clientsInLobby.Add(lobbyQueue[i]);
                         Debug.Log("Lobby is available, sending positive");
+                        p.GdataInts.Add(0);
+                        p.GdataInts.Add(1);
+                        lobbyQueue[i].clientSocket.Send(p.ToBytes());
+
+                        //Send lobby enter event to all clients
+                        Packet p2 = new Packet(PacketType.LOBBYEVENT, "Server");
+                        p2.GdataInts.Add(1);
+                        p2.GdataInts.Add(_clientsInLobby.Count);
+                        foreach (ClientData client in _clients)
+                        {
+                            client.clientSocket.Send(p2.ToBytes());
+                            Debug.Log("Client enter lobby event sent to a client");
+                        }
+                        Debug.Log("Client enter lobby event sent to all clients");
                     }
                     else
                     {
                         p.GdataInts.Add(0);
+                        p.GdataInts.Add(0);
+                        lobbyQueue[i].clientSocket.Send(p.ToBytes());
                         Debug.Log("Lobby is full, sending negative");
                     }
-                    lobbyQueue[0].clientSocket.Send(p.ToBytes());
-                    lobbyQueue.RemoveAt(0);
+                    lobbyQueue.RemoveAt(i);
                     i--;
                     Debug.Log("LobbyJoin response sent back to client");
                 }
             }
+            #endregion
 
-            if(clientsExitingLobby.Count > 0)
+            #region Exiting lobby
+            if (clientsExitingLobby.Count > 0)
             {
-                for(int i = 0; i < clientsExitingLobby.Count; i++)
+                Debug.Log("clientsExitingLobby.Count > 0");
+                for (int i = 0; i < clientsExitingLobby.Count; i++)
                 {
-                    em.BroadcastClientExitLobby(clientsExitingLobby[0]);
-                    clientsExitingLobby.RemoveAt(0);
+                    em.BroadcastClientExitLobby(clientsExitingLobby[i]);
+                    for (int j = 0; j < _clientsInLobby.Count; j++)
+                    {
+                        if (_clientsInLobby[j].id == clientsExitingLobby[i].id)
+                        {
+                            _clientsInLobby.RemoveAt(j);
+                            foreach (ClientData client in _clients)
+                            {
+                                if (client.id == clientsExitingLobby[i].id)
+                                {
+                                    client.inLobby = false;
+                                    client.isReady = false;
+                                    em.BroadcastClientVote(client.id, 0);
+                                }
+                            }
+                            Debug.Log("Client exiting lobby removed from clientsInLobby list");
+                        }
+                    }
+
+                    Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
+                    p.GdataInts.Add(1);
+                    p.GdataInts.Add(_clientsInLobby.Count);
+                    foreach (ClientData client in _clients)
+                    {
+                        if (client.id != clientsExitingLobby[i].id)
+                        {
+                            client.clientSocket.Send(p.ToBytes());
+                            Debug.Log("Client exit lobby event sent to other client");
+                        }
+                    }
+                    clientsExitingLobby.RemoveAt(i);
                     i--;
                 }
             }
             #endregion
+            #endregion
+
+            #region Lobby ready state
+            if (readyQueue.Count > 0)
+            {
+                Debug.Log("ReadyQueue.Count > 0");
+                for (int i = 0; i < readyQueue.Count; i++)
+                {
+                    Debug.Log("Inside readyQueue for-loop");
+                    em.BroadcastClientVote(readyQueue[i].id, 1);
+                    Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
+                    p.GdataInts.Add(2);
+                    p.GdataInts.Add(em.BroadcastRequestReadyClientCount());
+                    foreach (ClientData client in _clientsInLobby)
+                    {
+                        if(client.id == readyQueue[i].id)
+                        {
+                            client.isReady = true;
+                        }
+
+                        client.clientSocket.Send(p.ToBytes());
+                        Debug.Log("Client isReadyState sent to a client");
+                    }
+                    readyQueue.RemoveAt(i);
+                    i--;
+                    Debug.Log("LobbyIsReady state sent to all other clients");
+                }
+            }
+
+            if (notReadyQueue.Count > 0)
+            {
+                Debug.Log("NotReadyQueue.Count > 0");
+                for (int i = 0; i < notReadyQueue.Count; i++)
+                {
+                    Debug.Log("Inside notReadyQueue for-loop");
+                    em.BroadcastClientVote(notReadyQueue[i].id, 0);
+                    Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
+                    p.GdataInts.Add(2);
+                    p.GdataInts.Add(em.BroadcastRequestReadyClientCount());
+                    foreach (ClientData client in _clientsInLobby)
+                    {
+                        if (client.id == notReadyQueue[i].id)
+                        {
+                            client.isReady = false;
+                        }
+
+                        client.clientSocket.Send(p.ToBytes());
+                        Debug.Log("Client notReadyState sent to other client");
+                    }
+                    notReadyQueue.RemoveAt(i);
+                    i--;
+                    Debug.Log("LobbyNotReady state sent to all other clients");
+                }
+            }
+            #endregion
+
+            #region Requesting match start
+            if (requestMatchStart)
+            {
+                requestMatchStart = false;
+                em.BroadcastRequestMatchStart();
+            }
+            #endregion
+
+            #region ShipInfo
+            if (inGame)
+            {
+                foreach (ShipInfo shipInfo in newestShipMovementInfo)
+                {
+                    em.BroadcastShipPositionUpdate(shipInfo.shipIndex, shipInfo.shipPosition);
+                }
+            }
+            #endregion
+            #endregion
+        }
+        #endregion
+
+        #region Lobby access
+        private bool RequestLobbyAccess(ClientData newClientData)
+        {
+            foreach (ClientData client in _clientsInLobby)
+            {
+                if (client == newClientData)
+                {
+                    client.inLobby = true;
+                    Debug.LogWarning("Client already in lobby!");
+                    return true;
+                }
+            }
+
+            if (maxNumberOfClientsInLobby > _clientsInLobby.Count)
+            {
+                ClientData tmp = new ClientData();
+                foreach (ClientData client in _clients)
+                {
+                    if(client.id == newClientData.id)
+                    {
+                        client.inLobby = true;
+                        tmp = client;
+                    }
+                }
+                
+                _clientsInLobby.Add(tmp);
+                em.BroadcastClientEnterLobby(tmp);
+                return true;
+            }
+
+            return false;
         }
         #endregion
 
@@ -274,12 +469,16 @@ namespace Server
         {
             if (client != null)
             {
-                newlyDisconnectedClients.Add(client.id);
+                newlyDisconnectedClients.Add(client);
 
                 Thread clientThread = client.clientThread;
                 
                 client.clientSocket.Close();
+                client.isReady = false;
+                client.inLobby = false;
                 client.disconnected = true;
+                _clientsInLobby.Remove(client);
+                clientsExitingLobby.Add(client);
                 _clients.Remove(client);
                 Debug.Log("Client disconnected. _clients.Count: " + _clients.Count);
 
@@ -293,7 +492,7 @@ namespace Server
             {
                 if (_clients[i] != null)
                 {
-                    newlyDisconnectedClients.Add(_clients[0].id);
+                    newlyDisconnectedClients.Add(_clients[i]);
 
                     if (_clients[i].clientThread != null)
                         _clients[i].clientThread.Abort();
@@ -302,11 +501,16 @@ namespace Server
                         _clients[i].clientSocket.Close();
                 }
 
+                _clients[i].isReady = false;
+                _clients[i].inLobby = false;
                 _clients[i].disconnected = true;
-                _clients.RemoveAt(i);
+                _clientsInLobby.Remove(_clients[i]);
+                clientsExitingLobby.Add(_clients[i]);
+                _clients.Remove(_clients[i]);
                 i--;
                 Debug.Log("Client removed. _clients.Count: " + _clients.Count);
             }
+            _clientsInLobby.Clear();
             _clients.Clear();
         }
         #endregion
@@ -345,18 +549,29 @@ namespace Server
                     break;
 
                 case PacketType.LOBBYEVENT:
-                    #region Lobby joining handling
-                    if (p.GdataInts[0] == 0 || p.GdataInts[0] == 1)
+                    int listCount = p.GdataInts.Count;
+                    int tmp1 = -1;
+                    int tmp2 = -1;
+                    if (listCount > 0)
                     {
-                        if (p.GdataInts[0] == 1)
+                        tmp1 = p.GdataInts[0];
+                    }
+                    if (listCount > 1)
+                    {
+                        tmp2 = p.GdataInts[1];
+                    }
+                    #region Lobby joining handling
+                    if (tmp1 == 0)
+                    {
+                        if (tmp2 == 1)
                         {
                             foreach (ClientData client in _clients)
                             {
-                                Debug.Log("client.id: " + client.id);
-                                Debug.Log("p.senderID: " + p.senderID);
                                 if (client.id == p.senderID)
                                 {
                                     client.clientName = p.GdataStrings[0];
+                                    client.inLobby = true;
+                                    client.isReady = false;
                                     lobbyQueue.Add(client);
                                     Debug.Log("Client found and added to lobbyQueue");
                                 }
@@ -367,9 +582,18 @@ namespace Server
                                 }
                             }
                         }
-                        else if (p.GdataInts[0] == 0)
+                        else if (tmp2 == 0)
                         {
-                            clientsExitingLobby.Add(p.senderID);
+                            foreach (ClientData client in _clients)
+                            {
+                                if (client.id == p.senderID)
+                                {
+                                    client.inLobby = false;
+                                    client.isReady = false;
+                                    clientsExitingLobby.Add(client);
+                                    Debug.Log("Client found, adding client to clientsExitingLobby list");
+                                }
+                            }
                         }
 
                         Debug.Log("Lobby join packet managed");
@@ -377,15 +601,12 @@ namespace Server
                     #endregion
 
                     #region Lobby ready state handling
-                    //TODO: Finish implementing this (add queue size checks in FixedUpdate)
-                    else if (p.GdataInts[0] == 2 || p.GdataInts[0] == 3)
+                    else if (tmp1 == 2)
                     {
-                        if (p.GdataInts[0] == 2)
+                        if (tmp2 == 1)
                         {
                             foreach (ClientData client in _clients)
                             {
-                                Debug.Log("client.id: " + client.id);
-                                Debug.Log("p.senderID: " + p.senderID);
                                 if (client.id == p.senderID)
                                 {
                                     readyQueue.Add(client);
@@ -398,12 +619,10 @@ namespace Server
                                 }
                             }
                         }
-                        else if (p.GdataInts[0] == 3)
+                        else if (tmp2 == 0)
                         {
                             foreach (ClientData client in _clients)
                             {
-                                Debug.Log("client.id: " + client.id);
-                                Debug.Log("p.senderID: " + p.senderID);
                                 if (client.id == p.senderID)
                                 {
                                     notReadyQueue.Add(client);
@@ -415,8 +634,6 @@ namespace Server
                                     client.SendRegistrationPacket();
                                 }
                             }
-
-                            clientsExitingLobby.Add(p.senderID);
                         }
 
                         Debug.Log("Lobby ready state packet managed");
@@ -424,25 +641,51 @@ namespace Server
                     #endregion
 
                     #region Lobby start match request handling
-                    //TODO: Implement this
+                    else if(tmp1 == 3)
+                    {
+                        if (!matchRunning && !requestMatchStart)
+                        {
+                            requestMatchStart = true;
+                            Debug.Log("Start match request packet managed");
+                        }
+                        else
+                        {
+                            Debug.LogWarning("Match already running!");
+                        }
+                    }
                     #endregion
                     break;
 
                 case PacketType.MOVEMENT:
                     #region Movement packet handling
-                    Vector_3 _shipPosition = p.GdataVectors[0];
-                    Vector3 shipPosition = new Vector3(_shipPosition.x, 
-                        _shipPosition.y, _shipPosition.z);
-                    Debug.Log("PacketType Movement: " + shipPosition);
-                    Debug.Log("networkServer, shipInfoList.Count: " + shipManager.shipInfoList.Count);
-                    if (shipManager.shipInfoList.Count <= 0)
-                    {
-                        Debug.Log("ShipInfoList element 0 is null, creating new shipInfo");
-                        shipManager.shipInfoList.Add(new ShipInfo());
-                    }
+                    //Vector_3 _shipPosition = p.GdataVectors[0];
+                    //Vector3 shipPosition = new Vector3(_shipPosition.x, 
+                    //    _shipPosition.y, _shipPosition.z);
+                    //Debug.Log("PacketType Movement: " + shipPosition);
+                    //Debug.Log("networkServer, shipInfoList.Count: " + shipManager.shipInfoList.Count);
+                    //if (shipManager.shipInfoList.Count <= 0)
+                    //{
+                    //    Debug.Log("ShipInfoList element 0 is null, creating new shipInfo");
+                    //    shipManager.shipInfoList.Add(new ShipInfo());
+                    //}
 
-                    Debug.Log("Adding ship position to shipInfoList[0]");
-                    shipManager.shipInfoList[0].shipPosition = shipPosition;
+                    //Debug.Log("Adding ship position to shipInfoList[0]");
+                    //shipManager.shipInfoList[0].shipPosition = shipPosition;
+                    int shipIndex = p.GdataInts[0];
+                    Vector_3 _shipPosition = p.GdataVectors[0];
+                    Vector3 shipPosition;
+                    shipPosition.x = _shipPosition.x;
+                    shipPosition.y = _shipPosition.y;
+                    shipPosition.z = _shipPosition.z;
+
+                    foreach(ShipInfo shipInfo in newestShipMovementInfo)
+                    {
+                        if(shipInfo.shipIndex == shipIndex)
+                        {
+                            Debug.Log("NetworkClient: ShipInfo found with shipIndex, updating position info");
+                            shipInfo.shipPosition = shipPosition;
+                        }
+                    }
                     #endregion
                     break;
 
@@ -459,13 +702,18 @@ namespace Server
         public string id;
         public string clientName;
         public bool disconnected = false;
+        public bool inLobby = false;
+        public bool isReady = false;
         
         public ClientData()
         {
-            id = Guid.NewGuid().ToString();
-            clientThread = new Thread(NetworkServer.Data_IN);
-            clientThread.Start(clientSocket);
-            SendRegistrationPacket();
+            //This is only used for empty ClientData variable
+            Debug.LogWarning("This is only used for empty ClientData variable");
+            id = "empty";
+            //id = Guid.NewGuid().ToString();
+            //clientThread = new Thread(NetworkServer.Data_IN);
+            //clientThread.Start(clientSocket);
+            //SendRegistrationPacket();
         }
 
         public ClientData(Socket clientSocket)
