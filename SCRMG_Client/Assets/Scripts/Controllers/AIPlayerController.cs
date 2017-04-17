@@ -63,6 +63,8 @@ public class AIPlayerController : ShipController {
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
         em.OnShipReference += OnShipReference;
+
+        isControllerByServer = false;
     }
 
     protected override void OnDisable()

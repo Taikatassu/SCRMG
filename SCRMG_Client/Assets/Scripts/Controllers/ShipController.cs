@@ -14,12 +14,13 @@ public class ShipController : MonoBehaviour {
     //References
     protected Toolbox toolbox;
     protected GlobalVariableLibrary lib;
+    protected ShipInfoManager shipInfoManager;
     protected EventManager em;
     protected Rigidbody rb;
     protected Vector3 movementDirection;
     protected Vector3 lookTargetPosition;
     protected Transform shipHull;
-    Transform shipTurret;
+    protected Transform shipTurret;
     Transform turretOutputMarker;
     GameObject healthBar;
     Color myShipColor;
@@ -27,7 +28,9 @@ public class ShipController : MonoBehaviour {
     Projectile newProjectileScript;
 
     //Variables coming from within the script
+    protected List<int> currentProjectileIndices = new List<int>();
     protected int index = -1;
+    protected int myShipInfoElement = -1;
     float currentHealth = -1;
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
@@ -37,11 +40,7 @@ public class ShipController : MonoBehaviour {
     float damageTakenModifier = -1;
     float shootCooldownModifier = -1;
     public int currentGameModeIndex = -1;
-    List<int> currentProjectileIndices = new List<int>();
     int shootCooldownFrameTimer = -1;
-    int gameModeSingleplayerIndex = -1;
-    int gameModeNetworkMultiplayerIndex = -1;
-    int gameModeLocalMultiplayerIndex = -1;
     int powerUpType = -1;
     bool isPersistingProjectile = false;
     bool persistingProjectileOnline = false;
@@ -54,6 +53,7 @@ public class ShipController : MonoBehaviour {
     bool isPaused = false;
     bool isPoweredUp = false;
     protected bool rotatingTurret = false;
+    protected bool isControllerByServer = false;
     //Values coming from GlobalVariableLibrary
     protected float maxHealth = -1;
     float movementSpeed = -1;
@@ -66,11 +66,9 @@ public class ShipController : MonoBehaviour {
     protected int buildPlatform = -1; //0 = PC, 1 = Android
     int projectileType = -1;
     int powerUpTimer = -1;
-    //TODO: Remove if deemed permanently obsolete
-    //int rubberBulletsIndex = -1;
-    //int blazingRamIndex = -1;
-    //int beamCannonIndex = -1;
-    //int bombsIndex = -1;
+    int gameModeSingleplayerIndex = -1;
+    int gameModeNetworkMultiplayerIndex = -1;
+    int gameModeLocalMultiplayerIndex = -1;
     #endregion
 
     #region Initialization
@@ -80,6 +78,7 @@ public class ShipController : MonoBehaviour {
         toolbox = FindObjectOfType<Toolbox>();
         em = toolbox.GetComponent<EventManager>();
         lib = toolbox.GetComponentInChildren<GlobalVariableLibrary>();
+        shipInfoManager = toolbox.GetComponent<ShipInfoManager>();
         rb = GetComponent<Rigidbody>();
         shipColorableParts = GetComponentsInChildren<ShipColorablePartTag>();
         shipHull = GetComponentInChildren<ShipHullTag>().transform;
@@ -106,11 +105,6 @@ public class ShipController : MonoBehaviour {
         gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
         gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
         gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
-        //TODO: Remove if deemed permanently obsolete
-        //rubberBulletsIndex = -lib.powerUpVariables.rubberBulletsIndex;
-        //blazingRamIndex = lib.powerUpVariables.blazingRamIndex;
-        //beamCannonIndex = lib.powerUpVariables.beamCannonIndex;
-        //bombsIndex = lib.powerUpVariables.bombsIndex;
     }
     #endregion
 
@@ -124,6 +118,7 @@ public class ShipController : MonoBehaviour {
         em.OnMatchEnded += OnMatchEnded;
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
+        em.OnProjectileDestroyed += OnProjectileDestroyed;
 
         powerUpType = 0;
         powerUpTimer = 0;
@@ -141,17 +136,25 @@ public class ShipController : MonoBehaviour {
     protected virtual void OnDisable()
     {
         Debug.Log("ShipController OnDisable");
-        //DestroyAllProjectiles();
         em.OnGameRestart -= OnGameRestart;
         em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
         em.OnMatchStarted -= OnMatchStarted;
         em.OnMatchEnded -= OnMatchEnded;
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
+        em.OnProjectileDestroyed -= OnProjectileDestroyed;
     }
     #endregion
 
     #region Subscribers
+    private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex)
+    {
+        if (projectileOwnerIndex == index)
+        {
+            RemoveProjectileIndexFromList(projectileIndex);
+        }
+    }
+
     private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
         if (currentTimerValue == 1)
@@ -243,10 +246,106 @@ public class ShipController : MonoBehaviour {
 
     protected virtual void FixedUpdate()
     {
-        #region Movement
-        //TODO: Add lerp to movement?
-        if (!isPaused)
+        if (!isControllerByServer)
         {
+            #region Movement
+            //TODO: Add lerp to movement?
+            if (!isPaused)
+            {
+                if (isMovable && movementDirection != Vector3.zero)
+                {
+                    float movementDirectionMagnitude = movementDirection.magnitude;
+                    if (movementDirectionMagnitude > 1)
+                    {
+                        movementDirection = movementDirection / movementDirectionMagnitude;
+                    }
+                    rb.MovePosition(transform.position + movementDirection * (movementSpeed * speedModifier) * Time.fixedDeltaTime);
+                    if (movementDirection == Vector3.zero)
+                    {
+                        rb.velocity = Vector3.zero;
+                    }
+
+                    //Hull rotation
+                    Quaternion newHullRotation = Quaternion.LookRotation(movementDirection);
+                    shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
+                        Time.fixedDeltaTime * shipHullRotationSpeed);
+                }
+
+                //TODO: Implement a proper way to detect if ship is outside of arena bounds, and returning it back to arena
+                Vector3 currentPosition = transform.position;
+                if (currentPosition.x > 25)
+                {
+                    Vector3 newPosition = currentPosition;
+                    newPosition.x = 25;
+                    transform.position = newPosition;
+                }
+                else if (currentPosition.x < -25)
+                {
+                    Vector3 newPosition = currentPosition;
+                    newPosition.x = -25;
+                    transform.position = newPosition;
+
+                }
+                else if (currentPosition.z > 25)
+                {
+                    Vector3 newPosition = currentPosition;
+                    newPosition.z = 25;
+                    transform.position = newPosition;
+                }
+                else if (currentPosition.z < -25)
+                {
+                    Vector3 newPosition = currentPosition;
+                    newPosition.z = -25;
+                    transform.position = newPosition;
+                }
+            }
+            #endregion
+
+            #region Turret rotation
+            if (!isPaused)
+            {
+                if (buildPlatform == 0 || (buildPlatform == 1 && rotatingTurret))
+                {
+                    lookTargetPosition.y = shipTurret.position.y;
+                    Vector3 lookDirection = lookTargetPosition - shipTurret.position;
+                    Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+                    shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                        Time.fixedDeltaTime * shipTurretRotationSpeed);
+                }
+            }
+            #endregion
+
+            #region Shoot cooldown
+            if (!isPaused)
+            {
+                if (shootOnCooldown)
+                {
+                    shootCooldownFrameTimer--;
+                    if (shootCooldownFrameTimer <= 0)
+                    {
+                        shootOnCooldown = false;
+                    }
+                }
+            }
+            #endregion
+
+            #region PowerUp timer
+            if (!isPaused)
+            {
+                if (isPoweredUp)
+                {
+                    powerUpTimer--;
+                    if (powerUpTimer <= 0)
+                    {
+                        EndPowerUp();
+                    }
+                }
+            }
+            #endregion
+        }
+        else
+        {
+            #region Movement
             if (isMovable && movementDirection != Vector3.zero)
             {
                 float movementDirectionMagnitude = movementDirection.magnitude;
@@ -293,50 +392,16 @@ public class ShipController : MonoBehaviour {
                 newPosition.z = -25;
                 transform.position = newPosition;
             }
-        }
-        #endregion
+            #endregion
 
-        #region Turret rotation
-        if (!isPaused)
-        {
-            if (buildPlatform == 0 || (buildPlatform == 1 && rotatingTurret))
-            {
-                lookTargetPosition.y = shipTurret.position.y;
-                Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-                Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
-                shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
-                    Time.fixedDeltaTime * shipTurretRotationSpeed);
-            }
+            #region Turret rotation
+            lookTargetPosition.y = shipTurret.position.y;
+            Vector3 lookDirection = lookTargetPosition - shipTurret.position;
+            Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+            shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                Time.fixedDeltaTime * shipTurretRotationSpeed);
+            #endregion
         }
-        #endregion
-
-        #region Shoot cooldown
-        if (!isPaused)
-        {
-            if (shootOnCooldown)
-            {
-                shootCooldownFrameTimer--;
-                if (shootCooldownFrameTimer <= 0)
-                {
-                    shootOnCooldown = false;
-                }
-            }
-        }
-        #endregion
-
-        #region PowerUp timer
-        if (!isPaused)
-        {
-            if (isPoweredUp)
-            {
-                powerUpTimer--;
-                if (powerUpTimer <= 0)
-                {
-                    EndPowerUp();
-                }
-            }
-        }
-        #endregion
     }
     #endregion
 
@@ -400,7 +465,7 @@ public class ShipController : MonoBehaviour {
     }
     
     //TODO: Broadcast projectile destruction with projectile index and owner index!
-    private void RemoveProejctileIndexFromList(int destroyedProjectileIndex)
+    private void RemoveProjectileIndexFromList(int destroyedProjectileIndex)
     {
         if (currentProjectileIndices.Contains(destroyedProjectileIndex))
         {
@@ -409,11 +474,11 @@ public class ShipController : MonoBehaviour {
         }
         else
         {
-            Debug.LogError("DestroyedProjectileIndex NOT found in list: " + destroyedProjectileIndex);
+            Debug.LogWarning("DestroyedProjectileIndex NOT found in list: " + destroyedProjectileIndex);
         }
     }
 
-    private int GetNewProjectileIndex()
+    protected int GetNewProjectileIndex()
     {
         int availableIndex = -1;
         if (currentProjectileIndices.Count == 0)

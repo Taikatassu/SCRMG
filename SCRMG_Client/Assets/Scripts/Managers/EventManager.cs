@@ -50,7 +50,7 @@ public class EventManager : MonoBehaviour
     public event IntVoid OnSetGameMode;
     public void BroadcastSetGameMode(int gameModeIndex)
     {
-        if(OnSetGameMode != null)
+        if (OnSetGameMode != null)
         {
             OnSetGameMode(gameModeIndex);
         }
@@ -61,7 +61,7 @@ public class EventManager : MonoBehaviour
     public event EmptyVoid OnRequestApplicationExit;
     public void BroadcastRequestApplicationExit()
     {
-        if(OnRequestApplicationExit != null)
+        if (OnRequestApplicationExit != null)
         {
             OnRequestApplicationExit();
         }
@@ -214,7 +214,7 @@ public class EventManager : MonoBehaviour
     public event IntVoid OnMouseButtonLeftDown;
     public void BroadcastMouseButtonLeftDown(int controllerIndex)
     {
-        if(OnMouseButtonLeftDown != null)
+        if (OnMouseButtonLeftDown != null)
         {
             OnMouseButtonLeftDown(controllerIndex);
         }
@@ -252,7 +252,7 @@ public class EventManager : MonoBehaviour
     public event IntVoid OnEscapeButtonDown;
     public void BroadcastEscapeButtonDown(int controllerIndex)
     {
-        if(OnEscapeButtonDown != null)
+        if (OnEscapeButtonDown != null)
         {
             OnEscapeButtonDown(controllerIndex);
         }
@@ -376,7 +376,7 @@ public class EventManager : MonoBehaviour
     public event IntVoid OnShipDead;
     public void BroadcastShipDead(int shipIndex)
     {
-        if(OnShipDead != null)
+        if (OnShipDead != null)
         {
             OnShipDead(shipIndex);
         }
@@ -403,7 +403,7 @@ public class EventManager : MonoBehaviour
     public event GameObjectVoid OnShipReference;
     public void BroadcastShipReference(GameObject newShip)
     {
-        if(OnShipReference != null)
+        if (OnShipReference != null)
         {
             OnShipReference(newShip);
         }
@@ -412,7 +412,7 @@ public class EventManager : MonoBehaviour
     public event FloatVoid OnMatchTimerValueChange;
     public void BroadcastMatchTimerValueChange(float newValue)
     {
-        if(OnMatchTimerValueChange != null)
+        if (OnMatchTimerValueChange != null)
         {
             OnMatchTimerValueChange(newValue);
         }
@@ -439,7 +439,7 @@ public class EventManager : MonoBehaviour
     public event IntIntVoid OnPowerUpEnded;
     public void BroadcastPowerUpEnded(int shipIndex, int powerUpType)
     {
-        if(OnPowerUpEnded != null)
+        if (OnPowerUpEnded != null)
         {
             OnPowerUpEnded(shipIndex, powerUpType);
         }
@@ -495,33 +495,60 @@ public class EventManager : MonoBehaviour
         }
     }
 
+    public event IntIntVector3Vector3Void OnProjectileSpawnedByServer;
+    public void BroadcastProjectileSpawnedByServer(int projectileOwnerIndex, int projectileIndex, Vector3 spawnPosition, Vector3 spawnRotation)
+    {
+        if (OnProjectileSpawnedByServer != null)
+        {
+            OnProjectileSpawnedByServer(projectileOwnerIndex, projectileIndex, spawnPosition, spawnRotation);
+        }
+    }
+
+    public event IntIntVoid OnProjectileDestroyedByServer;
+    public void BroadcastProjectileDestroyedByServer(int projectileOwnerIndex, int projectileIndex)
+    {
+        if (OnProjectileDestroyedByServer != null)
+        {
+            OnProjectileDestroyedByServer(projectileOwnerIndex, projectileIndex);
+        }
+    }
+
     public event IntIntIntStringVoid OnShipSpawnByServer;
     public void BroadcastShipSpawnByServer(int shipIndex, int spawnPointIndex, int shipColorIndex, string ownerID)
     {
         if (OnShipSpawnByServer != null)
         {
-            
-            OnShipSpawnByServer(shipIndex, spawnPointIndex, shipColorIndex, ownerID);
-        }
-    }
 
-    public event IntVector3Void OnShipPositionUpdate;
-    public void BroadcastShipPositionUpdate(int shipIndex, Vector3 currentPosition)
-    {
-        if (OnShipPositionUpdate != null)
-        {
-            OnShipPositionUpdate(shipIndex, currentPosition);
+            OnShipSpawnByServer(shipIndex, spawnPointIndex, shipColorIndex, ownerID);
         }
     }
     #endregion
 
     #region Network events
-    public event EmptyVoid OnStartingMatchByServer;
-    public void BroadcastStartingMatchByServer()
+    public event EmptyVoid OnNetworkMultiplayerStartMatchStartTimer;
+    public void BroadcastNetworkMultiplayerStartMatchStartTimer()
+    {
+        if (OnNetworkMultiplayerStartMatchStartTimer != null)
+        {
+            OnNetworkMultiplayerStartMatchStartTimer();
+        }
+    }
+
+    public event EmptyVoid OnNetworkMultiplayerMatchInitialized;
+    public void BroadcastNetworkMultiplayerMatchInitialized()
+    {
+        if (OnNetworkMultiplayerMatchInitialized != null)
+        {
+            OnNetworkMultiplayerMatchInitialized();
+        }
+    }
+
+    public event IntVoid OnStartingMatchByServer;
+    public void BroadcastStartingMatchByServer(int numberOfShips)
     {
         if (OnStartingMatchByServer != null)
         {
-            OnStartingMatchByServer();
+            OnStartingMatchByServer(numberOfShips);
         }
     }
 
@@ -565,7 +592,7 @@ public class EventManager : MonoBehaviour
     public event StringVoid OnRequestConnectToNetwork;
     public void BroadcastRequestConnectToNetwork(string ip)
     {
-        if(OnRequestConnectToNetwork != null)
+        if (OnRequestConnectToNetwork != null)
         {
             OnRequestConnectToNetwork(ip);
         }
@@ -632,7 +659,7 @@ public class EventManager : MonoBehaviour
     public event IntVoid OnClientCountInLobbyChange;
     public void BroadcastClientCountInLobbyChange(int newCount)
     {
-        if(OnClientCountInLobbyChange != null)
+        if (OnClientCountInLobbyChange != null)
         {
             OnClientCountInLobbyChange(newCount);
         }

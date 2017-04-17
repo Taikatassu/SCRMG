@@ -134,7 +134,7 @@ public class Projectile : MonoBehaviour {
                 projectileSpeed = lib.projectileVariables.bulletSpeed;
                 projectileLifetimeTimer = Mathf.RoundToInt((lib.projectileVariables.bulletRange / projectileSpeed) / Time.fixedDeltaTime);
                 projectileRicochetCounter = 0;
-                projectileRicochetCooldown = lib.projectileVariables.rubberBulletRicochetCooldown;
+                projectileRicochetCooldown = lib.projectileVariables.bulletRicochetCooldown;
                 projectileRicochetNumber = lib.projectileVariables.bulletRicochetNumber;
 
                 Instantiate(Resources.Load("Projectiles/Visuals/BulletVisuals", typeof(GameObject)), transform);

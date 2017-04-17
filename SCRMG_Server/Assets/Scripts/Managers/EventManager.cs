@@ -28,6 +28,8 @@ public class EventManager : MonoBehaviour {
 
     #region Delegates
     public delegate void EmptyVoid();
+    public delegate void IntVoid(int integer);
+    public delegate void FloatVoid(float floatingPoint);
     public delegate void ClientDataVoid(ClientData clientData);
     public delegate void StringVoid(string string1);
     public delegate void StringIntVoid(string string1, int integer);
@@ -36,6 +38,8 @@ public class EventManager : MonoBehaviour {
     public delegate void IntIntIntStringVoid(int integer1, int integer2, int integer3, string string1);
     public delegate void GameObjectVoid(GameObject gameObject);
     public delegate void IntVector3Void(int integer, Vector3 vec3);
+    public delegate void IntIntVector3Vector3Void(int integer1, int integer2, Vector3 vec31, Vector3 vec32);
+    public delegate void IntIntVoid(int integer1, int integer2);
     #endregion
 
     #region Events
@@ -84,12 +88,12 @@ public class EventManager : MonoBehaviour {
         }
     }
 
-    public event EmptyVoid OnStartingMatchByServer;
-    public void BroadcastStartingMatchByServer()
+    public event IntVoid OnStartingMatchByServer;
+    public void BroadcastStartingMatchByServer(int numberOfShips)
     {
         if (OnStartingMatchByServer != null)
         {
-            OnStartingMatchByServer();
+            OnStartingMatchByServer(numberOfShips);
         }
     }
 
@@ -138,6 +142,87 @@ public class EventManager : MonoBehaviour {
         if (OnShipPositionUpdate != null)
         {
             OnShipPositionUpdate(shipIndex, shipPosition);
+        }
+    }
+
+    public event EmptyVoid OnMatchStartTimerStart;
+    public void BroadcastMatchStartTimerStart()
+    {
+        if (OnMatchStartTimerStart != null)
+        {
+            OnMatchStartTimerStart();
+        }
+    }
+
+    public event IntVoid OnMatchStartTimerValueChange;
+    public void BroadcastMatchStartTimerValueChange(int currentValue)
+    {
+        if (OnMatchStartTimerValueChange != null)
+        {
+            OnMatchStartTimerValueChange(currentValue);
+        }
+    }
+
+    public event EmptyVoid OnMatchStarted;
+    public void BroadcastMatchStarted()
+    {
+        if (OnMatchStarted != null)
+        {
+            OnMatchStarted();
+        }
+    }
+
+    public event IntVoid OnMatchEnded;
+    public void BroadcastMatchEnded(int winnerIndex)
+    {
+        if (OnMatchEnded != null)
+        {
+            OnMatchEnded(winnerIndex);
+        }
+    }
+
+    public event FloatVoid OnMatchTimerValueChange;
+    public void BroadcastMatchTimerValueChange(float newValue)
+    {
+        if (OnMatchTimerValueChange != null)
+        {
+            OnMatchTimerValueChange(newValue);
+        }
+    }
+
+    public event IntIntVector3Vector3Void OnProjectileSpawned;
+    public void BroadcastProjectileSpawned(int projectileOwnerIndex, int projectileIndex, Vector3 spawnPosition, Vector3 spawnRotation)
+    {
+        if (OnProjectileSpawned != null)
+        {
+            OnProjectileSpawned(projectileOwnerIndex, projectileIndex, spawnPosition, spawnRotation);
+        }
+    }
+
+    public event IntIntVoid OnProjectileDestroyed;
+    public void BroadcastProjectileDestroyed(int projectileOwnerIndex, int projectileIndex)
+    {
+        if (OnProjectileDestroyed != null)
+        {
+            OnProjectileDestroyed(projectileOwnerIndex, projectileIndex);
+        }
+    }
+
+    public event IntIntVector3Vector3Void OnProjectileSpawnedByClient;
+    public void BroadcastProjectileSpawnedByClient(int projectileOwnerIndex, int projectileIndex, Vector3 spawnPosition, Vector3 spawnRotation)
+    {
+        if (OnProjectileSpawnedByClient != null)
+        {
+            OnProjectileSpawnedByClient(projectileOwnerIndex, projectileIndex, spawnPosition, spawnRotation);
+        }
+    }
+
+    public event IntIntVoid OnProjectileDestroyedByClient;
+    public void BroadcastProjectileDestroyedByClient(int projectileOwnerIndex, int projectileIndex)
+    {
+        if (OnProjectileDestroyedByClient != null)
+        {
+            OnProjectileDestroyedByClient(projectileOwnerIndex, projectileIndex);
         }
     }
     #endregion

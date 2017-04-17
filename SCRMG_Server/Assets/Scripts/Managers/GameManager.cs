@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour
     Toolbox toolbox;
     EventManager em;
     GlobalVariableLibrary lib;
+    ShipInfoManager shipInfoManager;
 
     enum ServerState
     {
@@ -20,7 +21,6 @@ public class GameManager : MonoBehaviour
 
     ServerState serverState;
 
-    public List<ShipInfo> shipInfoList = new List<ShipInfo>();
     List<ClientData> clientsInLobby = new List<ClientData>();
     List<string> clientsReadyInLobby = new List<string>();
     List<GameObject> currentlyAliveShips = new List<GameObject>();
@@ -30,7 +30,15 @@ public class GameManager : MonoBehaviour
     List<Transform> respawnPoints = new List<Transform>();
     bool resetUsedSpawnPointsList = false;
     bool resetUsedShipColors = false;
+    bool inGame = false;
+    bool matchStarted = false;
+    bool matchStartTimerRunning = false;
+    int fixedUpdateLoopCounter = -1;
+    int fixedUpdateLoopsPerSecond = -1;
+    int matchStartTimerValue = -1;
+    float matchTimer = -1;
 
+    int matchStartTimerLength = -1;
     int maxNumberOfClientsInLobby = -1;
     List<Color> shipColorOptions = new List<Color>();
     #region Initialization
@@ -42,6 +50,7 @@ public class GameManager : MonoBehaviour
         toolbox = FindObjectOfType<Toolbox>();
         em = toolbox.GetComponent<EventManager>();
         lib = toolbox.GetComponent<GlobalVariableLibrary>();
+        shipInfoManager = toolbox.GetComponent<ShipInfoManager>();
         GetStats();
     }
     #endregion
@@ -49,6 +58,7 @@ public class GameManager : MonoBehaviour
     #region GetStats
     private void GetStats()
     {
+        matchStartTimerLength = lib.serverVariables.matchStartTimerLength;
         maxNumberOfClientsInLobby = lib.serverVariables.maxNumberOfClientsInLobby;
         shipColorOptions = lib.serverVariables.shipColorOptions;
     }
@@ -63,6 +73,9 @@ public class GameManager : MonoBehaviour
         em.OnClientVote += OnClientVote;
         em.OnClientDisconnected += OnClientDisconnected;
         em.OnRequestReadyClientCount += OnRequestReadyClientCount;
+        em.OnMatchStartTimerStart += OnMatchStartTimerStart;
+        em.OnMatchStarted += OnMatchStarted;
+        em.OnMatchEnded += OnMatchEnded;
     }
 
     private void OnDisable()
@@ -73,11 +86,19 @@ public class GameManager : MonoBehaviour
         em.OnClientVote -= OnClientVote;
         em.OnClientDisconnected -= OnClientDisconnected;
         em.OnRequestReadyClientCount -= OnRequestReadyClientCount;
+        em.OnMatchStartTimerStart -= OnMatchStartTimerStart;
+        em.OnMatchStarted -= OnMatchStarted;
+        em.OnMatchEnded -= OnMatchEnded;
     }
     #endregion
     #endregion
 
     #region Subscribers
+    private void OnMatchStartTimerStart()
+    {
+        StartMatchStartTimer();
+    }
+
     private int OnRequestReadyClientCount()
     {
         Debug.Log("OnRequestReadyClientCount, clientsReadyInLobby.Count: " 
@@ -146,7 +167,9 @@ public class GameManager : MonoBehaviour
         if (clientsReadyInLobby.Count == clientsInLobby.Count)
         {
             Debug.Log("GameManager: OnRequestMatchStart, all participants are ready");
-            em.BroadcastStartingMatchByServer();
+            em.BroadcastStartingMatchByServer(numberOfShips);
+            inGame = true;
+            matchTimer = 0;
             InitializeGame();
         }
         else
@@ -177,6 +200,39 @@ public class GameManager : MonoBehaviour
             else
             {
                 Debug.LogError("Vote value must be 0 or 1 in yes/no events.");
+            }
+        }
+    }
+
+    private void OnMatchStarted()
+    {
+        matchStarted = true;
+    }
+
+    private void OnMatchEnded(int winnerIndex)
+    {
+        matchStarted = false;
+        shipInfoManager.ClearShipInfoList();
+    }
+
+    private void OnShipDead(int shipIndex)
+    {
+        if (currentlyAliveShips.Count > 1)
+        {
+            for (int i = 0; i < currentlyAliveShips.Count; i++)
+            {
+                if (currentlyAliveShips[i] == null)
+                {
+                    currentlyAliveShips.RemoveAt(i);
+                }
+                else if (currentlyAliveShips[i].GetComponent<ShipController>().GetIndex() == shipIndex)
+                {
+                    currentlyAliveShips.RemoveAt(i);
+                }
+            }
+            if (currentlyAliveShips.Count == 1)
+            {
+                em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
             }
         }
     }
@@ -221,6 +277,7 @@ public class GameManager : MonoBehaviour
                     newShip.AddComponent<NetworkPlayerController>();
                 newShipOwner = clientsInLobby[i].id;
                 newShipInfo.ownerID = newShipOwner;
+                newShipInfo.isControlledByServer = false;
                 Debug.Log("GameManager: Player ship created");
             }
             else
@@ -229,6 +286,7 @@ public class GameManager : MonoBehaviour
                     newShip.AddComponent<AIPlayerController>();
                 newShipOwner = "AI" + newShipIndex;
                 newShipInfo.ownerID = newShipOwner;
+                newShipInfo.isControlledByServer = true;
                 Debug.Log("GameManager: AI ship created");
             }
             //Give ship an index and color
@@ -237,7 +295,7 @@ public class GameManager : MonoBehaviour
             currentlyAliveShips.Add(newShip);
             em.BroadcastShipSpawnByServer(newShipIndex, newSpawnPointIndex, newShipColorIndex, newShipOwner);
 
-            shipInfoList.Add(newShipInfo);
+            shipInfoManager.shipInfoList.Add(newShipInfo);
         }
 
         foreach (GameObject ship in currentlyAliveShips)
@@ -304,6 +362,57 @@ public class GameManager : MonoBehaviour
     //    int i = Random.Range(0, respawnPoints.Count);
     //    return respawnPoints[i].position;
     //}
+    #endregion
+
+    #region Update & FixedUpdate
+    private void Update()
+    {
+        if (inGame)
+        {
+            #region HUD Timer
+            if (matchStarted)
+            {
+                matchTimer += Time.deltaTime;
+                em.BroadcastMatchTimerValueChange(matchTimer);
+            }
+            #endregion
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (inGame)
+        {
+            #region MatchStartTimer
+            if (matchStartTimerRunning)
+            {
+                fixedUpdateLoopCounter++;
+                if (fixedUpdateLoopCounter >= fixedUpdateLoopsPerSecond)
+                {
+                    matchStartTimerValue--;
+                    em.BroadcastMatchStartTimerValueChange(matchStartTimerValue);
+                    if (matchStartTimerValue <= 0)
+                    {
+                        em.BroadcastMatchStarted();
+                        matchStartTimerRunning = false;
+                    }
+                    fixedUpdateLoopCounter = 0;
+                }
+            }
+            #endregion
+        }
+    }
+    #endregion
+
+    #region MatchStartTimer initialization
+    public void StartMatchStartTimer()
+    {
+        matchStartTimerRunning = true;
+        fixedUpdateLoopsPerSecond = Mathf.RoundToInt(1 / Time.fixedDeltaTime);
+        matchStartTimerValue = matchStartTimerLength;
+        fixedUpdateLoopCounter = 0;
+        em.BroadcastMatchStartTimerValueChange(matchStartTimerValue);
+    }
     #endregion
 
 }

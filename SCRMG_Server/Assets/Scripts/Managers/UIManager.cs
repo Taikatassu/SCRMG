@@ -13,9 +13,15 @@ public class UIManager : MonoBehaviour {
     GameObject clientInfoHolder;
     GameObject leftUIPanel;
     GameObject rightUIPanel;
+    GameObject hudHolder;
+    Text matchStartTimerText; //TODO: Set this in Awake
+    Text hudTimerText; //TODO: Set this in Awake
 
     List<GameObject> connectedClientInfos = new List<GameObject>();
     List<GameObject> lobbyClientInfos = new List<GameObject>();
+
+    int matchStartTimerValue = -1;
+    float matchTimer = -1;
 
     #region Initialization
     private void Awake()
@@ -27,9 +33,19 @@ public class UIManager : MonoBehaviour {
 
         clientInfoHolder = canvas.transform.GetChild(0).gameObject;
         leftUIPanel = Instantiate(Resources.Load("UI/LeftPanel", typeof(GameObject)),
-            canvas.transform) as GameObject;
+            clientInfoHolder.transform) as GameObject;
         rightUIPanel = Instantiate(Resources.Load("UI/RightPanel", typeof(GameObject)),
-            canvas.transform) as GameObject;
+            clientInfoHolder.transform) as GameObject;
+        hudHolder = canvas.transform.GetChild(1).gameObject;
+        GameObject matchStartTimer = Instantiate(Resources.Load("UI/MatchStartTimer", typeof(GameObject)),
+            hudHolder.transform) as GameObject;
+        matchStartTimerText = matchStartTimer.GetComponent<Text>();
+        GameObject hudTimer = Instantiate(Resources.Load("UI/MatchTimer", typeof(GameObject)),
+            hudHolder.transform) as GameObject;
+        hudTimerText = hudTimer.GetComponent<Text>();
+
+        matchStartTimer.SetActive(false);
+        hudTimer.SetActive(false);
     }
 
     private void OnEnable()
@@ -38,6 +54,8 @@ public class UIManager : MonoBehaviour {
         em.OnClientDisconnected += OnClientDisconnected;
         em.OnClientEnterLobby += OnClientEnterLobby;
         em.OnClientExitLobby += OnClientExitLobby;
+        em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
+        em.OnMatchTimerValueChange += OnMatchTimerValueChange;
     }
 
     private void OnDisable()
@@ -46,6 +64,8 @@ public class UIManager : MonoBehaviour {
         em.OnClientDisconnected -= OnClientDisconnected;
         em.OnClientEnterLobby -= OnClientEnterLobby;
         em.OnClientExitLobby -= OnClientExitLobby;
+        em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
+        em.OnMatchTimerValueChange -= OnMatchTimerValueChange;
     }
     #endregion
 
@@ -92,6 +112,53 @@ public class UIManager : MonoBehaviour {
                 Destroy(lobbyClientInfos[i]);
                 lobbyClientInfos.RemoveAt(i);
                 i--;
+            }
+        }
+    }
+
+    private void OnMatchStartTimerValueChange(int currentTimerValue)
+    {
+        UpdateMatchStartTimer(currentTimerValue);
+    }
+
+    private void OnMatchTimerValueChange(float newValue)
+    {
+        matchTimer = newValue;
+
+        int minutes = Mathf.FloorToInt(matchTimer / 60f);
+        int seconds = Mathf.FloorToInt(matchTimer - minutes * 60);
+        int milliseconds = Mathf.FloorToInt((matchTimer - seconds - minutes * 60) * 100);
+
+        if (minutes > 99)
+        {
+            minutes = 99;
+        }
+
+        string t = string.Format("{0:00}:{1:00}:{2:00}", minutes, seconds, milliseconds);
+
+        if (hudTimerText != null)
+        {
+            hudTimerText.text = t.ToString();
+        }
+    }
+    #endregion
+
+    #region MatchStartTimer
+    private void UpdateMatchStartTimer(int newTimerValue)
+    {
+        matchStartTimerValue = newTimerValue;
+        matchStartTimerText.text = matchStartTimerValue.ToString();
+        if (!matchStartTimerText.gameObject.activeSelf)
+        {
+            matchStartTimerText.gameObject.SetActive(true);
+        }
+
+        if (matchStartTimerValue <= 0)
+        {
+            matchStartTimerText.gameObject.SetActive(false);
+            if (!hudTimerText.gameObject.activeSelf)
+            {
+                hudTimerText.gameObject.SetActive(true);
             }
         }
     }

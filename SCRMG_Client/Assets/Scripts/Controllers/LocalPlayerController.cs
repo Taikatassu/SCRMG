@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LocalPlayerController : ShipController {
-    
+public class LocalPlayerController : ShipController
+{
     Transform closestTarget;
     //List<Transform> shipList = new List<Transform>();
     LayerMask mouseRayCollisionLayer = -1;
@@ -60,6 +60,8 @@ public class LocalPlayerController : ShipController {
             em.OnVirtualJoystickReleased += OnVirtualJoystickReleased;
             em.OnVirtualJoystickValueChange += OnVirtualJoystickValueChange;
         }
+
+        isControllerByServer = false;
     }
 
     protected override void OnDisable()
@@ -249,13 +251,19 @@ public class LocalPlayerController : ShipController {
             Shoot();
         }
 
-        //Testing network functionality
-        //Vector3 currentPosition = transform.position;
-        //if (previousPosition != currentPosition)
-        //{
-        //    em.BroadcastShipPositionUpdate(index, currentPosition);
-        //    previousPosition = currentPosition;
-        //}
+        //TODO: Update my info on shipInfoList
+
+        if (myShipInfoElement == -1)
+        {
+            myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+        }
+
+        if (myShipInfoElement != -1)
+        {
+            shipInfoManager.shipInfoList[myShipInfoElement].shipPosition = transform.position;
+            shipInfoManager.shipInfoList[myShipInfoElement].hullRotation = shipHull.eulerAngles;
+            shipInfoManager.shipInfoList[myShipInfoElement].turretRotation = shipTurret.eulerAngles;
+        }
     }
     #endregion
 

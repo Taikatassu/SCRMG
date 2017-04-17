@@ -2,19 +2,21 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ShipController : MonoBehaviour {
+public class ShipController : MonoBehaviour
+{
 
 
     #region References & variables
     //References
     protected Toolbox toolbox;
     protected GlobalVariableLibrary lib;
+    protected ShipInfoManager shipInfoManager;
     protected EventManager em;
     protected Rigidbody rb;
     protected Vector3 movementDirection;
     protected Vector3 lookTargetPosition;
     protected Transform shipHull;
-    Transform shipTurret;
+    protected Transform shipTurret;
     Transform turretOutputMarker;
     GameObject healthBar;
     Color myShipColor;
@@ -22,7 +24,9 @@ public class ShipController : MonoBehaviour {
     Projectile newProjectileScript;
 
     //Variables coming from within the script
+    protected List<int> currentProjectileIndices = new List<int>();
     protected int index = -1;
+    protected int myShipInfoElement = -1;
     float currentHealth = -1;
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
@@ -31,23 +35,15 @@ public class ShipController : MonoBehaviour {
     float speedModifier = -1;
     float damageTakenModifier = -1;
     float shootCooldownModifier = -1;
-    public int currentGameModeIndex = -1;
     int shootCooldownFrameTimer = -1;
-    int gameModeSingleplayerIndex = -1;
-    int gameModeNetworkMultiplayerIndex = -1;
-    int gameModeLocalMultiplayerIndex = -1;
-    int powerUpType = -1;
-    bool isPersistingProjectile = false;
-    bool persistingProjectileOnline = false;
     bool isMovable = false;
     bool isVulnerable = false;
     bool canShoot = false;
     bool isDead = false;
     bool shootOnCooldown = false;
     bool updatingHealthBar = false;
-    bool isPaused = false;
-    bool isPoweredUp = false;
     protected bool rotatingTurret = false;
+    protected bool isControllerByServer = false;
     //Values coming from GlobalVariableLibrary
     protected float maxHealth = -1;
     float movementSpeed = -1;
@@ -57,14 +53,6 @@ public class ShipController : MonoBehaviour {
     float healthBarMinValue = -1;
     float healthBarMaxValue = -1;
     float healthBarLerpDuration = -1;
-    protected int buildPlatform = -1; //0 = PC, 1 = Android
-    int projectileType = -1;
-    int powerUpTimer = -1;
-    //TODO: Remove if deemed permanently obsolete
-    //int rubberBulletsIndex = -1;
-    //int blazingRamIndex = -1;
-    //int beamCannonIndex = -1;
-    //int bombsIndex = -1;
     #endregion
 
     #region Initialization
@@ -74,76 +62,71 @@ public class ShipController : MonoBehaviour {
         toolbox = FindObjectOfType<Toolbox>();
         em = toolbox.GetComponent<EventManager>();
         lib = toolbox.GetComponentInChildren<GlobalVariableLibrary>();
+        shipInfoManager = toolbox.GetComponent<ShipInfoManager>();
         rb = GetComponent<Rigidbody>();
         shipColorableParts = GetComponentsInChildren<ShipColorablePartTag>();
         shipHull = GetComponentInChildren<ShipHullTag>().transform;
         shipTurret = GetComponentInChildren<ShipTurretTag>().transform;
         turretOutputMarker = GetComponentInChildren<TurretOutputMarkerTag>().
             transform;
-        //healthBar = GetComponentInChildren<ShipHealthBarTag>().gameObject;
+        healthBar = GetComponentInChildren<ShipHealthBarTag>().gameObject;
     }
     #endregion
 
     #region GetStats
     protected virtual void GetStats()
     {
-        //buildPlatform = lib.gameSettingVariables.buildPlatform;
-        //defaultMovementSpeed = lib.shipVariables.movementSpeed;
-        //movementSpeed = defaultMovementSpeed;
-        //maxHealth = lib.shipVariables.maxHealth;
-        //shipTurretRotationSpeed = lib.shipVariables.shipTurretRotationSpeed;
-        //shipHullRotationSpeed = lib.shipVariables.shipHullRotationSpeed;
-        //shootCooldownDuration = lib.shipVariables.shootCooldownDuration;
-        //healthBarMinValue = lib.shipVariables.healthBarMinValue;
-        //healthBarMaxValue = lib.shipVariables.healthBarMaxValue;
-        //healthBarLerpDuration = lib.shipVariables.healthBarLerpDuration;
-        //gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
-        //gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
-        //gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
-        //TODO: Remove if deemed permanently obsolete
-        //rubberBulletsIndex = -lib.powerUpVariables.rubberBulletsIndex;
-        //blazingRamIndex = lib.powerUpVariables.blazingRamIndex;
-        //beamCannonIndex = lib.powerUpVariables.beamCannonIndex;
-        //bombsIndex = lib.powerUpVariables.bombsIndex;
+        defaultMovementSpeed = lib.serverVariables.movementSpeed;
+        movementSpeed = defaultMovementSpeed;
+        maxHealth = lib.serverVariables.maxHealth;
+        shipTurretRotationSpeed = lib.serverVariables.shipTurretRotationSpeed;
+        shipHullRotationSpeed = lib.serverVariables.shipHullRotationSpeed;
+        shootCooldownDuration = lib.serverVariables.shootCooldownDuration;
+        healthBarMinValue = lib.serverVariables.healthBarMinValue;
+        healthBarMaxValue = lib.serverVariables.healthBarMaxValue;
+        healthBarLerpDuration = lib.serverVariables.healthBarLerpDuration;
     }
     #endregion
 
     #region OnEnable & OnDisable
     protected virtual void OnEnable()
     {
+        //TODO: Add projectile destruction when quitting game or restarting
         //em.OnGameRestart += OnGameRestart;
-        //em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
-        //em.OnMatchStarted += OnMatchStarted;
-        //em.OnMatchEnded += OnMatchEnded;
-        //em.OnPauseOn += OnPauseOn;
-        //em.OnPauseOff += OnPauseOff;
+        em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
+        em.OnMatchStarted += OnMatchStarted;
+        em.OnMatchEnded += OnMatchEnded;
+        em.OnProjectileDestroyed += OnProjectileDestroyed;
 
-        powerUpType = 0;
-        powerUpTimer = 0;
-        projectileType = 0;
-        isPersistingProjectile = false;
         speedModifier = 1;
         damageTakenModifier = 1;
         shootCooldownModifier = 1;
         canShoot = false;
         isMovable = false;
         isVulnerable = false;
-        isPoweredUp = false;
     }
 
     protected virtual void OnDisable()
     {
-        //DestroyAllProjectiles();
         //em.OnGameRestart -= OnGameRestart;
-        //em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
-        //em.OnMatchStarted -= OnMatchStarted;
-        //em.OnMatchEnded -= OnMatchEnded;
-        //em.OnPauseOn -= OnPauseOn;
-        //em.OnPauseOff -= OnPauseOff;
+        em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
+        em.OnMatchStarted -= OnMatchStarted;
+        em.OnMatchEnded -= OnMatchEnded;
+        em.OnProjectileDestroyed -= OnProjectileDestroyed;
     }
     #endregion
 
     #region Subscribers
+    private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex)
+    {
+        if (projectileOwnerIndex == index)
+        {
+            Debug.Log("ShipController, OnProjectileDestroyed. projectileOwnerIndex: " + projectileOwnerIndex + ", projectileIndex: " + projectileIndex);
+            RemoveProjectileIndexFromList(projectileIndex);
+        }
+    }
+
+
     private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
         if (currentTimerValue == 1)
@@ -152,15 +135,8 @@ public class ShipController : MonoBehaviour {
         }
     }
 
-    private void OnGameRestart()
-    {
-        //TODO: Change if implementing a pool for ships instead of instantiating them
-        //Destroy(gameObject); //Currently done by GameManager
-    }
-
     private void OnMatchStarted()
     {
-        powerUpType = 0;
         SetIsMoveable(true);
         SetIsVulnerable(true);
         SetCanShoot(true);
@@ -168,47 +144,9 @@ public class ShipController : MonoBehaviour {
 
     private void OnMatchEnded(int winnerIndex)
     {
-        powerUpType = 0;
         SetIsVulnerable(false);
         SetIsMoveable(false);
         SetCanShoot(false);
-    }
-
-    public void SetGameMode(int newGameModeIndex)
-    {
-        currentGameModeIndex = newGameModeIndex;
-    }
-
-    private void OnPauseOn()
-    {
-        if (currentGameModeIndex == gameModeSingleplayerIndex)
-        {
-            isPaused = true;
-        }
-        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
-        {
-            // TODO: Decide how to manage pausing in NetMP gameMode
-        }
-        else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
-        {
-            // TODO: Decide how to manage pausing in LocMP gameMode
-        }
-    }
-
-    private void OnPauseOff()
-    {
-        if (currentGameModeIndex == gameModeSingleplayerIndex)
-        {
-            isPaused = false;
-        }
-        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
-        {
-            // TODO: Decide how to manage pausing in NetMP gameMode
-        }
-        else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
-        {
-            // TODO: Decide how to manage pausing in LocMP gameMode
-        }
     }
     #endregion
     #endregion
@@ -235,10 +173,9 @@ public class ShipController : MonoBehaviour {
 
     protected virtual void FixedUpdate()
     {
-        #region Movement
-        //TODO: Add lerp to movement?
-        if (!isPaused)
+        if (isControllerByServer)
         {
+            #region Movement
             if (isMovable && movementDirection != Vector3.zero)
             {
                 float movementDirectionMagnitude = movementDirection.magnitude;
@@ -252,13 +189,11 @@ public class ShipController : MonoBehaviour {
                     rb.velocity = Vector3.zero;
                 }
 
-                //Hull rotation
                 Quaternion newHullRotation = Quaternion.LookRotation(movementDirection);
                 shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
                     Time.fixedDeltaTime * shipHullRotationSpeed);
             }
 
-            //TODO: Implement a proper way to detect if ship is outside of arena bounds, and returning it back to arena
             Vector3 currentPosition = transform.position;
             if (currentPosition.x > 25)
             {
@@ -285,26 +220,17 @@ public class ShipController : MonoBehaviour {
                 newPosition.z = -25;
                 transform.position = newPosition;
             }
-        }
-        #endregion
+            #endregion
 
-        #region Turret rotation
-        if (!isPaused)
-        {
-            if (buildPlatform == 0 || (buildPlatform == 1 && rotatingTurret))
-            {
-                lookTargetPosition.y = shipTurret.position.y;
-                Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-                Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
-                shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
-                    Time.fixedDeltaTime * shipTurretRotationSpeed);
-            }
-        }
-        #endregion
+            #region Turret rotation
+            lookTargetPosition.y = shipTurret.position.y;
+            Vector3 lookDirection = lookTargetPosition - shipTurret.position;
+            Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+            shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                Time.fixedDeltaTime * shipTurretRotationSpeed);
+            #endregion
 
-        #region Shoot cooldown
-        if (!isPaused)
-        {
+            #region Shoot cooldown
             if (shootOnCooldown)
             {
                 shootCooldownFrameTimer--;
@@ -313,94 +239,83 @@ public class ShipController : MonoBehaviour {
                     shootOnCooldown = false;
                 }
             }
-        }
-        #endregion
+            #endregion
 
-        #region PowerUp timer
-        if (!isPaused)
-        {
-            if (isPoweredUp)
+            #region Updating ShipInfo
+            if (myShipInfoElement == -1)
             {
-                powerUpTimer--;
-                if (powerUpTimer <= 0)
-                {
-                    EndPowerUp();
-                }
+                myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
             }
-        }
-        #endregion
-    }
-    #endregion
 
-    #region PowerUp management
-    private void EndPowerUp()
-    {
-        //em.BroadcastPowerUpEnded(index, powerUpType);
-        EndPersistingProjectile();
-        powerUpType = 0;
-        powerUpTimer = 0;
-        projectileType = 0;
-        isPersistingProjectile = false;
-        speedModifier = 1;
-        damageTakenModifier = 1;
-        shootCooldownModifier = 1;
-        canShoot = true;
-        isMovable = true;
-        isVulnerable = true;
-        isPoweredUp = false;
+            if (myShipInfoElement != -1)
+            {
+                shipInfoManager.shipInfoList[myShipInfoElement].shipPosition = transform.position;
+                shipInfoManager.shipInfoList[myShipInfoElement].hullRotation = shipHull.eulerAngles;
+                shipInfoManager.shipInfoList[myShipInfoElement].turretRotation = shipTurret.eulerAngles;
+            }
+            #endregion
+        }
     }
     #endregion
 
     #region Shooting & projectiles
     protected void Shoot()
     {
-        if (!isPaused)
+        if (canShoot && !shootOnCooldown)
         {
-            if (canShoot && !shootOnCooldown)
-            {
-                //Debug.Log("Shooting, projectileType: " + projectileType);
-                if (!isPersistingProjectile || (isPersistingProjectile && !persistingProjectileOnline))
-                {
-                    GameObject newProjectile;
+            GameObject newProjectile = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
+                            turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
 
-                    if (isPersistingProjectile)
-                    {
-                        newProjectile = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
-                                shipTurret.transform) as GameObject;
+            Physics.IgnoreCollision(newProjectile.GetComponent<Collider>(),
+                GetComponentInChildren<Collider>());
 
-                        persistingProjectileOnline = true;
-                    }
-                    else
-                    {
-                        newProjectile = Instantiate(Resources.Load("Projectiles/Projectile", typeof(GameObject)),
-                                turretOutputMarker.position, turretOutputMarker.rotation) as GameObject;
-                    }
+            newProjectileScript = newProjectile.GetComponent<Projectile>();
+            newProjectileScript.InitializeProjectile(index, GetNewProjectileIndex(), 0, myShipColor);
 
-                    Physics.IgnoreCollision(newProjectile.GetComponent<Collider>(),
-                        GetComponentInChildren<Collider>());
-
-                    newProjectileScript = newProjectile.GetComponent<Projectile>();
-                    newProjectileScript.SetShipController(this);
-                    newProjectileScript.SetProjectileType(projectileType);
-
-                    //Set shoot on cooldown
-                    shootCooldownFrameTimer = Mathf.RoundToInt((shootCooldownDuration * shootCooldownModifier) / Time.fixedDeltaTime);
-                    shootOnCooldown = true;
-
-                }
-            }
+            shootCooldownFrameTimer = Mathf.RoundToInt((shootCooldownDuration * shootCooldownModifier) / Time.fixedDeltaTime);
+            shootOnCooldown = true;
         }
     }
 
-    protected void EndPersistingProjectile()
+    private void RemoveProjectileIndexFromList(int destroyedProjectileIndex)
     {
-        if (isPersistingProjectile)
+        if (currentProjectileIndices.Contains(destroyedProjectileIndex))
         {
-            if (newProjectileScript != null)
+            currentProjectileIndices.Remove(destroyedProjectileIndex);
+            Debug.Log("DestroyedProjectileIndex found and removed from list. destroyedProjectileIndex: " + destroyedProjectileIndex);
+        }
+        else
+        {
+            Debug.LogError("DestroyedProjectileIndex NOT found in list. destroyedProjectileIndex: " + destroyedProjectileIndex);
+        }
+    }
+
+    private int GetNewProjectileIndex()
+    {
+        int availableIndex = -1;
+        if (currentProjectileIndices.Count == 0)
+        {
+            availableIndex = 1;
+            Debug.Log("Projectile index list empty, creating new projectile index: " + availableIndex);
+            currentProjectileIndices.Add(availableIndex);
+            return availableIndex;
+        }
+        else
+        {
+            for (int i = 0; i < currentProjectileIndices.Count + 1; i++)
             {
-                newProjectileScript.OnPersistingProjectileDestruction();
+                if (!currentProjectileIndices.Contains(i))
+                {
+                    availableIndex = i;
+                    Debug.Log("Available projectile index found: " + availableIndex);
+                    currentProjectileIndices.Add(availableIndex);
+                    return availableIndex;
+                }
             }
-            persistingProjectileOnline = false;
+            availableIndex = currentProjectileIndices.Count + 1;
+            Debug.Log("Creating new projectile index: " + availableIndex);
+            currentProjectileIndices.Add(availableIndex);
+            return availableIndex;
         }
     }
     #endregion
@@ -434,40 +349,17 @@ public class ShipController : MonoBehaviour {
         canShoot = state;
     }
 
-    public void SetPowerUpType(int newPowerUpType, float newDuration,
-        int newProjectileType, bool newIsPersistingProjectileState, float newSpeedModifier,
-        float newDamageTakenModifier, float newShootCooldownModifier, bool newCanShootState,
-        bool newIsMoveableState, bool newIsVulnerableState)
-    {
-        if (isPoweredUp)
-        {
-            EndPowerUp();
-        }
-
-        powerUpType = newPowerUpType;
-        powerUpTimer = Mathf.RoundToInt(newDuration / Time.fixedDeltaTime);
-        projectileType = newProjectileType;
-        isPersistingProjectile = newIsPersistingProjectileState;
-        speedModifier = newSpeedModifier;
-        damageTakenModifier = newDamageTakenModifier;
-        shootCooldownModifier = newShootCooldownModifier;
-        canShoot = newCanShootState;
-        isMovable = newIsMoveableState;
-        isVulnerable = newIsVulnerableState;
-        isPoweredUp = true;
-    }
-
     public void SetShipColor(Color newColor)
     {
         myShipColor = newColor;
 
-        //Set shipColorableParts color
         for (int i = 0; i < shipColorableParts.Length; i++)
         {
             shipColorableParts[i].GetComponent<Renderer>().material.SetColor("_TintColor", myShipColor);
         }
+
         //Set circularHealthBarColor
-        //healthBar.GetComponent<Renderer>().material.SetColor("_EmissionColor", myShipColor);
+        healthBar.GetComponent<Renderer>().material.SetColor("_EmissionColor", myShipColor);
     }
     #endregion
 
@@ -486,10 +378,25 @@ public class ShipController : MonoBehaviour {
     #region Health adjustments
     public void TakeDamage(float amount)
     {
+        Debug.Log("TakeDamage, amount: " + amount);
         if (!isDead && isVulnerable)
         {
             //Debug.Log("I'm taking damage.");
             currentHealth -= amount * damageTakenModifier;
+
+            if (isControllerByServer)
+            {
+                if (myShipInfoElement == -1)
+                {
+                    myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+                }
+
+                if (myShipInfoElement != -1)
+                {
+                    shipInfoManager.shipInfoList[myShipInfoElement].currentHealth = currentHealth;
+                }
+            }
+
             if (currentHealth <= 0)
             {
                 currentHealth = 0;
@@ -505,6 +412,20 @@ public class ShipController : MonoBehaviour {
         if (!isDead)
         {
             currentHealth += amount;
+
+            if (isControllerByServer)
+            {
+                if (myShipInfoElement == -1)
+                {
+                    myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+                }
+
+                if (myShipInfoElement != -1)
+                {
+                    shipInfoManager.shipInfoList[myShipInfoElement].currentHealth = currentHealth;
+                }
+            }
+
             if (currentHealth > maxHealth)
             {
                 currentHealth = maxHealth;
@@ -554,13 +475,5 @@ public class ShipController : MonoBehaviour {
         healthBarLerpStartTime = Time.time;
         updatingHealthBar = true;
     }
-    #endregion
-
-    #region [Currently obsolete] Collision detection
-    //TODO: Remove if deemed permanently obsolete
-    //private void OnCollisionEnter()
-    //{
-    //    Debug.Log("OnCollisionEnter");
-    //}
     #endregion
 }

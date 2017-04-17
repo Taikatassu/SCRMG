@@ -16,11 +16,11 @@ public class GameManager : MonoBehaviour
     Toolbox toolbox;
     EventManager em;
     GlobalVariableLibrary lib;
+    ShipInfoManager shipInfoManager;
     List<Transform> respawnPoints = new List<Transform>();
     List<Transform> powerUpPositions = new List<Transform>();
     List<GameObject> currentlyAliveShips = new List<GameObject>();
     List<GameObject> currentlyExistingPowerUps = new List<GameObject>();
-    public List<ShipInfo> shipInfoList = new List<ShipInfo>();
     GameObject currentPlayerCamera;
     //Variables coming from within the script
     List<int> usedSpawnPoints = new List<int>();
@@ -76,6 +76,7 @@ public class GameManager : MonoBehaviour
         toolbox = FindObjectOfType<Toolbox>();
         em = toolbox.GetComponent<EventManager>();
         lib = toolbox.GetComponent<GlobalVariableLibrary>();
+        shipInfoManager = toolbox.GetComponent<ShipInfoManager>();
         GetStats();
     }
     #endregion
@@ -112,13 +113,13 @@ public class GameManager : MonoBehaviour
         em.OnPauseOff += OnPauseOff;
         em.OnPowerUpPickedUp += OnPowerUpPickedUp;
         em.OnPowerUpOnline += OnPowerUpOnline;
-        em.OnShipPositionUpdate += OnShipPositionUpdate;
         em.OnConnectionToNetworkLost += OnConnectionToNetworkLost;
         em.OnShipSpawnByServer += OnShipSpawnByServer;
         em.OnClientCountInLobbyChange += OnClientCountInLobbyChange;
         em.OnReadyCountInLobbyChange += OnReadyCountInLobbyChange;
         em.OnStartingMatchByServer += OnStartingMatchByServer;
         em.OnRequestCurrentGameModeIndex += OnRequestCurrentGameModeIndex;
+        em.OnNetworkMultiplayerStartMatchStartTimer += OnNetworkMultiplayerStartMatchStartTimer;
     }
 
     private void OnDisable()
@@ -134,22 +135,29 @@ public class GameManager : MonoBehaviour
         em.OnPauseOff -= OnPauseOff;
         em.OnPowerUpPickedUp -= OnPowerUpPickedUp;
         em.OnPowerUpOnline -= OnPowerUpOnline;
-        em.OnShipPositionUpdate -= OnShipPositionUpdate;
         em.OnConnectionToNetworkLost -= OnConnectionToNetworkLost;
         em.OnShipSpawnByServer -= OnShipSpawnByServer;
         em.OnClientCountInLobbyChange -= OnClientCountInLobbyChange;
         em.OnReadyCountInLobbyChange -= OnReadyCountInLobbyChange;
         em.OnStartingMatchByServer -= OnStartingMatchByServer;
         em.OnRequestCurrentGameModeIndex -= OnRequestCurrentGameModeIndex;
+        em.OnNetworkMultiplayerStartMatchStartTimer -= OnNetworkMultiplayerStartMatchStartTimer;
     }
     #endregion
     #endregion
 
     #region Subscribers
     #region Network event subscribers
-    private void OnStartingMatchByServer()
+    private void OnNetworkMultiplayerStartMatchStartTimer()
+    {
+        StartMatchStartTimer();
+    }
+
+    private void OnStartingMatchByServer(int newNumberOfShips)
     {
         em.BroadcastRequestSceneSingleLevel01();
+        numberOfShips = newNumberOfShips;
+        matchTimer = 0;
     }
 
     private void OnConnectionToNetworkLost()
@@ -170,6 +178,11 @@ public class GameManager : MonoBehaviour
             {
                 Debug.Log("respawnPointsInitialized = true, spawning ship instantly");
                 SpawnShip(shipIndex, spawnPointIndex, shipColorIndex, ownerID);
+                if (currentlyAliveShips.Count == numberOfShips)
+                {
+                    em.BroadcastNetworkMultiplayerMatchInitialized();
+                    Debug.Log("GameManager: multiplayer match initialization broadcasted, numberOfShips: " + numberOfShips);
+                }
             }
             else
             {
@@ -214,7 +227,7 @@ public class GameManager : MonoBehaviour
     private void OnMatchEnded(int winnerIndex)
     {
         matchStarted = false;
-        shipInfoList.Clear();
+        shipInfoManager.ClearShipInfoList();
     }
 
     private void OnPauseOn()
@@ -259,7 +272,7 @@ public class GameManager : MonoBehaviour
             respawnPointsInitialized = false;
             matchStarted = false;
             inGame = false;
-            shipInfoList.Clear();
+            shipInfoManager.ClearShipInfoList();
         }
         else if (sceneIndex == sceneIndexLevel01)
         {
@@ -300,7 +313,7 @@ public class GameManager : MonoBehaviour
         //Reset all
         resetUsedShipColors = true;
         resetUsedSpawnPointsList = true;
-        shipInfoList.Clear();
+        shipInfoManager.ClearShipInfoList();
         //Respawn everything
         InitializeGame();
         StartMatchStartTimer();
@@ -355,41 +368,6 @@ public class GameManager : MonoBehaviour
     {
         //TODO: Do something with this
         //Debug.Log("GameManager: PowerUp index: " + powerUpBaseIndex + " back online with type: " + powerUpType);
-    }
-
-    private void OnShipPositionUpdate(int shipIndex, Vector3 currentPosition)
-    {
-        if (shipInfoList.Count > 0)
-        {
-            bool shipInfoFound = false;
-            foreach (ShipInfo shipInfo in shipInfoList)
-            {
-                if (shipInfo.shipIndex == shipIndex)
-                {
-                    Debug.Log("Ship info found with index");
-                    shipInfo.shipPosition = currentPosition;
-                    shipInfoFound = true;
-                    break;
-                }
-            }
-
-            if (shipInfoFound == false)
-            {
-                Debug.LogError("Ship info NOT found with index!");
-                //ShipInfo newShipInfo = new ShipInfo();
-                //newShipInfo.shipIndex = shipIndex;
-                //newShipInfo.shipPosition = currentPosition;
-                //shipInfoList.Add(newShipInfo);
-            }
-        }
-        //else
-        //{
-        //    Debug.Log("ShipInfoList empty, creating new shipInfo");
-        //    ShipInfo newShipInfo = new ShipInfo();
-        //    newShipInfo.shipIndex = shipIndex;
-        //    newShipInfo.shipPosition = currentPosition;
-        //    shipInfoList.Add(newShipInfo);
-        //}
     }
     #endregion
     #endregion
@@ -542,7 +520,7 @@ public class GameManager : MonoBehaviour
             ShipInfo newShipInfo = new ShipInfo();
             newShipInfo.shipIndex = newShipIndex;
             newShipInfo.shipPosition = spawnPoint.position;
-            shipInfoList.Add(newShipInfo);
+            shipInfoManager.shipInfoList.Add(newShipInfo);
         }
 
         foreach (GameObject ship in currentlyAliveShips)
@@ -614,7 +592,7 @@ public class GameManager : MonoBehaviour
         newShipInfo.shipIndex = shipIndex;
         newShipInfo.shipPosition = spawnPoint.position;
         newShipInfo.ownerID = ownerID;
-        shipInfoList.Add(newShipInfo);
+        shipInfoManager.shipInfoList.Add(newShipInfo);
     }
     #endregion
     #endregion
@@ -635,6 +613,8 @@ public class GameManager : MonoBehaviour
                     SpawnShip(shipInfo.shipIndex, shipInfo.spawnPointIndex, 
                         shipInfo.shipColorIndex, shipInfo.ownerID);
                 }
+                em.BroadcastNetworkMultiplayerMatchInitialized();
+                Debug.Log("GameManager: multiplayer match initialization broadcasted");
             }
         }
     }
@@ -768,12 +748,6 @@ public class GameManager : MonoBehaviour
     {
         if (inGame)
         {
-            //foreach (ShipInfo shipInfo in shipInfoList)
-            //{
-            //    Debug.Log("shipInfo.shipIndex: " + shipInfo.shipIndex
-            //        + ", shipInfo.shipPosition: " + shipInfo.shipPosition);
-            //}
-
             #region MatchStartTimer
             if (!isPaused)
             {
@@ -801,7 +775,6 @@ public class GameManager : MonoBehaviour
     #region MatchStartTimer initialization
     public void StartMatchStartTimer()
     {
-        //StartCoroutine(BroadcastAndDecreaseMatchStartTimer(matchStartTimerLength));
         matchStartTimerRunning = true;
         fixedUpdateLoopsPerSecond = Mathf.RoundToInt(1 / Time.fixedDeltaTime);
         matchStartTimerValue = matchStartTimerLength;

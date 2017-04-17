@@ -268,7 +268,7 @@ public class UIManager : MonoBehaviour
         em.OnConnectingToNetworkFailed += OnConnectingToNetworkFailed;
         em.OnRequestLoadingIconOn += OnRequestLoadingIconOn;
         em.OnRequestLoadingIconOff += OnRequestLoadingIconOff;
-        em.OnStartingMatchByServer += OnStartingMatchByServer;
+        em.OnNetworkMultiplayerStartMatchStartTimer += OnNetworkMultiplayerStartMatchStartTimer;
     }
 
     private void OnDisable()
@@ -293,17 +293,16 @@ public class UIManager : MonoBehaviour
         em.OnConnectingToNetworkFailed -= OnConnectingToNetworkFailed;
         em.OnRequestLoadingIconOn -= OnRequestLoadingIconOn;
         em.OnRequestLoadingIconOff -= OnRequestLoadingIconOff;
-        em.OnStartingMatchByServer -= OnStartingMatchByServer;
+        em.OnNetworkMultiplayerStartMatchStartTimer -= OnNetworkMultiplayerStartMatchStartTimer;
     }
     #endregion
 
     #region Subscribers
     #region Network event subscribers
-    private void OnStartingMatchByServer()
+    private void OnNetworkMultiplayerStartMatchStartTimer()
     {
-        OpenLoadingScreen();
-        OpenLoadingIcon();
-        CloseMainMenuOnlineLobbyView();
+        CloseLoadingIcon();
+        StartFadeFromLoadingScreen();
     }
 
     private void OnConnectingToNetworkSucceeded(string ip)
@@ -438,8 +437,8 @@ public class UIManager : MonoBehaviour
             CloseMainMenuUI();
             OpenInGameUI();
 
-            CloseLoadingIcon();
-            CloseLoadingScreen();
+            //CloseLoadingIcon();
+            //CloseLoadingScreen();
         }
     }
 

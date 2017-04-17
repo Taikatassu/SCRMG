@@ -40,13 +40,15 @@ public class AIPlayerController : ShipController {
     {
         base.GetStats();
 
-        //aiDisabled = lib.aiVariables.aiDisabled;
-        //closestTargetTimerDuration = lib.aiVariables.closestTargetTimerDuration;
-        //changeDirectionTimerDuration = lib.aiVariables.changeDirectionTimerDuration;
-        //directionChangeLerpDuration = lib.aiVariables.directionChangeLerpDuration;
-        //shootingRange = lib.aiVariables.shootingRange;
+        aiDisabled = lib.serverVariables.aiDisabled;
+        closestTargetTimerDuration = lib.serverVariables.closestTargetTimerDuration;
+        changeDirectionTimerDuration = lib.serverVariables.changeDirectionTimerDuration;
+        directionChangeLerpDuration = lib.serverVariables.directionChangeLerpDuration;
+        shootingRange = lib.serverVariables.shootingRange;
+        preferredMaxDistanceToTarget = lib.serverVariables.preferredMaxDistanceToTarget;
         changeDirectionTimer = 0;
-        //preferredMaxDistanceToTarget = lib.aiVariables.preferredMaxDistanceToTarget;
+
+        isControllerByServer = true;
     }
     #endregion
 
@@ -54,31 +56,17 @@ public class AIPlayerController : ShipController {
     protected override void OnEnable()
     {
         base.OnEnable();
-        //em.OnPauseOn += OnPauseOn;
-        //em.OnPauseOff += OnPauseOff;
-        //em.OnShipReference += OnShipReference;
+        em.OnShipReference += OnShipReference;
     }
 
     protected override void OnDisable()
     {
         base.OnDisable();
-        //em.OnPauseOn -= OnPauseOn;
-        //em.OnPauseOff -= OnPauseOff;
-        //em.OnShipReference -= OnShipReference;
+        em.OnShipReference -= OnShipReference;
     }
     #endregion
 
     #region Subscribers
-    private void OnPauseOn()
-    {
-        isPaused = true;
-    }
-
-    private void OnPauseOff()
-    {
-        isPaused = false;
-    }
-
     private void OnShipReference(GameObject newShip)
     {
         if (newShip != gameObject)
@@ -217,7 +205,6 @@ public class AIPlayerController : ShipController {
                 else
                 {
                     isShooting = false;
-                    EndPersistingProjectile();
                 }
             }
             #endregion
