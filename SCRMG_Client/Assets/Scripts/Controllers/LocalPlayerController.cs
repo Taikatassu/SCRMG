@@ -18,16 +18,6 @@ public class LocalPlayerController : ShipController
         base.Awake();
         mouseRayCollisionLayer = LayerMask.NameToLayer("MouseRayCollider");
         GetStats();
-
-        //For testing only
-        //StartCoroutine(WaitToDie(5));
-    }
-
-    //For testing only
-    IEnumerator WaitToDie(float time)
-    {
-        yield return new WaitForSeconds(time);
-        TakeDamage(200);
     }
 
     protected override void GetStats()

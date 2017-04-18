@@ -76,6 +76,7 @@ public class GameManager : MonoBehaviour
         em.OnMatchStartTimerStart += OnMatchStartTimerStart;
         em.OnMatchStarted += OnMatchStarted;
         em.OnMatchEnded += OnMatchEnded;
+        em.OnShipDead += OnShipDead;
     }
 
     private void OnDisable()
@@ -89,6 +90,7 @@ public class GameManager : MonoBehaviour
         em.OnMatchStartTimerStart -= OnMatchStartTimerStart;
         em.OnMatchStarted -= OnMatchStarted;
         em.OnMatchEnded -= OnMatchEnded;
+        em.OnShipDead -= OnShipDead;
     }
     #endregion
     #endregion
@@ -212,10 +214,17 @@ public class GameManager : MonoBehaviour
     private void OnMatchEnded(int winnerIndex)
     {
         matchStarted = false;
+        for(int i = 0; i < currentlyAliveShips.Count; i++)
+        {
+            Destroy(currentlyAliveShips[i]);
+            currentlyAliveShips.RemoveAt(i);
+            i--;
+        }
+        currentlyAliveShips.Clear();
         shipInfoManager.ClearShipInfoList();
     }
 
-    private void OnShipDead(int shipIndex)
+    private void OnShipDead(int shipIndex, int killerIndex)
     {
         if (currentlyAliveShips.Count > 1)
         {
@@ -223,16 +232,29 @@ public class GameManager : MonoBehaviour
             {
                 if (currentlyAliveShips[i] == null)
                 {
+                    Debug.Log("GameManager: OnShipDead, removed null ship");
                     currentlyAliveShips.RemoveAt(i);
                 }
                 else if (currentlyAliveShips[i].GetComponent<ShipController>().GetIndex() == shipIndex)
                 {
+                    Debug.Log("GameManager: OnShipDead, removed ship with index");
                     currentlyAliveShips.RemoveAt(i);
                 }
             }
-            if (currentlyAliveShips.Count == 1)
+            Debug.Log("GameManager: OnShipDead, currentlyAliveShips.Count: " + currentlyAliveShips.Count);
+            if (currentlyAliveShips.Count <= 1)
             {
-                em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
+                Debug.Log("GameManager: OnShipDead, currentlyAliveShips.Count <= 1");
+                if (currentlyAliveShips.Count > 0)
+                {
+                    Debug.Log("GameManager: OnShipDead, broadcasted winner index by the last item in currentlyAliveShips");
+                    em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
+                }
+                else
+                {
+                    Debug.Log("GameManager: OnShipDead, broadcasted winner index killerIndex");
+                    em.BroadcastMatchEnded(killerIndex);
+                }
             }
         }
     }
@@ -249,6 +271,7 @@ public class GameManager : MonoBehaviour
     private void InitializeGame()
     {
         Debug.Log("GameManager: InitializeGame");
+        shipInfoManager.ClearShipInfoList();
         #region Instantiate ships
         for (int i = 0; i < numberOfShips; i++)
         {

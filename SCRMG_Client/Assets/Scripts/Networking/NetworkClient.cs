@@ -66,9 +66,10 @@ namespace Client
         //Implement gameEnd menu functionality on networkMultiplayer
         //Figure out a way to predict shipInfo to prevent perceivable dis-sync with other clients!
 
+        //Find out why GAMEEND packet is never received by the client!!
+
         Toolbox toolbox;
         EventManager em;
-        GameManager gm;
         GlobalVariableLibrary lib;
         public static ShipInfoManager shipInfoManager;
         public static Socket master;
@@ -89,13 +90,18 @@ namespace Client
         static int clientsInLobby = -1;
         static int numberOfShips = -1;
         static int myShipIndex = -1;
+        static int winnerIndex = -1;
+        static string winnerName = "empty";
+        static bool gameEnded = false;
         int currentGameModeIndex = -1;
         int myShipInfoElement = -1;
         float shipInfoUpdateTimer = -1;
         static List<ShipInfo> newlySpawnedShips = new List<ShipInfo>();
         static List<ProjectileInfo> newlySpawnedProjectiles = new List<ProjectileInfo>();
+        static List<ProjectileInfo> newlyHitProjectiles = new List<ProjectileInfo>();
+        static List<ProjectileInfo> newlyDestroyedProjectiles = new List<ProjectileInfo>();
 
-        float shipInfoUpdatesPerSecond = 2f;
+        float shipInfoUpdatesPerSecond = 5f;
         int gameModeSingleplayerIndex = -1;
         int gameModeNetworkMultiplayerIndex = -1;
         int gameModeLocalMultiplayerIndex = -1;
@@ -105,7 +111,6 @@ namespace Client
         {
             toolbox = FindObjectOfType<Toolbox>();
             em = toolbox.GetComponent<EventManager>();
-            gm = toolbox.GetComponent<GameManager>();
             lib = toolbox.GetComponent<GlobalVariableLibrary>();
             shipInfoManager = toolbox.GetComponent<ShipInfoManager>();
             GetStats();
@@ -149,6 +154,11 @@ namespace Client
             em.OnRequestOnlineMatchStart += OnRequestOnlineMatchStart;
             em.OnRequestMyNetworkID += OnRequestMyNetworkID;
             em.OnNetworkMultiplayerMatchInitialized += OnNetworkMultiplayerMatchInitialized;
+            em.OnProjectileHitShip += OnProjectileHitShip;
+            em.OnProjectileSpawned += OnProjectileSpawned;
+            em.OnProjectileDestroyed += OnProjectileDestroyed;
+            em.OnShipDead += OnShipDead;
+
             inGame = false;
             shipInfoUpdateTimer = 0;
         }
@@ -166,6 +176,10 @@ namespace Client
             em.OnRequestOnlineMatchStart -= OnRequestOnlineMatchStart;
             em.OnRequestMyNetworkID -= OnRequestMyNetworkID;
             em.OnNetworkMultiplayerMatchInitialized -= OnNetworkMultiplayerMatchInitialized;
+            em.OnProjectileHitShip -= OnProjectileHitShip;
+            em.OnProjectileSpawned -= OnProjectileSpawned;
+            em.OnProjectileDestroyed -= OnProjectileDestroyed;
+            em.OnShipDead -= OnShipDead;
 
             if (incomingDataThread != null)
             {
@@ -186,7 +200,6 @@ namespace Client
         #region Subscribers
         private void OnRequestLobbyEnter()
         {
-            Debug.Log("Requesting lobby enter from server");
             lobbyJoinedResponse = 2;
             Packet p = new Packet(PacketType.LOBBYEVENT, clientID);
             p.GdataInts.Add(0);
@@ -195,7 +208,6 @@ namespace Client
             try
             {
                 master.Send(p.ToBytes());
-                Debug.Log("Bytes sent");
             }
             catch (SocketException ex)
             {
@@ -207,14 +219,12 @@ namespace Client
 
         private void OnRequestLobbyExit()
         {
-            Debug.Log("Exiting lobby");
             Packet p = new Packet(PacketType.LOBBYEVENT, clientID);
             p.GdataInts.Add(0);
             p.GdataInts.Add(0);
             try
             {
                 master.Send(p.ToBytes());
-                Debug.Log("Bytes sent");
             }
             catch (SocketException ex)
             {
@@ -231,7 +241,6 @@ namespace Client
 
         private void OnNewSceneLoaded(int sceneIndex)
         {
-            Debug.Log("NetworkClient, OnNewSceneLoaded, sceneIndex: " + sceneIndex);
             if (sceneIndex == 0)
             {
                 inGame = false;
@@ -256,7 +265,6 @@ namespace Client
 
         private void OnRequestDisconnectFromNetwork()
         {
-            Debug.Log("NetworkClient: OnRequestDisconnectFromNetwork");
             if (connected)
             {
                 Disconnect();
@@ -280,18 +288,15 @@ namespace Client
             {
                 p.GdataInts.Add(2);
                 p.GdataInts.Add(1);
-                Debug.Log("Lobby isReady event sent to server");
             }
             else
             {
                 p.GdataInts.Add(2);
                 p.GdataInts.Add(0);
-                Debug.Log("Lobby notReady event sent to server");
             }
             try
             {
                 master.Send(p.ToBytes());
-                Debug.Log("Bytes sent");
             }
             catch (SocketException ex)
             {
@@ -309,7 +314,6 @@ namespace Client
             try
             {
                 master.Send(p.ToBytes());
-                Debug.Log("Bytes sent");
             }
             catch (SocketException ex)
             {
@@ -332,7 +336,98 @@ namespace Client
             try
             {
                 master.Send(p.ToBytes());
-                Debug.Log("Bytes sent");
+            }
+            catch (SocketException ex)
+            {
+                Debug.Log("SocketException: " + ex);
+                Debug.Log("Connection to server lost.");
+                Disconnect();
+            }
+        }
+
+        private void OnProjectileSpawned(int projectileOwnerIndex, int projectileIndex,
+            Vector3 spawnPosition, Vector3 spawnRotation, bool isControlledByServer)
+        {
+            if (!isControlledByServer)
+            {
+                Packet p = new Packet(PacketType.PROJECTILE, clientID);
+                p.GdataInts.Add(0);
+                p.GdataInts.Add(projectileOwnerIndex);
+                p.GdataInts.Add(projectileIndex);
+                p.GdataVectors.Add(new Vector_3(spawnPosition));
+                p.GdataVectors.Add(new Vector_3(spawnRotation));
+
+                try
+                {
+                    master.Send(p.ToBytes());
+                }
+                catch (SocketException ex)
+                {
+                    Debug.Log("SocketException: " + ex);
+                    Debug.Log("Connection to server lost.");
+                    Disconnect();
+                }
+            }
+        }
+
+        private void OnProjectileHitShip(int projectileOwnerIndex, int projectileIndex,
+            int hitShipIndex, float projectileDamage)
+        {
+            if (projectileOwnerIndex == myShipIndex)
+            {
+                Packet p = new Packet(PacketType.PROJECTILE, clientID);
+                p.GdataInts.Add(1);
+                p.GdataInts.Add(projectileOwnerIndex);
+                p.GdataInts.Add(projectileIndex);
+                p.GdataInts.Add(hitShipIndex);
+                p.GdataFloats.Add(projectileDamage);
+                try
+                {
+                    master.Send(p.ToBytes());
+                }
+                catch (SocketException ex)
+                {
+                    Debug.Log("SocketException: " + ex);
+                    Debug.Log("Connection to server lost.");
+                    Disconnect();
+                }
+            }
+        }
+
+        private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, Vector3 location)
+        {
+            if (projectileOwnerIndex == myShipIndex)
+            {
+                Packet p = new Packet(PacketType.PROJECTILE, clientID);
+                p.GdataInts.Add(0);
+                p.GdataInts.Add(projectileOwnerIndex);
+                p.GdataInts.Add(projectileIndex);
+                p.GdataVectors.Add(new Vector_3(location));
+
+                try
+                {
+                    master.Send(p.ToBytes());
+                    Debug.Log("Bytes sent");
+                }
+                catch (SocketException ex)
+                {
+                    Debug.Log("SocketException: " + ex);
+                    Debug.Log("Connection to server lost.");
+                    Disconnect();
+                }
+            }
+        }
+
+        private void OnShipDead(int shipIndex, int killerIndex)
+        {
+            Packet p = new Packet(PacketType.DEATH, clientID);
+            p.GdataInts.Add(0);
+            p.GdataInts.Add(shipIndex);
+            p.GdataInts.Add(killerIndex);
+
+            try
+            {
+                master.Send(p.ToBytes());
             }
             catch (SocketException ex)
             {
@@ -404,7 +499,7 @@ namespace Client
                 {
                     if (inGame)
                     {
-                        #region Local client controlled ship's movement data
+                        #region Local client controlled ship's info
                         shipInfoUpdateTimer += Time.fixedDeltaTime;
                         if (shipInfoUpdateTimer >= (1 / shipInfoUpdatesPerSecond))
                         {
@@ -421,19 +516,14 @@ namespace Client
                                 {
                                     Packet p = new Packet(PacketType.SHIPINFO, clientID);
                                     p.GdataInts.Add(shipInfoManager.shipInfoList[myShipInfoElement].shipIndex);
-                                    p.GdataFloats.Add(shipInfoManager.shipInfoList[myShipInfoElement].currentHealth);
                                     p.GdataStrings.Add(shipInfoManager.shipInfoList[myShipInfoElement].ownerID);
-                                    Vector_3 _shipPosition = new Vector_3(shipInfoManager.shipInfoList[myShipInfoElement].shipPosition);
-                                    p.GdataVectors.Add(_shipPosition);
-                                    Vector_3 _hullRotation = new Vector_3(shipInfoManager.shipInfoList[myShipInfoElement].hullRotation);
-                                    p.GdataVectors.Add(_hullRotation);
-                                    Vector_3 _turretRotation = new Vector_3(shipInfoManager.shipInfoList[myShipInfoElement].turretRotation);
-                                    p.GdataVectors.Add(_shipPosition);
+                                    p.GdataVectors.Add(new Vector_3(shipInfoManager.shipInfoList[myShipInfoElement].shipPosition));
+                                    p.GdataVectors.Add(new Vector_3(shipInfoManager.shipInfoList[myShipInfoElement].hullRotation));
+                                    p.GdataVectors.Add(new Vector_3(shipInfoManager.shipInfoList[myShipInfoElement].turretRotation));
 
                                     try
                                     {
                                         master.Send(p.ToBytes());
-                                        Debug.Log("Local shipInfo sent to the server");
                                     }
                                     catch (SocketException ex)
                                     {
@@ -446,16 +536,39 @@ namespace Client
                         }
                         #endregion
 
-                        #region Projectile spawning from server
+                        #region Projectile events from server
                         if (newlySpawnedProjectiles.Count > 0)
                         {
-                            for(int i = 0; i < newlySpawnedProjectiles.Count; i++)
+                            for (int i = 0; i < newlySpawnedProjectiles.Count; i++)
                             {
                                 em.BroadcastProjectileSpawnedByServer(newlySpawnedProjectiles[i].projectileOwnerIndex,
                                     newlySpawnedProjectiles[i].projectileIndex, newlySpawnedProjectiles[i].spawnPosition,
                                     newlySpawnedProjectiles[i].spawnRotation);
 
                                 newlySpawnedProjectiles.RemoveAt(i);
+                                i--;
+                            }
+                        }
+                        if (newlyHitProjectiles.Count > 0)
+                        {
+                            for (int i = 0; i < newlyHitProjectiles.Count; i++)
+                            {
+                                em.BroadcastProjectileHitShipByServer(newlyHitProjectiles[i].projectileOwnerIndex,
+                                    newlyHitProjectiles[i].projectileIndex, newlyHitProjectiles[i].hitShipIndex,
+                                    newlyHitProjectiles[i].projectileDamage);
+
+                                newlyHitProjectiles.RemoveAt(i);
+                                i--;
+                            }
+                        }
+                        if (newlyDestroyedProjectiles.Count > 0)
+                        {
+                            for (int i = 0; i < newlyDestroyedProjectiles.Count; i++)
+                            {
+                                em.BroadcastProjectileDestroyedByServer(newlyDestroyedProjectiles[i].projectileOwnerIndex,
+                                    newlyDestroyedProjectiles[i].projectileIndex, newlyHitProjectiles[i].hitLocation);
+
+                                newlyDestroyedProjectiles.RemoveAt(i);
                                 i--;
                             }
                         }
@@ -527,6 +640,20 @@ namespace Client
                     allClientsDoneWithMatchInitialization = false;
                 }
                 #endregion
+
+                #region Match ending
+                if (gameEnded)
+                {
+                    Debug.LogWarning("Game has ended, broadcasting info!");
+                    gameEnded = false;
+                    bool iWin = false;
+                    if (winnerIndex == myShipIndex)
+                        iWin = true;
+
+                    em.BroadcastMatchEndedByServer(winnerName, iWin);
+                    gameEnded = false;
+                }
+                #endregion
             }
 
             #region Disconnect requests from a thread
@@ -571,13 +698,16 @@ namespace Client
                             Packet packet = new Packet(Buffer);
                             if (!packet.errorEncountered)
                             {
-                                Debug.Log("ErrorEncountered when creating packet from buffer, discarding packet");
                                 DataManager(packet);
+                            }
+                            else
+                            {
+                                Debug.LogWarning("ErrorEncountered when creating packet from buffer, discarding packet");
                             }
                         }
                         catch
                         {
-                            Debug.LogWarning("Unable to create packet from buffer bytes!");
+                            Debug.LogWarning("Unable to create packet from buffer bytes! readBytes: " + readBytes);
                         }
                     }
                 }
@@ -595,7 +725,7 @@ namespace Client
         #region DataManager
         static void DataManager(Packet p)
         {
-            Debug.Log("DataManager called");
+            Debug.Log("DataManager called, packetType: " + p.packetType);
             int shipIndex = -1;
 
             switch (p.packetType)
@@ -604,12 +734,11 @@ namespace Client
                     #region Registration packet handling
                     clientID = p.GdataStrings[0];
                     registrationResponse = 1;
-                    Debug.Log("Registration packet managed, my id: " + clientID);
                     #endregion
                     break;
 
                 case PacketType.DEBUG:
-                    Debug.Log("Debug packet managed");
+                    Debug.Log("PacketType Debug: " + p.GdataStrings[0]);
                     break;
 
                 case PacketType.LOBBYEVENT:
@@ -619,7 +748,6 @@ namespace Client
                     if (tmp1 == 0)
                     {
                         lobbyJoinedResponse = tmp2;
-                        Debug.Log("LobbyJoinedResponse: " + lobbyJoinedResponse);
                     }
                     else if (tmp1 == 1)
                     {
@@ -640,67 +768,92 @@ namespace Client
                     int tmp = p.GdataInts[0];
                     if (tmp == 0)
                     {
-                        Debug.Log("GameStart packet: begin initializing match");
                         numberOfShips = p.GdataInts[1];
-                        Debug.Log("NetworkClient, numberOfShips: " + numberOfShips);
                         startMatch = true;
                     }
                     else if (tmp == 1)
                     {
-                        Debug.Log("GameStart packet: all clients done with match initialization, start match timer");
                         allClientsDoneWithMatchInitialization = true;
-                        Debug.Log("");
                     }
-                    Debug.Log("GameStart packet managed");
                     #endregion
                     break;
 
                 case PacketType.SPAWN:
                     #region Spawn packet handling
-                    Debug.Log("Starting to manage spawn packet");
                     ShipInfo newShipInfo = new ShipInfo();
                     shipIndex = p.GdataInts[0];
                     string ownerID = p.GdataStrings[0];
                     if (ownerID == clientID)
                     {
                         myShipIndex = shipIndex;
-                        Debug.Log("NetworkClient, SPAWN-type packet: MyShipIndex found");
                     }
                     newShipInfo.shipIndex = shipIndex;
                     newShipInfo.ownerID = ownerID;
                     newShipInfo.spawnPointIndex = p.GdataInts[1];
                     newShipInfo.shipColorIndex = p.GdataInts[2];
                     newlySpawnedShips.Add(newShipInfo);
-                    Debug.Log("Spawn packet managed");
                     #endregion
                     break;
 
                 case PacketType.PROJECTILE:
-                    ProjectileInfo newProjectileInfo = new ProjectileInfo();
-                    newProjectileInfo.projectileOwnerIndex = p.GdataInts[0];
-                    newProjectileInfo.projectileIndex = p.GdataInts[1];
-                    newProjectileInfo.spawnPosition = p.GdataVectors[0].ToVector3();
-                    newProjectileInfo.spawnRotation = p.GdataVectors[1].ToVector3();
-                    newlySpawnedProjectiles.Add(newProjectileInfo);
-                    Debug.Log("Projectile packet managed");
+                    #region Projectile packet handling
+                    if (p.GdataInts[0] == 0)
+                    {
+                        ProjectileInfo newProjectileInfo = new ProjectileInfo();
+                        newProjectileInfo.projectileOwnerIndex = p.GdataInts[1];
+                        newProjectileInfo.projectileIndex = p.GdataInts[2];
+                        newProjectileInfo.spawnPosition = p.GdataVectors[0].ToVector3();
+                        newProjectileInfo.spawnRotation = p.GdataVectors[1].ToVector3();
+                        newlySpawnedProjectiles.Add(newProjectileInfo);
+                    }
+                    else if (p.GdataInts[0] == 1)
+                    {
+                        ProjectileInfo newProjectileInfo = new ProjectileInfo();
+                        newProjectileInfo.projectileOwnerIndex = p.GdataInts[1];
+                        newProjectileInfo.projectileIndex = p.GdataInts[2];
+                        newProjectileInfo.hitShipIndex = p.GdataInts[3];
+                        newProjectileInfo.projectileDamage = p.GdataFloats[0];
+                        newlyHitProjectiles.Add(newProjectileInfo);
+                    }
+                    else if (p.GdataInts[0] == 2)
+                    {
+                        ProjectileInfo newProjectileInfo = new ProjectileInfo();
+                        newProjectileInfo.projectileOwnerIndex = p.GdataInts[1];
+                        newProjectileInfo.projectileIndex = p.GdataInts[2];
+                        newProjectileInfo.hitLocation = p.GdataVectors[0].ToVector3();
+                        newlyDestroyedProjectiles.Add(newProjectileInfo);
+                    }
+                    #endregion
                     break;
 
                 case PacketType.SHIPINFO:
                     #region ShipInfo packet handling
-                    shipIndex = p.GdataInts[0];
-                    Vector3 shipPosition = p.GdataVectors[0].ToVector3();
-                    Vector3 hullRotation = p.GdataVectors[1].ToVector3();
-                    Vector3 turretRotation = p.GdataVectors[2].ToVector3();
-
-                    int shipInfoListElement = shipInfoManager.GetMyShipInfoElement(shipIndex);
+                    int shipInfoListElement = shipInfoManager.GetMyShipInfoElement(p.GdataInts[0]);
                     if (shipInfoListElement != -1)
                     {
-                        Debug.Log("NetworkClient: ShipInfo found with shipIndex, updating info");
-                        shipInfoManager.shipInfoList[shipInfoListElement].shipPosition = shipPosition;
-                        shipInfoManager.shipInfoList[shipInfoListElement].hullRotation = hullRotation;
-                        shipInfoManager.shipInfoList[shipInfoListElement].turretRotation = turretRotation;
+                        shipInfoManager.shipInfoList[shipInfoListElement].shipPosition = p.GdataVectors[0].ToVector3();
+                        shipInfoManager.shipInfoList[shipInfoListElement].hullRotation = p.GdataVectors[1].ToVector3();
+                        shipInfoManager.shipInfoList[shipInfoListElement].turretRotation = p.GdataVectors[2].ToVector3();
                     }
                     #endregion
+                    break;
+
+                case PacketType.DEATH:
+                    #region Death packet handling
+                    int shipInfoListElement2 = shipInfoManager.GetMyShipInfoElement(p.GdataInts[0]);
+                    if (shipInfoListElement2 != -1)
+                    {
+                        shipInfoManager.shipInfoList[shipInfoListElement2].killerIndex = p.GdataInts[1];
+                        shipInfoManager.shipInfoList[shipInfoListElement2].isDead = true;
+                    }
+                    #endregion
+                    break;
+
+                case PacketType.GAMEEND:
+                    winnerIndex = p.GdataInts[0];
+                    winnerName = p.GdataStrings[0];
+                    gameEnded = true;
+                    Debug.LogWarning("GameEndPacket managed");
                     break;
 
             }

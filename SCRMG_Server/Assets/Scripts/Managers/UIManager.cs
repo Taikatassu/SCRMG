@@ -14,6 +14,7 @@ public class UIManager : MonoBehaviour {
     GameObject leftUIPanel;
     GameObject rightUIPanel;
     GameObject hudHolder;
+    GameObject gameEndPanel;
     Text matchStartTimerText; //TODO: Set this in Awake
     Text hudTimerText; //TODO: Set this in Awake
 
@@ -43,9 +44,12 @@ public class UIManager : MonoBehaviour {
         GameObject hudTimer = Instantiate(Resources.Load("UI/MatchTimer", typeof(GameObject)),
             hudHolder.transform) as GameObject;
         hudTimerText = hudTimer.GetComponent<Text>();
+        gameEndPanel = Instantiate(Resources.Load("UI/GameEndPanel", typeof(GameObject)),
+            hudHolder.transform) as GameObject;
 
         matchStartTimer.SetActive(false);
         hudTimer.SetActive(false);
+        gameEndPanel.SetActive(false);
     }
 
     private void OnEnable()
@@ -56,6 +60,7 @@ public class UIManager : MonoBehaviour {
         em.OnClientExitLobby += OnClientExitLobby;
         em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
         em.OnMatchTimerValueChange += OnMatchTimerValueChange;
+        em.OnMatchEnded += OnMatchEnded;
     }
 
     private void OnDisable()
@@ -66,6 +71,7 @@ public class UIManager : MonoBehaviour {
         em.OnClientExitLobby -= OnClientExitLobby;
         em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
         em.OnMatchTimerValueChange -= OnMatchTimerValueChange;
+        em.OnMatchEnded -= OnMatchEnded;
     }
     #endregion
 
@@ -140,6 +146,12 @@ public class UIManager : MonoBehaviour {
         {
             hudTimerText.text = t.ToString();
         }
+    }
+
+    private void OnMatchEnded(int winnerIndex)
+    {
+        gameEndPanel.SetActive(true);
+        gameEndPanel.transform.GetChild(1).GetComponent<Text>().text = "ShipIndex " + winnerIndex + " wins!";
     }
     #endregion
 

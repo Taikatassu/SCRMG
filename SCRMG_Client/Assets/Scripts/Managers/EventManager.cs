@@ -32,7 +32,10 @@ public class EventManager : MonoBehaviour
     public delegate void IntFloatVoid(int integer, float floatingpoint);
     public delegate void IntIntVoid(int integer1, int integer2);
     public delegate void IntIntIntVoid(int integer1, int integer2, int integer3);
+    public delegate void IntIntIntFloatVoid(int integer1, int integer2, int integer3, float floatingPoint);
+    public delegate void IntIntVector3Void(int integer1, int integer2, Vector3 vec31);
     public delegate void IntIntVector3Vector3Void(int integer1, int integer2, Vector3 vec31, Vector3 vec32);
+    public delegate void IntIntVector3Vector3BoolVoid(int integer1, int integer2, Vector3 vec31, Vector3 vec32, bool boolean);
     public delegate void Vector2Void(Vector2 vec2);
     public delegate void IntVector2Void(int integer, Vector2 vec2);
     public delegate void IntVector3Void(int integer, Vector3 vec3);
@@ -43,6 +46,7 @@ public class EventManager : MonoBehaviour
     public delegate bool EmptyBool();
     public delegate int EmptyInt();
     public delegate void IntIntIntStringVoid(int integer1, int integer2, int integer3, string string1);
+    public delegate void StringBoolVoid(string string1, bool boolean);
     #endregion
 
     #region Events
@@ -373,12 +377,21 @@ public class EventManager : MonoBehaviour
         }
     }
 
-    public event IntVoid OnShipDead;
-    public void BroadcastShipDead(int shipIndex)
+    public event IntIntVoid OnShipDead;
+    public void BroadcastShipDead(int shipIndex, int killerIndex)
     {
         if (OnShipDead != null)
         {
-            OnShipDead(shipIndex);
+            OnShipDead(shipIndex, killerIndex);
+        }
+    }
+
+    public event IntIntVoid OnShipDeadByServer;
+    public void BroadcastShipDeadByServer(int shipIndex, int killerIndex)
+    {
+        if (OnShipDeadByServer != null)
+        {
+            OnShipDeadByServer(shipIndex, killerIndex);
         }
     }
 
@@ -468,30 +481,22 @@ public class EventManager : MonoBehaviour
     #endregion
 
     #region ShipInfo
-    public event IntFloatVoid OnShipHealthChange;
-    public void BroadcastShipHealthChange(int shipIndex, float currentHealth)
+    public event StringBoolVoid OnMatchEndedByServer;
+    public void BroadcastMatchEndedByServer(string winnerName, bool localPlayerWins)
     {
-        if (OnShipHealthChange != null)
+        Debug.LogWarning("EventManager: BroadcastMatchEndedByServer");
+        if (OnMatchEndedByServer != null)
         {
-            OnShipHealthChange(shipIndex, currentHealth);
+            OnMatchEndedByServer(winnerName, localPlayerWins);
         }
     }
 
-    public event IntIntVector3Vector3Void OnProjectileSpawned;
-    public void BroadcastProjectileSpawned(int projectileOwnerIndex, int projectileIndex, Vector3 spawnPosition, Vector3 spawnRotation)
+    public event IntIntVector3Vector3BoolVoid OnProjectileSpawned;
+    public void BroadcastProjectileSpawned(int projectileOwnerIndex, int projectileIndex, Vector3 spawnPosition, Vector3 spawnRotation, bool isControlledByServer)
     {
         if (OnProjectileSpawned != null)
         {
-            OnProjectileSpawned(projectileOwnerIndex, projectileIndex, spawnPosition, spawnRotation);
-        }
-    }
-
-    public event IntIntVoid OnProjectileDestroyed;
-    public void BroadcastProjectileDestroyed(int projectileOwnerIndex, int projectileIndex)
-    {
-        if (OnProjectileDestroyed != null)
-        {
-            OnProjectileDestroyed(projectileOwnerIndex, projectileIndex);
+            OnProjectileSpawned(projectileOwnerIndex, projectileIndex, spawnPosition, spawnRotation, isControlledByServer);
         }
     }
 
@@ -504,12 +509,39 @@ public class EventManager : MonoBehaviour
         }
     }
 
-    public event IntIntVoid OnProjectileDestroyedByServer;
-    public void BroadcastProjectileDestroyedByServer(int projectileOwnerIndex, int projectileIndex)
+    public event IntIntIntFloatVoid OnProjectileHitShip;
+    public void BroadcastProjectileHitShip(int projectileOwnerIndex, int projectileIndex, int hitShipIndex, float projectileDamage)
+    {
+        if (OnProjectileHitShip != null)
+        {
+            OnProjectileHitShip(projectileOwnerIndex, projectileIndex, hitShipIndex, projectileDamage);
+        }
+    }
+
+    public event IntIntIntFloatVoid OnProjectileHitShipByServer;
+    public void BroadcastProjectileHitShipByServer(int projectileOwnerIndex, int projectileIndex, int hitShipIndex, float projectileDamage)
+    {
+        if (OnProjectileHitShipByServer != null)
+        {
+            OnProjectileHitShipByServer(projectileOwnerIndex, projectileIndex, hitShipIndex, projectileDamage);
+        }
+    }
+
+    public event IntIntVector3Void OnProjectileDestroyed;
+    public void BroadcastProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, Vector3 location)
+    {
+        if (OnProjectileDestroyed != null)
+        {
+            OnProjectileDestroyed(projectileOwnerIndex, projectileIndex, location);
+        }
+    }
+
+    public event IntIntVector3Void OnProjectileDestroyedByServer;
+    public void BroadcastProjectileDestroyedByServer(int projectileOwnerIndex, int projectileIndex, Vector3 location)
     {
         if (OnProjectileDestroyedByServer != null)
         {
-            OnProjectileDestroyedByServer(projectileOwnerIndex, projectileIndex);
+            OnProjectileDestroyedByServer(projectileOwnerIndex, projectileIndex, location);
         }
     }
 

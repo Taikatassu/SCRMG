@@ -265,10 +265,11 @@ public class UIManager : MonoBehaviour
         em.OnRequestUINotification += OnRequestUINotification;
         em.OnLobbyEnterSuccessful += OnLobbyEnterSuccessful;
         em.OnLobbyEnterDenied += OnLobbyEnterDenied;
-        em.OnConnectingToNetworkFailed += OnConnectingToNetworkFailed;
+        //em.OnConnectingToNetworkFailed += OnConnectingToNetworkFailed;
         em.OnRequestLoadingIconOn += OnRequestLoadingIconOn;
         em.OnRequestLoadingIconOff += OnRequestLoadingIconOff;
         em.OnNetworkMultiplayerStartMatchStartTimer += OnNetworkMultiplayerStartMatchStartTimer;
+        em.OnMatchEndedByServer += OnMatchEndedByServer;
     }
 
     private void OnDisable()
@@ -290,10 +291,11 @@ public class UIManager : MonoBehaviour
         em.OnRequestUINotification -= OnRequestUINotification;
         em.OnLobbyEnterSuccessful -= OnLobbyEnterSuccessful;
         em.OnLobbyEnterDenied -= OnLobbyEnterDenied;
-        em.OnConnectingToNetworkFailed -= OnConnectingToNetworkFailed;
+        //em.OnConnectingToNetworkFailed -= OnConnectingToNetworkFailed;
         em.OnRequestLoadingIconOn -= OnRequestLoadingIconOn;
         em.OnRequestLoadingIconOff -= OnRequestLoadingIconOff;
         em.OnNetworkMultiplayerStartMatchStartTimer -= OnNetworkMultiplayerStartMatchStartTimer;
+        em.OnMatchEndedByServer -= OnMatchEndedByServer;
     }
     #endregion
 
@@ -315,7 +317,7 @@ public class UIManager : MonoBehaviour
             mainMenuConnectButton.transform.GetChild(1).gameObject.SetActive(false);
         }
     }
-    
+
     private void OnConnectingToNetworkFailed(string ip)
     {
         //TODO: Remove if deemed permanently obsolete
@@ -366,6 +368,21 @@ public class UIManager : MonoBehaviour
     {
         Debug.Log("OnLobbyEnterDenied: Closing loading icon");
         CloseLoadingIcon();
+    }
+
+    private void OnMatchEndedByServer(string winnerName, bool localPlayerWins)
+    {
+        Debug.LogWarning("UIManager: OnMatchEndedByServer");
+        if (localPlayerWins)
+        {
+            pauseMenuText.GetComponentInChildren<Text>().text = "Victory!";
+        }
+        else
+        {
+            pauseMenuText.GetComponentInChildren<Text>().text = "Defeat! " + winnerName + " wins.";
+        }
+
+        OpenGameEndMenu();
     }
     #endregion
 
@@ -421,7 +438,7 @@ public class UIManager : MonoBehaviour
             CloseLoadingIcon();
             CloseLoadingScreen();
         }
-        else if (sceneIndex == sceneIndexLevel01 
+        else if (sceneIndex == sceneIndexLevel01
             && em.BroadcastRequestCurrentGameModeIndex() == gameModeSingleplayerIndex)
         {
             OpenLoadingScreen();
@@ -468,12 +485,6 @@ public class UIManager : MonoBehaviour
             {
                 pauseMenuText.GetComponentInChildren<Text>().text = lossText;
             }
-            OpenGameEndMenu();
-        }
-        else if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
-        {
-            // TODO: Check if last ship alive is localPlayer and change text accordingly
-            pauseMenuText.GetComponentInChildren<Text>().text = "NetMp GameEnd";
             OpenGameEndMenu();
         }
         else if (currentGameModeIndex == gameModeLocalMultiplayerIndex)
@@ -834,7 +845,7 @@ public class UIManager : MonoBehaviour
 
         lobbyParticipantCountDisplay = Instantiate(Resources.Load("UI/MainMenu/MainMenuInfoDisplay", typeof(GameObject)),
                 mainMenuCenter.transform) as GameObject;
-        lobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PARTICIPANTS READY: " 
+        lobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PARTICIPANTS READY: "
             + numberOfLobbyParticipantsReady + "/" + numberOfPlayersInLobby;
 
         lobbyReadyButtonHolder = Instantiate(Resources.Load("UI/MainMenu/MainMenuButtonWithToggleMark", typeof(GameObject)),
@@ -847,7 +858,7 @@ public class UIManager : MonoBehaviour
         else
             lobbyReadyToggleMarkOnImage.SetActive(false);
         lobbyReadyButtonHolder.GetComponentInChildren<Button>(true).onClick.AddListener(OnLobbyReadyButtonPressed);
-        
+
         mainMenuReturnButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuReturnButton", typeof(GameObject)),
                 mainMenuRightSlotBot.transform) as GameObject;
         mainMenuReturnButton.GetComponent<Button>().onClick.AddListener(OnMainMenuReturnButtonPressed);
@@ -894,7 +905,7 @@ public class UIManager : MonoBehaviour
 
     private void OpenLobbyStartMatchButton()
     {
-        if(uiState == UIState.MAINMENUONLINELOBBY)
+        if (uiState == UIState.MAINMENUONLINELOBBY)
         {
             lobbyStartMatchButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
                     mainMenuCenter.transform) as GameObject;
@@ -1006,7 +1017,7 @@ public class UIManager : MonoBehaviour
 
     private void OnGameModeNetworkMultiplayerButtonPressed()
     {
-        if(!loading)
+        if (!loading)
         {
             if (!networkFunctionalityDisabled)
             {
@@ -1243,6 +1254,7 @@ public class UIManager : MonoBehaviour
 
     private void OpenGameEndMenu()
     {
+        Debug.LogWarning("UIManager: OpenGameEndMenu");
         ClosePauseMenu();
 
         HUDOffline();
@@ -1312,7 +1324,14 @@ public class UIManager : MonoBehaviour
             ClosePauseMenu();
             ResetOffscreenTargetFollowing();
             DestroyOffscreenIndicators();
-            em.BroadcastGameRestart();
+            if(currentGameModeIndex != gameModeNetworkMultiplayerIndex)
+            {
+                em.BroadcastGameRestart();
+            }
+            else
+            {
+                //TODO: Broadcast restart game request to the server
+            }
         }
     }
 
@@ -1322,7 +1341,14 @@ public class UIManager : MonoBehaviour
         ClosePauseMenu();
         ResetOffscreenTargetFollowing();
         DestroyOffscreenIndicators();
-        em.BroadcastRequestSceneSingleMainMenu();
+        if(currentGameModeIndex != gameModeNetworkMultiplayerIndex)
+        {
+            em.BroadcastRequestSceneSingleMainMenu();
+        }
+        else
+        {
+            //TODO: Broadcast lobby exit to the server
+        }
     }
     #endregion
 

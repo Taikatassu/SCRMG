@@ -35,11 +35,15 @@ public class EventManager : MonoBehaviour {
     public delegate void StringIntVoid(string string1, int integer);
     public delegate bool ClientDataBool(ClientData clientData);
     public delegate int EmptyInt();
+    public delegate void IntIntIntFloatVector3Void(int integer1, int integer2, int integer3, float floatingPoint, Vector3 vec3);
     public delegate void IntIntIntStringVoid(int integer1, int integer2, int integer3, string string1);
     public delegate void GameObjectVoid(GameObject gameObject);
     public delegate void IntVector3Void(int integer, Vector3 vec3);
     public delegate void IntIntVector3Vector3Void(int integer1, int integer2, Vector3 vec31, Vector3 vec32);
     public delegate void IntIntVoid(int integer1, int integer2);
+    public delegate void IntIntVector3Void(int integer1, int integer2, Vector3 vec3);
+    public delegate void IntIntIntFloatVoid(int integer1, int integer2, int integer3, float floatingPoint);
+    public delegate void IntBoolVoid(int integer, bool boolean);
     #endregion
 
     #region Events
@@ -126,7 +130,25 @@ public class EventManager : MonoBehaviour {
             OnShipSpawnByServer(shipIndex, spawnPointIndex, shipColorIndex, ownerID);
         }
     }
-    
+
+    public event IntIntVoid OnShipDead;
+    public void BroadcastShipDead(int shipIndex, int killerIndex)
+    {
+        if (OnShipDead != null)
+        {
+            OnShipDead(shipIndex, killerIndex);
+        }
+    }
+
+    public event IntIntVoid OnShipDeadByClient;
+    public void BroadcastShipDeadByClient(int shipIndex, int killerIndex)
+    {
+        if (OnShipDeadByClient != null)
+        {
+            OnShipDeadByClient(shipIndex, killerIndex);
+        }
+    }
+
     public event GameObjectVoid OnShipReference;
     public void BroadcastShipReference(GameObject newShip)
     {
@@ -199,15 +221,6 @@ public class EventManager : MonoBehaviour {
         }
     }
 
-    public event IntIntVoid OnProjectileDestroyed;
-    public void BroadcastProjectileDestroyed(int projectileOwnerIndex, int projectileIndex)
-    {
-        if (OnProjectileDestroyed != null)
-        {
-            OnProjectileDestroyed(projectileOwnerIndex, projectileIndex);
-        }
-    }
-
     public event IntIntVector3Vector3Void OnProjectileSpawnedByClient;
     public void BroadcastProjectileSpawnedByClient(int projectileOwnerIndex, int projectileIndex, Vector3 spawnPosition, Vector3 spawnRotation)
     {
@@ -217,12 +230,39 @@ public class EventManager : MonoBehaviour {
         }
     }
 
-    public event IntIntVoid OnProjectileDestroyedByClient;
-    public void BroadcastProjectileDestroyedByClient(int projectileOwnerIndex, int projectileIndex)
+    public event IntIntIntFloatVoid OnProjectileHitShip;
+    public void BroadcastProjectileHitShip(int projectileOwnerIndex, int projectileIndex, int hitShipIndex, float projectileDamage)
+    {
+        if (OnProjectileHitShip != null)
+        {
+            OnProjectileHitShip(projectileOwnerIndex, projectileIndex, hitShipIndex, projectileDamage);
+        }
+    }
+
+    public event IntIntIntFloatVoid OnProjectileHitShipByClient;
+    public void BroadcastProjectileHitShipByClient(int projectileOwnerIndex, int projectileIndex, int hitShipIndex, float projectileDamage)
+    {
+        if (OnProjectileHitShipByClient != null)
+        {
+            OnProjectileHitShipByClient(projectileOwnerIndex, projectileIndex, hitShipIndex, projectileDamage);
+        }
+    }
+
+    public event IntIntVector3Void OnProjectileDestroyed;
+    public void BroadcastProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, Vector3 location)
+    {
+        if (OnProjectileDestroyed != null)
+        {
+            OnProjectileDestroyed(projectileOwnerIndex, projectileIndex, location);
+        }
+    }
+
+    public event IntIntVector3Void OnProjectileDestroyedByClient;
+    public void BroadcastProjectileDestroyedByClient(int projectileOwnerIndex, int projectileIndex, Vector3 location)
     {
         if (OnProjectileDestroyedByClient != null)
         {
-            OnProjectileDestroyedByClient(projectileOwnerIndex, projectileIndex);
+            OnProjectileDestroyedByClient(projectileOwnerIndex, projectileIndex, location);
         }
     }
     #endregion

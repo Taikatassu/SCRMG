@@ -28,10 +28,10 @@ public class Projectile : MonoBehaviour
     public enum EProjectileType { DEFAULT, BULLET, RUBBERBULLET, BLAZINGRAM, BEAMCANNON, BOMBS }
     EProjectileType projectileType = EProjectileType.DEFAULT;
     Color projectileColor;
-    bool isPaused = false;
     bool ricohetOnCooldown = false;
     bool isPersistingProjectile = false;
     bool isInitialized = false;
+    bool isControlledByServer = false;
     float projectileDamage = -1;
     float projectileSpeed = -1;
     float projectileRicochetCooldown = -1;
@@ -69,26 +69,31 @@ public class Projectile : MonoBehaviour
     #region OnEnable & OnDisable
     void OnEnable()
     {
+        em.OnProjectileDestroyedByClient += OnProjectileDestroyedByClient;
         //em.OnGameRestart += OnGameRestart;
     }
 
     void OnDisable()
     {
+        em.OnProjectileDestroyedByClient -= OnProjectileDestroyedByClient;
         //em.OnGameRestart -= OnGameRestart;
         projectileType = EProjectileType.DEFAULT;
     }
     #endregion
 
     #region Subscribers
-    private void OnPauseOn()
+    private void OnProjectileDestroyedByClient(int projectileOwnerIndex, int projectileIndex, Vector3 location)
     {
-        isPaused = true;
-        rb.velocity = Vector3.zero;
-    }
-
-    private void OnPauseOff()
-    {
-        isPaused = false;
+        if (!isControlledByServer)
+        {
+            if(ownerIndex == projectileOwnerIndex && projectileIndex == this.projectileIndex)
+            {
+                GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                    location, Quaternion.identity) as GameObject;
+                bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                DestroyThisProjectile();
+            }
+        }
     }
 
     private void OnGameRestart()
@@ -105,8 +110,10 @@ public class Projectile : MonoBehaviour
 
     #region Setters & getters
     #region Setters
-    public void InitializeProjectile(int newOwnerIndex, int newProjectileIndex, int newProjectileType, Color newProjectileColor)
+    public void InitializeProjectile(int newOwnerIndex, int newProjectileIndex, int newProjectileType, Color newProjectileColor, bool isControlledByServerState)
     {
+        isControlledByServer = isControlledByServerState;
+
         ownerIndex = newOwnerIndex;
         projectileIndex = newProjectileIndex;
         projectileColor = newProjectileColor;
@@ -331,101 +338,98 @@ public class Projectile : MonoBehaviour
     #region FixedUpdate
     private void FixedUpdate()
     {
-        if (!isPaused)
+        if (isInitialized)
         {
-            if (isInitialized)
+            if (!isPersistingProjectile)
             {
-                if (!isPersistingProjectile)
+                #region Non-persisting projectile management
+                #region Movement
+                rb.velocity = Vector3.zero;
+                rb.MovePosition(transform.forward * projectileSpeed * Time.fixedDeltaTime + rb.position);
+                #endregion
+
+                #region Outside area bounds detection
+                //TODO: Implement a proper way to detect if projectile is outside of arena bounds, and returning it back to arena
+                Vector3 currentPosition = transform.position;
+                if (currentPosition.x > 25)
                 {
-                    #region Non-persisting projectile management
-                    #region Movement
-                    rb.velocity = Vector3.zero;
-                    rb.MovePosition(transform.forward * projectileSpeed * Time.fixedDeltaTime + rb.position);
-                    #endregion
-
-                    #region Outside area bounds detection
-                    //TODO: Implement a proper way to detect if projectile is outside of arena bounds, and returning it back to arena
-                    Vector3 currentPosition = transform.position;
-                    if (currentPosition.x > 25)
-                    {
-                        Vector3 newPosition = currentPosition;
-                        newPosition.x = 24;
-                        transform.position = newPosition;
-                        //Vector3 currentRotation = transform.localEulerAngles;
-                        //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
-                        transform.rotation = Quaternion.LookRotation(Ricochet());
-                    }
-                    else if (currentPosition.x < -25)
-                    {
-                        Vector3 newPosition = currentPosition;
-                        newPosition.x = -24;
-                        transform.position = newPosition;
-                        //Vector3 currentRotation = transform.localEulerAngles;
-                        //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
-                        transform.rotation = Quaternion.LookRotation(Ricochet());
-                    }
-                    else if (currentPosition.z > 25)
-                    {
-                        Vector3 newPosition = currentPosition;
-                        newPosition.z = 24;
-                        transform.position = newPosition;
-                        //Vector3 currentRotation = transform.localEulerAngles;
-                        //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
-                        transform.rotation = Quaternion.LookRotation(Ricochet());
-                    }
-                    else if (currentPosition.z < -25)
-                    {
-                        Vector3 newPosition = currentPosition;
-                        newPosition.z = -24;
-                        transform.position = newPosition;
-                        //Vector3 currentRotation = transform.localEulerAngles;
-                        //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
-                        transform.rotation = Quaternion.LookRotation(Ricochet());
-                    }
-                    #endregion
-
-                    #region Lifetime timer
-                    projectileLifetimeTimer--;
-                    if (projectileLifetimeTimer <= 0)
-                    {
-                        projectileLifetimeTimer = 0;
-                        OnProjectileLifetimeEnded();
-                    }
-                    #endregion
-
-                    #region Ricochet cooldown
-                    if (ricohetOnCooldown)
-                    {
-                        ricochetCooldownTimer--;
-                        if (ricochetCooldownTimer <= 0)
-                        {
-                            ricochetCooldownTimer = 0;
-                            ricohetOnCooldown = false;
-                        }
-                    }
-                    #endregion
-                    #endregion
+                    Vector3 newPosition = currentPosition;
+                    newPosition.x = 24;
+                    transform.position = newPosition;
+                    //Vector3 currentRotation = transform.localEulerAngles;
+                    //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
+                    transform.rotation = Quaternion.LookRotation(Ricochet());
                 }
-                else
+                else if (currentPosition.x < -25)
                 {
-                    #region Persisting projectile management
-                    #region Tick rate counter
-                    if (projectileCollider.enabled == true)
-                    {
-                        projectileCollider.enabled = false;
-                    }
-
-                    projectileTickRateCounter--;
-                    if (projectileTickRateCounter <= 0)
-                    {
-                        projectileTickRateCounter = Mathf.RoundToInt(projectileTickInterval
-                            / Time.fixedDeltaTime);
-
-                        projectileCollider.enabled = true;
-                    }
-                    #endregion
-                    #endregion
+                    Vector3 newPosition = currentPosition;
+                    newPosition.x = -24;
+                    transform.position = newPosition;
+                    //Vector3 currentRotation = transform.localEulerAngles;
+                    //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
+                    transform.rotation = Quaternion.LookRotation(Ricochet());
                 }
+                else if (currentPosition.z > 25)
+                {
+                    Vector3 newPosition = currentPosition;
+                    newPosition.z = 24;
+                    transform.position = newPosition;
+                    //Vector3 currentRotation = transform.localEulerAngles;
+                    //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
+                    transform.rotation = Quaternion.LookRotation(Ricochet());
+                }
+                else if (currentPosition.z < -25)
+                {
+                    Vector3 newPosition = currentPosition;
+                    newPosition.z = -24;
+                    transform.position = newPosition;
+                    //Vector3 currentRotation = transform.localEulerAngles;
+                    //transform.localEulerAngles = new Vector3(currentRotation.x, currentRotation.y + 180, currentRotation.z);
+                    transform.rotation = Quaternion.LookRotation(Ricochet());
+                }
+                #endregion
+
+                #region Lifetime timer
+                projectileLifetimeTimer--;
+                if (projectileLifetimeTimer <= 0)
+                {
+                    projectileLifetimeTimer = 0;
+                    OnProjectileLifetimeEnded();
+                }
+                #endregion
+
+                #region Ricochet cooldown
+                if (ricohetOnCooldown)
+                {
+                    ricochetCooldownTimer--;
+                    if (ricochetCooldownTimer <= 0)
+                    {
+                        ricochetCooldownTimer = 0;
+                        ricohetOnCooldown = false;
+                    }
+                }
+                #endregion
+                #endregion
+            }
+            else
+            {
+                #region Persisting projectile management
+                #region Tick rate counter
+                if (projectileCollider.enabled == true)
+                {
+                    projectileCollider.enabled = false;
+                }
+
+                projectileTickRateCounter--;
+                if (projectileTickRateCounter <= 0)
+                {
+                    projectileTickRateCounter = Mathf.RoundToInt(projectileTickInterval
+                        / Time.fixedDeltaTime);
+
+                    projectileCollider.enabled = true;
+                }
+                #endregion
+                #endregion
             }
         }
     }
@@ -452,11 +456,10 @@ public class Projectile : MonoBehaviour
     bool isBeingDestroyed = false;
     private void DestroyThisProjectile()
     {
-        Debug.Log("Projectile, DestroyThisProjectile. ownerIndex: " + ownerIndex + ", projectileIndex: " + projectileIndex);
         if (!isBeingDestroyed)
         {
             isBeingDestroyed = true;
-            em.BroadcastProjectileDestroyed(ownerIndex, projectileIndex);
+            em.BroadcastProjectileDestroyed(ownerIndex, projectileIndex, transform.position);
             Destroy(gameObject);
         }
     }
@@ -491,16 +494,16 @@ public class Projectile : MonoBehaviour
             #region Collision with ships
             if (collidedObjectTag == shipTag)
             {
-                collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage);
-                if (!isPersistingProjectile)
+                if (isControlledByServer)
                 {
+                    ShipController collidedShip = collidedObject.GetComponentInParent<ShipController>();
+                    collidedShip.TakeDamage(projectileDamage, ownerIndex);
+                    em.BroadcastProjectileHitShip(ownerIndex, projectileIndex, collidedShip.GetIndex(), projectileDamage);
                     DestroyOnHit();
                 }
                 else
                 {
-                    GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-                        collidedObject.transform.position, Quaternion.identity) as GameObject;
-                    bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                    Debug.Log("Projectile is not controlled by server, ignoring ship collision");
                 }
             }
             #endregion
@@ -539,17 +542,16 @@ public class Projectile : MonoBehaviour
             #region Collision with ships
             if (collidedObjectTag == shipTag)
             {
-                Debug.Log("Damaging ship, projectileDamage: " + projectileDamage);
-                collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage);
-                if (!isPersistingProjectile)
+                if (isControlledByServer)
                 {
+                    ShipController collidedShip = collidedObject.GetComponentInParent<ShipController>();
+                    collidedShip.TakeDamage(projectileDamage, ownerIndex);
+                    em.BroadcastProjectileHitShip(ownerIndex, projectileIndex, collidedShip.GetIndex(), projectileDamage);
                     DestroyOnHit();
                 }
                 else
                 {
-                    GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-                        collidedObject.transform.position, Quaternion.identity) as GameObject;
-                    bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                    Debug.Log("Projectile is not controlled by server, ignoring ship collision");
                 }
             }
             #endregion

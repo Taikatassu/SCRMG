@@ -12,6 +12,7 @@ public class ShipInfo
     public int shipIndex;
     public int shipColorIndex;
     public int spawnPointIndex;
-    public float currentHealth;
+    public int killerIndex;
     public string ownerID;
+    public bool isDead = false;
 }

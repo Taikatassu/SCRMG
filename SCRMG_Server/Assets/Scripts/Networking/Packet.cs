@@ -54,7 +54,7 @@ namespace ServerData
             int packetTypeIndex;
             if (int.TryParse(types[0], out packetTypeIndex))
             {
-                Debug.Log("packetTypeIndex parsed successfully");
+                //Debug.Log("packetTypeIndex parsed successfully");
             }
             else
             {
@@ -113,7 +113,7 @@ namespace ServerData
                     int value;
                     if (int.TryParse(str, out value))
                     {
-                        Debug.Log("GdataInts value parsed successfully, value: " + value);
+                        //Debug.Log("GdataInts value parsed successfully, value: " + value);
                     }
                     else
                     {
@@ -142,7 +142,7 @@ namespace ServerData
                     float value;
                     if (float.TryParse(str, out value))
                     {
-                        Debug.Log("GdataFloats value parsed successfully, value: " + value);
+                        //Debug.Log("GdataFloats value parsed successfully, value: " + value);
                     }
                     else
                     {
@@ -168,7 +168,7 @@ namespace ServerData
 
                 foreach (string str in strings)
                 {
-                    Debug.Log("GdataStrings value parsed successfully, str: " + str);
+                    //Debug.Log("GdataStrings value parsed successfully, str: " + str);
                     GdataStrings.Add(str);
                 }
             }
@@ -187,7 +187,7 @@ namespace ServerData
 
                     if (singleVectorElements.Length == 3)
                     {
-                        Debug.Log("singleVectorElements.Length == 3");
+                        //Debug.Log("singleVectorElements.Length == 3");
 
                         float xValue;
                         float yValue;
@@ -195,7 +195,7 @@ namespace ServerData
 
                         if (float.TryParse(singleVectorElements[0], out xValue))
                         {
-                            Debug.Log("singleVectorElements[0] parsed successfully");
+                            //Debug.Log("singleVectorElements[0] parsed successfully");
                         }
                         else
                         {
@@ -205,7 +205,7 @@ namespace ServerData
 
                         if (float.TryParse(singleVectorElements[1], out yValue))
                         {
-                            Debug.Log("singleVectorElements[1] parsed successfully");
+                            //Debug.Log("singleVectorElements[1] parsed successfully");
                         }
                         else
                         {
@@ -215,7 +215,7 @@ namespace ServerData
 
                         if (float.TryParse(singleVectorElements[2], out zValue))
                         {
-                            Debug.Log("singleVectorElements[2] parsed successfully");
+                            //Debug.Log("singleVectorElements[2] parsed successfully");
                         }
                         else
                         {
@@ -258,6 +258,7 @@ namespace ServerData
         public byte[] ToBytes()
         {
             #region Proto: Turning the packet to string
+            Debug.Log("Sending packetType: " + packetType);
             int packetTypeIndex = -1;
             switch (packetType)
             {
@@ -296,7 +297,6 @@ namespace ServerData
 
             if (GdataInts.Count > 0)
             {
-                Debug.Log("GdataInts is not empty, adding values to packetString");
                 bool first = true;
                 foreach (int integer in GdataInts)
                 {
@@ -316,12 +316,10 @@ namespace ServerData
             else
             {
                 packetString += skipMarker.ToString() + nextTypeDelimiter.ToString();
-                Debug.Log("GdataInts was empty, skipping type ");
             }
 
             if (GdataFloats.Count > 0)
             {
-                Debug.Log("GdataFloats is not empty, adding values to packetString");
                 bool first = true;
                 foreach (float floatingPoint in GdataFloats)
                 {
@@ -341,12 +339,10 @@ namespace ServerData
             else
             {
                 packetString += skipMarker.ToString() + nextTypeDelimiter.ToString();
-                Debug.Log("GdataFloats was empty, skipping type ");
             }
 
             if (GdataStrings.Count > 0)
             {
-                Debug.Log("GdataStrings is not empty, adding values to packetString");
                 bool first = true;
                 foreach (string str in GdataStrings)
                 {
@@ -366,12 +362,10 @@ namespace ServerData
             else
             {
                 packetString += skipMarker.ToString() + nextTypeDelimiter.ToString();
-                Debug.Log("GdataStrings was empty, skipping type ");
             }
 
             if (GdataVectors.Count > 0)
             {
-                Debug.Log("GdataVectors is not empty, adding values to packetString");
                 bool first = true;
                 foreach (Vector_3 vec_3 in GdataVectors)
                 {
@@ -391,10 +385,7 @@ namespace ServerData
             else
             {
                 packetString += skipMarker.ToString() + nextTypeDelimiter.ToString();
-                Debug.Log("GdataVectors was empty, skipping type ");
             }
-
-            Debug.Log(packetString);
 
             BinaryFormatter bf = new BinaryFormatter();
             MemoryStream ms = new MemoryStream();
@@ -441,6 +432,7 @@ namespace ServerData
         SHIPINFO,
         SHOOT,
         DEATH,
+        GAMEEND,
     }
 
     [Serializable]

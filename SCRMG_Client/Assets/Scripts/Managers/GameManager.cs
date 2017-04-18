@@ -120,6 +120,7 @@ public class GameManager : MonoBehaviour
         em.OnStartingMatchByServer += OnStartingMatchByServer;
         em.OnRequestCurrentGameModeIndex += OnRequestCurrentGameModeIndex;
         em.OnNetworkMultiplayerStartMatchStartTimer += OnNetworkMultiplayerStartMatchStartTimer;
+        em.OnMatchEndedByServer += OnMatchEndedByServer;
     }
 
     private void OnDisable()
@@ -142,6 +143,7 @@ public class GameManager : MonoBehaviour
         em.OnStartingMatchByServer -= OnStartingMatchByServer;
         em.OnRequestCurrentGameModeIndex -= OnRequestCurrentGameModeIndex;
         em.OnNetworkMultiplayerStartMatchStartTimer -= OnNetworkMultiplayerStartMatchStartTimer;
+        em.OnMatchEndedByServer -= OnMatchEndedByServer;
     }
     #endregion
     #endregion
@@ -210,6 +212,17 @@ public class GameManager : MonoBehaviour
     private void OnReadyCountInLobbyChange(int change)
     {
         numberOfLobbyParticipantsReady = change;
+    }
+
+    private void OnMatchEndedByServer(string winnerName, bool localPlayerWins)
+    {
+        for (int i = 0; i < currentlyAliveShips.Count; i++)
+        {
+            Destroy(currentlyAliveShips[i]);
+            currentlyAliveShips.RemoveAt(i);
+        }
+        currentlyAliveShips.Clear();
+        shipInfoManager.ClearShipInfoList();
     }
     #endregion
 
@@ -320,7 +333,7 @@ public class GameManager : MonoBehaviour
         matchStarted = false;
     }
 
-    private void OnShipDead(int shipIndex)
+    private void OnShipDead(int shipIndex, int killerIndex)
     {
         if (currentlyAliveShips.Count > 1)
         {
@@ -335,9 +348,13 @@ public class GameManager : MonoBehaviour
                     currentlyAliveShips.RemoveAt(i);
                 }
             }
-            if (currentlyAliveShips.Count == 1)
+            if (currentGameModeIndex != gameModeNetworkMultiplayerIndex)
             {
-                em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
+                if (currentlyAliveShips.Count == 1)
+                {
+                    //em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
+                    em.BroadcastMatchEnded(killerIndex);
+                }
             }
         }
     }
@@ -604,13 +621,13 @@ public class GameManager : MonoBehaviour
         respawnPoints = newRespawnPoints;
         respawnPointsInitialized = true;
 
-        if(currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
         {
-            if(shipsToSpawn.Count > 0)
+            if (shipsToSpawn.Count > 0)
             {
-                foreach(ShipInfo shipInfo in shipsToSpawn)
+                foreach (ShipInfo shipInfo in shipsToSpawn)
                 {
-                    SpawnShip(shipInfo.shipIndex, shipInfo.spawnPointIndex, 
+                    SpawnShip(shipInfo.shipIndex, shipInfo.spawnPointIndex,
                         shipInfo.shipColorIndex, shipInfo.ownerID);
                 }
                 em.BroadcastNetworkMultiplayerMatchInitialized();
@@ -735,7 +752,7 @@ public class GameManager : MonoBehaviour
         if (inGame)
         {
             #region HUD Timer
-            if (matchStarted && !isPaused)
+            if (matchStarted && (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex))
             {
                 matchTimer += Time.deltaTime;
                 em.BroadcastMatchTimerValueChange(matchTimer);
@@ -749,7 +766,7 @@ public class GameManager : MonoBehaviour
         if (inGame)
         {
             #region MatchStartTimer
-            if (!isPaused)
+            if (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex)
             {
                 if (matchStartTimerRunning)
                 {

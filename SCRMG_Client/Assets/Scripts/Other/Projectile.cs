@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Projectile : MonoBehaviour {
+public class Projectile : MonoBehaviour
+{
 
     /*TODO: 
      * - Add fading effect when projectile runs out of lifetime
@@ -13,7 +14,6 @@ public class Projectile : MonoBehaviour {
      * - Rename projectiles / powerUps as "projectileOne" / "powerUpOne" (or similar)
      *      and create variables for projectile / powerUp names (same reason as above)
      *      
-     * - Broadcast projectile destruction!
     */
 
     #region References & variables
@@ -31,6 +31,7 @@ public class Projectile : MonoBehaviour {
     bool ricohetOnCooldown = false;
     bool isPersistingProjectile = false;
     bool isInitialized = false;
+    bool isControlledByServer = false;
     float projectileDamage = -1;
     float projectileSpeed = -1;
     float projectileRicochetCooldown = -1;
@@ -42,9 +43,13 @@ public class Projectile : MonoBehaviour {
     int projectileRicochetNumber = -1;
     int projectileIndex = -1;
     int ownerIndex = -1;
+    int currentGameModeIndex = -1;
     //Variables coming from GlobalVariableLibrary
     string shipTag = "Ship";
     string environmentTag = "Environment";
+    int gameModeSingleplayerIndex = 0;
+    int gameModeNetworkMultiplayerIndex = 1;
+    int gameModeLocalMultiplayerIndex = 2;
     #endregion
 
     #region Initialization
@@ -62,6 +67,9 @@ public class Projectile : MonoBehaviour {
     {
         shipTag = lib.shipVariables.shipTag;
         environmentTag = lib.shipVariables.environmentTag;
+        gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
+        gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
+        gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
     }
     #endregion
 
@@ -72,6 +80,7 @@ public class Projectile : MonoBehaviour {
         em.OnPauseOff += OnPauseOff;
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoading += OnNewSceneLoading;
+        em.OnProjectileDestroyedByServer += OnProjectileDestroyedByServer;
     }
 
     void OnDisable()
@@ -85,6 +94,20 @@ public class Projectile : MonoBehaviour {
     #endregion
 
     #region Subscribers
+    private void OnProjectileDestroyedByServer(int projectileOwnerIndex, int projectileIndex, Vector3 location)
+    {
+        if (isControlledByServer)
+        {
+            if (ownerIndex == projectileOwnerIndex && projectileIndex == this.projectileIndex)
+            {
+                GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                    location, Quaternion.identity) as GameObject;
+                bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                DestroyThisProjectile();
+            }
+        }
+    }
+
     private void OnPauseOn()
     {
         isPaused = true;
@@ -110,14 +133,18 @@ public class Projectile : MonoBehaviour {
 
     #region Setters & getters
     #region Setters
-    public void InitializeProjectile(int newOwnerIndex, int newProjectileIndex, int newProjectileType, Color newProjectileColor)
+    public void InitializeProjectile(int newOwnerIndex, int newProjectileIndex, int newProjectileType, Color newProjectileColor, bool isControlledByServerState)
     {
+        isControlledByServer = isControlledByServerState;
+
         ownerIndex = newOwnerIndex;
         projectileIndex = newProjectileIndex;
         projectileColor = newProjectileColor;
         SetProjectileType(newProjectileType);
         isInitialized = true;
-        em.BroadcastProjectileSpawned(ownerIndex, projectileIndex, transform.position, transform.eulerAngles);
+        em.BroadcastProjectileSpawned(ownerIndex, projectileIndex, transform.position, transform.eulerAngles, isControlledByServer);
+
+        currentGameModeIndex = em.BroadcastRequestCurrentGameModeIndex();
     }
 
     private void SetProjectileType(int newProjectileType)
@@ -334,7 +361,7 @@ public class Projectile : MonoBehaviour {
     #region FixedUpdate
     private void FixedUpdate()
     {
-        if (!isPaused) 
+        if (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex)
         {
             if (isInitialized)
             {
@@ -430,7 +457,7 @@ public class Projectile : MonoBehaviour {
                     #endregion
                 }
             }
-        }   
+        }
     }
     #endregion
 
@@ -455,8 +482,9 @@ public class Projectile : MonoBehaviour {
 
     private void DestroyThisProjectile()
     {
-        em.BroadcastProjectileDestroyed(ownerIndex, projectileIndex);
+        em.BroadcastProjectileDestroyed(ownerIndex, projectileIndex, transform.position);
         Destroy(gameObject);
+        //gameObject.SetActive(false);
     }
     #endregion
 
@@ -489,16 +517,33 @@ public class Projectile : MonoBehaviour {
             #region Collision with ships
             if (collidedObjectTag == shipTag)
             {
-                collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage);
-                if (!isPersistingProjectile)
+                if (currentGameModeIndex == gameModeSingleplayerIndex)
                 {
-                    DestroyOnHit();
+                    collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage, ownerIndex);
+                    if (!isPersistingProjectile)
+                    {
+                        DestroyOnHit();
+                    }
+                    else
+                    {
+                        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                            collidedObject.transform.position, Quaternion.identity) as GameObject;
+                        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                    }
                 }
-                else
+                if(currentGameModeIndex == gameModeNetworkMultiplayerIndex)
                 {
-                    GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-                        collidedObject.transform.position, Quaternion.identity) as GameObject;
-                    bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                    if (!isControlledByServer)
+                    {
+                        ShipController collidedShip = collidedObject.GetComponentInParent<ShipController>();
+                        collidedShip.TakeDamage(projectileDamage, ownerIndex);
+                        em.BroadcastProjectileHitShip(ownerIndex, projectileIndex, collidedShip.GetIndex(), projectileDamage);
+                        DestroyOnHit();
+                    }
+                    else
+                    {
+                        Debug.Log("Projectile is controlled by server, ignoring ship collision");
+                    }
                 }
             }
             #endregion
@@ -537,16 +582,33 @@ public class Projectile : MonoBehaviour {
             #region Collision with ships
             if (collidedObjectTag == shipTag)
             {
-                collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage);
-                if (!isPersistingProjectile)
+                if (currentGameModeIndex == gameModeSingleplayerIndex)
                 {
-                    DestroyOnHit();
+                    collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage, ownerIndex);
+                    if (!isPersistingProjectile)
+                    {
+                        DestroyOnHit();
+                    }
+                    else
+                    {
+                        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                            collidedObject.transform.position, Quaternion.identity) as GameObject;
+                        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                    }
                 }
-                else
+                if (currentGameModeIndex == gameModeNetworkMultiplayerIndex)
                 {
-                    GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-                        collidedObject.transform.position, Quaternion.identity) as GameObject;
-                    bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+                    if (!isControlledByServer)
+                    {
+                        ShipController collidedShip = collidedObject.GetComponentInParent<ShipController>();
+                        collidedShip.TakeDamage(projectileDamage, ownerIndex);
+                        em.BroadcastProjectileHitShip(ownerIndex, projectileIndex, collidedShip.GetIndex(), projectileDamage);
+                        DestroyOnHit();
+                    }
+                    else
+                    {
+                        Debug.Log("Projectile is controlled by server, ignoring ship collision");
+                    }
                 }
             }
             #endregion

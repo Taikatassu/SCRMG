@@ -97,6 +97,7 @@ public class ShipController : MonoBehaviour
         em.OnMatchStarted += OnMatchStarted;
         em.OnMatchEnded += OnMatchEnded;
         em.OnProjectileDestroyed += OnProjectileDestroyed;
+        em.OnProjectileHitShipByClient += OnProjectileHitShipByClient;
 
         speedModifier = 1;
         damageTakenModifier = 1;
@@ -113,19 +114,26 @@ public class ShipController : MonoBehaviour
         em.OnMatchStarted -= OnMatchStarted;
         em.OnMatchEnded -= OnMatchEnded;
         em.OnProjectileDestroyed -= OnProjectileDestroyed;
+        em.OnProjectileHitShipByClient -= OnProjectileHitShipByClient;
     }
     #endregion
 
     #region Subscribers
-    private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex)
+    private void OnProjectileHitShipByClient(int projectileOwnerIndex, int projectileIndex, int hitShipIndex, float projectileDamage)
     {
-        if (projectileOwnerIndex == index)
+        if (hitShipIndex == index && projectileOwnerIndex != index)
         {
-            Debug.Log("ShipController, OnProjectileDestroyed. projectileOwnerIndex: " + projectileOwnerIndex + ", projectileIndex: " + projectileIndex);
-            RemoveProjectileIndexFromList(projectileIndex);
+            TakeDamage(projectileDamage, projectileOwnerIndex);
         }
     }
 
+    private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, Vector3 location)
+    {
+        if (projectileOwnerIndex == index)
+        {
+            RemoveProjectileIndexFromList(projectileIndex);
+        }
+    }
 
     private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
@@ -249,10 +257,74 @@ public class ShipController : MonoBehaviour
 
             if (myShipInfoElement != -1)
             {
+                if (shipInfoManager.shipInfoList[myShipInfoElement].isDead)
+                {
+                    Die(shipInfoManager.shipInfoList[myShipInfoElement].killerIndex);
+                }
+
                 shipInfoManager.shipInfoList[myShipInfoElement].shipPosition = transform.position;
                 shipInfoManager.shipInfoList[myShipInfoElement].hullRotation = shipHull.eulerAngles;
                 shipInfoManager.shipInfoList[myShipInfoElement].turretRotation = shipTurret.eulerAngles;
             }
+            #endregion
+        }
+        else
+        {
+            #region Movement
+            if (isMovable && movementDirection != Vector3.zero)
+            {
+                float movementDirectionMagnitude = movementDirection.magnitude;
+                if (movementDirectionMagnitude > 1)
+                {
+                    movementDirection = movementDirection / movementDirectionMagnitude;
+                }
+                rb.MovePosition(transform.position + movementDirection * (movementSpeed * speedModifier) * Time.fixedDeltaTime);
+                if (movementDirection == Vector3.zero)
+                {
+                    rb.velocity = Vector3.zero;
+                }
+
+                //Hull rotation
+                Quaternion newHullRotation = Quaternion.LookRotation(movementDirection);
+                shipHull.rotation = Quaternion.Slerp(shipHull.rotation, newHullRotation,
+                    Time.fixedDeltaTime * shipHullRotationSpeed);
+            }
+
+            //TODO: Implement a proper way to detect if ship is outside of arena bounds, and returning it back to arena
+            Vector3 currentPosition = transform.position;
+            if (currentPosition.x > 25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.x = 25;
+                transform.position = newPosition;
+            }
+            else if (currentPosition.x < -25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.x = -25;
+                transform.position = newPosition;
+
+            }
+            else if (currentPosition.z > 25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.z = 25;
+                transform.position = newPosition;
+            }
+            else if (currentPosition.z < -25)
+            {
+                Vector3 newPosition = currentPosition;
+                newPosition.z = -25;
+                transform.position = newPosition;
+            }
+            #endregion
+
+            #region Turret rotation
+            lookTargetPosition.y = shipTurret.position.y;
+            Vector3 lookDirection = lookTargetPosition - shipTurret.position;
+            Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+            shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                Time.fixedDeltaTime * shipTurretRotationSpeed);
             #endregion
         }
     }
@@ -270,7 +342,7 @@ public class ShipController : MonoBehaviour
                 GetComponentInChildren<Collider>());
 
             newProjectileScript = newProjectile.GetComponent<Projectile>();
-            newProjectileScript.InitializeProjectile(index, GetNewProjectileIndex(), 0, myShipColor);
+            newProjectileScript.InitializeProjectile(index, GetNewProjectileIndex(), 0, myShipColor, true);
 
             shootCooldownFrameTimer = Mathf.RoundToInt((shootCooldownDuration * shootCooldownModifier) / Time.fixedDeltaTime);
             shootOnCooldown = true;
@@ -376,31 +448,18 @@ public class ShipController : MonoBehaviour
     #endregion
 
     #region Health adjustments
-    public void TakeDamage(float amount)
+    public void TakeDamage(float amount, int damageDealerIndex)
     {
         Debug.Log("TakeDamage, amount: " + amount);
         if (!isDead && isVulnerable)
         {
             //Debug.Log("I'm taking damage.");
             currentHealth -= amount * damageTakenModifier;
-
-            if (isControllerByServer)
-            {
-                if (myShipInfoElement == -1)
-                {
-                    myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
-                }
-
-                if (myShipInfoElement != -1)
-                {
-                    shipInfoManager.shipInfoList[myShipInfoElement].currentHealth = currentHealth;
-                }
-            }
-
+            Debug.Log("TakeDamage, currentHealth: " + currentHealth);
             if (currentHealth <= 0)
             {
                 currentHealth = 0;
-                Die();
+                Die(damageDealerIndex);
             }
             //Update UI
             UpdateHealthBar();
@@ -412,20 +471,6 @@ public class ShipController : MonoBehaviour
         if (!isDead)
         {
             currentHealth += amount;
-
-            if (isControllerByServer)
-            {
-                if (myShipInfoElement == -1)
-                {
-                    myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
-                }
-
-                if (myShipInfoElement != -1)
-                {
-                    shipInfoManager.shipInfoList[myShipInfoElement].currentHealth = currentHealth;
-                }
-            }
-
             if (currentHealth > maxHealth)
             {
                 currentHealth = maxHealth;
@@ -437,15 +482,16 @@ public class ShipController : MonoBehaviour
     #endregion
 
     #region Die, Resurrect
-    private void Die()
+    private void Die(int killerIndex)
     {
+        Debug.Log("ShipController: Die");
         isDead = true;
         isVulnerable = false;
         isMovable = false;
         canShoot = false;
         //Broadcast ship death
         //Start spectator mode if player
-        //em.BroadcastShipDead(index);
+        em.BroadcastShipDead(index, killerIndex);
 
         GameObject shipDeathEffect = Instantiate(Resources.Load("Effects/ShipDeathEffect"),
             transform.position, Quaternion.identity) as GameObject;

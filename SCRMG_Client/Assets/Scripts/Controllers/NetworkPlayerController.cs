@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class NetworkPlayerController : ShipController {
-
-    // TODO: Implement a system that gets inputs through networking system from
-    // other players and controls the ship accordingly
+public class NetworkPlayerController : ShipController
+{
+    Vector3 previousShipPosition = Vector3.zero;
+    Vector3 previousTurretRotation = Vector3.zero;
+    Vector3 previousMovementDirection = Vector3.zero;
+    Vector3 previousTurretTargetPosition = Vector3.zero;
 
     #region Awake
     protected override void Awake()
@@ -48,13 +50,11 @@ public class NetworkPlayerController : ShipController {
                 GetComponentInChildren<Collider>());
 
             Projectile newProjectileScript = newProjectile.GetComponent<Projectile>();
-            newProjectileScript.InitializeProjectile(index, projectileIndex, 0, GetShipColor());
+            newProjectileScript.InitializeProjectile(index, projectileIndex, 0, GetShipColor(), true);
         }
     }
     #endregion
 
-    Vector3 previousShipPosition = Vector3.zero;
-    Vector3 previousTurretRotation = Vector3.zero;
     #region FixedUpdate
     protected override void FixedUpdate()
     {
@@ -65,26 +65,32 @@ public class NetworkPlayerController : ShipController {
 
         if (myShipInfoElement != -1)
         {
-            //transform.position = shipInfoManager.shipInfoList[myShipInfoElement].shipPosition;
-            //shipHull.eulerAngles = shipInfoManager.shipInfoList[myShipInfoElement].hullRotation;
-            //shipTurret.eulerAngles = shipInfoManager.shipInfoList[myShipInfoElement].turretRotation;
-
-            Vector3 newPosition = shipInfoManager.shipInfoList[myShipInfoElement].shipPosition;
-            Vector3 newRotation = shipInfoManager.shipInfoList[myShipInfoElement].turretRotation;
-
-            if (previousShipPosition != newPosition)
+            if (shipInfoManager.shipInfoList.Count >= myShipInfoElement)
             {
-                movementDirection = newPosition - transform.position;
-            }
+                //transform.position = shipInfoManager.shipInfoList[myShipInfoElement].shipPosition;
+                //shipHull.eulerAngles = shipInfoManager.shipInfoList[myShipInfoElement].hullRotation;
+                //shipTurret.eulerAngles = shipInfoManager.shipInfoList[myShipInfoElement].turretRotation;
 
-            if (previousTurretRotation != newRotation)
-            {
-                Vector3 turretTargetPosition = Quaternion.Euler(newRotation) * Vector3.forward;
-                SetLookTargetPosition(transform.position + new Vector3(turretTargetPosition.x, 0, turretTargetPosition.y));
-            }
 
-            previousShipPosition = newPosition;
-            previousTurretRotation = newRotation;
+                Vector3 newPosition = shipInfoManager.shipInfoList[myShipInfoElement].shipPosition;
+                Vector3 newRotation = shipInfoManager.shipInfoList[myShipInfoElement].turretRotation;
+
+                if (previousShipPosition != newPosition)
+                {
+                    previousMovementDirection = newPosition - transform.position;
+                    movementDirection = previousMovementDirection;
+                }
+                movementDirection = previousMovementDirection;
+
+                if (previousTurretRotation != newRotation)
+                {
+                    previousTurretTargetPosition = Quaternion.Euler(newRotation) * Vector3.forward;
+                }
+                SetLookTargetPosition(transform.position + new Vector3(previousTurretTargetPosition.x, 0, previousTurretTargetPosition.y));
+
+                previousShipPosition = newPosition;
+                previousTurretRotation = newRotation;
+            }
         }
 
         base.FixedUpdate();

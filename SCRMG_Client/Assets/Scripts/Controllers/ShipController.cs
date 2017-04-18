@@ -119,6 +119,7 @@ public class ShipController : MonoBehaviour {
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
         em.OnProjectileDestroyed += OnProjectileDestroyed;
+        em.OnProjectileHitShipByServer += OnProjectileHitShipByServer;
 
         powerUpType = 0;
         powerUpTimer = 0;
@@ -143,11 +144,21 @@ public class ShipController : MonoBehaviour {
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
         em.OnProjectileDestroyed -= OnProjectileDestroyed;
+        em.OnProjectileHitShipByServer -= OnProjectileHitShipByServer;
     }
     #endregion
 
     #region Subscribers
-    private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex)
+    private void OnProjectileHitShipByServer(int projectileOwnerIndex, int projectileIndex, int hitShipIndex, float projectileDamage)
+    {
+        if (hitShipIndex == index && projectileOwnerIndex != index)
+        {
+            TakeDamage(projectileDamage, projectileOwnerIndex);
+        }
+    }
+
+    private void OnProjectileDestroyed(int projectileOwnerIndex, 
+        int projectileIndex, Vector3 location)
     {
         if (projectileOwnerIndex == index)
         {
@@ -246,11 +257,28 @@ public class ShipController : MonoBehaviour {
 
     protected virtual void FixedUpdate()
     {
+        if(currentGameModeIndex == gameModeNetworkMultiplayerIndex)
+        {
+            if (myShipInfoElement == -1)
+            {
+                myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+            }
+
+            if (myShipInfoElement != -1)
+            {
+                if (shipInfoManager.shipInfoList[myShipInfoElement].isDead)
+                {
+                    Die(shipInfoManager.shipInfoList[myShipInfoElement].killerIndex);
+                }
+            }
+        }
+
+
         if (!isControllerByServer)
         {
             #region Movement
             //TODO: Add lerp to movement?
-            if (!isPaused)
+            if (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex)
             {
                 if (isMovable && movementDirection != Vector3.zero)
                 {
@@ -302,7 +330,7 @@ public class ShipController : MonoBehaviour {
             #endregion
 
             #region Turret rotation
-            if (!isPaused)
+            if (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex)
             {
                 if (buildPlatform == 0 || (buildPlatform == 1 && rotatingTurret))
                 {
@@ -316,7 +344,7 @@ public class ShipController : MonoBehaviour {
             #endregion
 
             #region Shoot cooldown
-            if (!isPaused)
+            if (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex)
             {
                 if (shootOnCooldown)
                 {
@@ -330,7 +358,7 @@ public class ShipController : MonoBehaviour {
             #endregion
 
             #region PowerUp timer
-            if (!isPaused)
+            if (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex)
             {
                 if (isPoweredUp)
                 {
@@ -427,7 +455,7 @@ public class ShipController : MonoBehaviour {
     #region Shooting & projectiles
     protected void Shoot()
     {
-        if (!isPaused)
+        if (!isPaused || currentGameModeIndex == gameModeNetworkMultiplayerIndex)
         {
             if (canShoot && !shootOnCooldown)
             {
@@ -453,7 +481,7 @@ public class ShipController : MonoBehaviour {
                         GetComponentInChildren<Collider>());
 
                     newProjectileScript = newProjectile.GetComponent<Projectile>();
-                    newProjectileScript.InitializeProjectile(index, GetNewProjectileIndex(), projectileType, myShipColor);
+                    newProjectileScript.InitializeProjectile(index, GetNewProjectileIndex(), projectileType, myShipColor, false);
                     
                     //Set shoot on cooldown
                     shootCooldownFrameTimer = Mathf.RoundToInt((shootCooldownDuration * shootCooldownModifier) / Time.fixedDeltaTime);
@@ -599,7 +627,7 @@ public class ShipController : MonoBehaviour {
     #endregion
 
     #region Health adjustments
-    public void TakeDamage(float amount)
+    public void TakeDamage(float amount, int damageDealerIndex)
     {
         if (!isDead && isVulnerable)
         {
@@ -608,11 +636,11 @@ public class ShipController : MonoBehaviour {
             if (currentHealth <= 0)
             {
                 currentHealth = 0;
-                Die();
+                Die(damageDealerIndex);
             }
             //Update UI
             UpdateHealthBar();
-            em.BroadcastShipHealthChange(index, currentHealth);
+            //em.BroadcastShipHealthChange(index, currentHealth);
         }
     }
 
@@ -627,22 +655,21 @@ public class ShipController : MonoBehaviour {
             }
             //Update UI
             UpdateHealthBar();
-            em.BroadcastShipHealthChange(index, currentHealth);
+            //em.BroadcastShipHealthChange(index, currentHealth);
         }
     }
     #endregion
 
     #region Die, Resurrect
-    private void Die()
+    private void Die(int killerIndex)
     {
-        Debug.Log("ShipController Die");
         isDead = true;
         isVulnerable = false;
         isMovable = false;
         canShoot = false;
         //Broadcast ship death
         //Start spectator mode if player
-        em.BroadcastShipDead(index);
+        em.BroadcastShipDead(index, killerIndex);
         
         GameObject shipDeathEffect = Instantiate(Resources.Load("Effects/ShipDeathEffect"),
             transform.position, Quaternion.identity) as GameObject;
