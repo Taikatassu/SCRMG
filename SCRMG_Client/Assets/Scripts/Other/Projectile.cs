@@ -542,7 +542,7 @@ public class Projectile : MonoBehaviour
                     }
                     else
                     {
-                        Debug.Log("Projectile is controlled by server, ignoring ship collision");
+                        //Debug.Log("Projectile is controlled by server, ignoring ship collision");
                     }
                 }
             }

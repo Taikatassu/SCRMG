@@ -265,6 +265,24 @@ public class EventManager : MonoBehaviour {
             OnProjectileDestroyedByClient(projectileOwnerIndex, projectileIndex, location);
         }
     }
+
+    public event EmptyVoid OnRequestMatchRestart;
+    public void BroadcastRequestMatchRestart()
+    {
+        if (OnRequestMatchRestart != null)
+        {
+            OnRequestMatchRestart();
+        }
+    }
+
+    public event EmptyVoid OnRequestReturnToLobbyFromMatch;
+    public void BroadcastRequestReturnToLobbyFromMatch()
+    {
+        if (OnRequestReturnToLobbyFromMatch != null)
+        {
+            OnRequestReturnToLobbyFromMatch();
+        }
+    }
     #endregion
 
 }

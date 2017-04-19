@@ -56,11 +56,13 @@ public class CameraController : MonoBehaviour {
     private void OnEnable()
     {
         em.OnShipDead += OnShipDead;
+        em.OnMatchEndedByServer += OnMatchEndedByServer;
     }
 
     private void OnDisable()
     {
         em.OnShipDead -= OnShipDead;
+        em.OnMatchEndedByServer -= OnMatchEndedByServer;
     }
     #endregion
 
@@ -71,6 +73,11 @@ public class CameraController : MonoBehaviour {
         {
             SetSpectateMode(true);
         }
+    }
+
+    private void OnMatchEndedByServer(string winnerName, bool localPlayerWins)
+    {
+        SetSpectateMode(true);
     }
     #endregion
     #endregion

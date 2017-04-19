@@ -557,6 +557,42 @@ public class EventManager : MonoBehaviour
     #endregion
 
     #region Network events
+    public event EmptyVoid OnReturnToLobbyFromMatch;
+    public void BroadcastReturnToLobbyFromMatch()
+    {
+        if (OnReturnToLobbyFromMatch != null)
+        {
+            OnReturnToLobbyFromMatch();
+        }
+    }
+
+    public event EmptyVoid OnExitNetworkMultiplayerMidGame;
+    public void BroadcastExitNetworkMultiplayerMidGame()
+    {
+        if (OnExitNetworkMultiplayerMidGame != null)
+        {
+            OnExitNetworkMultiplayerMidGame();
+        }
+    }
+
+    public event EmptyVoid OnRequestRestartFromServer;
+    public void BroadcastRequestRestartFromServer()
+    {
+        if (OnRequestRestartFromServer != null)
+        {
+            OnRequestRestartFromServer();
+        }
+    }
+
+    public event IntVoid OnRestartingMatchByServer;
+    public void BroadcastRestartingMatchByServer(int numberOfShips)
+    {
+        if (OnRestartingMatchByServer != null)
+        {
+            OnRestartingMatchByServer(numberOfShips);
+        }
+    }
+
     public event EmptyVoid OnNetworkMultiplayerStartMatchStartTimer;
     public void BroadcastNetworkMultiplayerStartMatchStartTimer()
     {

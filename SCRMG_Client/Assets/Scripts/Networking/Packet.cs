@@ -96,6 +96,9 @@ namespace ServerData
                 case 8:
                     packetType = PacketType.DEATH;
                     break;
+                case 9:
+                    packetType = PacketType.GAMEEND;
+                    break;
             }
             #endregion
 
@@ -258,6 +261,8 @@ namespace ServerData
         public byte[] ToBytes()
         {
             #region Proto: Turning the packet to string
+            if (packetType == PacketType.GAMESTART)
+                Debug.Log("Sending packetType: " + packetType);
             int packetTypeIndex = -1;
             switch (packetType)
             {
@@ -287,6 +292,9 @@ namespace ServerData
                     break;
                 case PacketType.DEATH:
                     packetTypeIndex = 8;
+                    break;
+                case PacketType.GAMEEND:
+                    packetTypeIndex = 9;
                     break;
             }
 
@@ -385,7 +393,7 @@ namespace ServerData
             {
                 packetString += skipMarker.ToString() + nextTypeDelimiter.ToString();
             }
-            
+
             BinaryFormatter bf = new BinaryFormatter();
             MemoryStream ms = new MemoryStream();
 

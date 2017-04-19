@@ -83,8 +83,11 @@ namespace Server
         public static bool inGame = false;
         public static bool requestMatchStart = false;
         public static bool matchBeginTimerStarted = false;
+        public static bool requestMatchRestart = false;
+        public static bool requestReturnToLobbyFromMatch = false;
         public static int clientsDoneWithInitializingMatch = -1;
         float shipInfoUpdateTimer = -1;
+        int numberOfShips = -1;
 
         float shipInfoUpdatesPerSecond = 5f;
         int maxNumberOfClientsInLobby = -1;
@@ -168,16 +171,19 @@ namespace Server
         #endregion
 
         #region Subscribers
-        private void OnStartingMatchByServer(int numberOfShips)
+        private void OnStartingMatchByServer(int newNumberOfShips)
         {
+            numberOfShips = newNumberOfShips;
+
             Debug.Log("Starting match from server!");
             inGame = true;
-            foreach (ClientData client in _clientsInLobby)
+
+            Packet p = new Packet(PacketType.GAMESTART, "Server");
+            p.GdataInts.Add(0);
+            p.GdataInts.Add(numberOfShips);
+            for (int i = 0; i < _clientsInLobby.Count; i++)
             {
-                Packet p = new Packet(PacketType.GAMESTART, "Server");
-                p.GdataInts.Add(0);
-                p.GdataInts.Add(numberOfShips);
-                client.clientSocket.Send(p.ToBytes());
+                _clientsInLobby[i].clientSocket.Send(p.ToBytes());
             }
         }
 
@@ -189,13 +195,22 @@ namespace Server
             p.GdataInts.Add(shipColorIndex);
             p.GdataStrings.Add(ownerID);
 
-            foreach (ClientData client in _clientsInLobby)
+            for (int i = 0; i < _clientsInLobby.Count; i++)
             {
-                client.clientSocket.Send(p.ToBytes());
 
-                if (client.id == ownerID)
+                if (_clientsInLobby[i].id == ownerID)
                 {
-                    client.shipIndex = shipIndex;
+                    _clientsInLobby[i].shipIndex = shipIndex;
+                }
+
+                try
+                {
+                    _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                }
+                catch
+                {
+                    DisconnectClient(_clientsInLobby[i]);
+                    i--;
                 }
             }
 
@@ -210,11 +225,19 @@ namespace Server
             p.GdataVectors.Add(new Vector_3(spawnPosition));
             p.GdataVectors.Add(new Vector_3(spawnRotation));
 
-            foreach (ClientData client in _clientsInLobby)
+            for (int i = 0; i < _clientsInLobby.Count; i++)
             {
-                if (client.shipIndex != projectileOwnerIndex)
+                if (_clientsInLobby[i].shipIndex != projectileOwnerIndex)
                 {
-                    client.clientSocket.Send(p.ToBytes());
+                    try
+                    {
+                        _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                    }
+                    catch
+                    {
+                        DisconnectClient(_clientsInLobby[i]);
+                        i--;
+                    }
                 }
             }
         }
@@ -229,11 +252,19 @@ namespace Server
             p.GdataInts.Add(hitShipIndex);
             p.GdataFloats.Add(projectileDamage);
 
-            foreach (ClientData client in _clientsInLobby)
+            for (int i = 0; i < _clientsInLobby.Count; i++)
             {
-                if (client.shipIndex != projectileOwnerIndex)
+                if (_clientsInLobby[i].shipIndex != projectileOwnerIndex)
                 {
-                    client.clientSocket.Send(p.ToBytes());
+                    try
+                    {
+                        _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                    }
+                    catch
+                    {
+                        DisconnectClient(_clientsInLobby[i]);
+                        i--;
+                    }
                 }
             }
         }
@@ -246,11 +277,19 @@ namespace Server
             p.GdataInts.Add(projectileIndex);
             p.GdataVectors.Add(new Vector_3(location));
 
-            foreach (ClientData client in _clientsInLobby)
+            for (int i = 0; i < _clientsInLobby.Count; i++)
             {
-                if (client.shipIndex != projectileOwnerIndex)
+                if (_clientsInLobby[i].shipIndex != projectileOwnerIndex)
                 {
-                    client.clientSocket.Send(p.ToBytes());
+                    try
+                    {
+                        _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                    }
+                    catch
+                    {
+                        DisconnectClient(_clientsInLobby[i]);
+                        i--;
+                    }
                 }
             }
         }
@@ -262,19 +301,28 @@ namespace Server
             p.GdataInts.Add(shipIndex);
             p.GdataInts.Add(killerIndex);
 
-            foreach (ClientData client in _clientsInLobby)
+            for (int i = 0; i < _clientsInLobby.Count; i++)
             {
-                client.clientSocket.Send(p.ToBytes());
+                try
+                {
+                    _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                }
+                catch
+                {
+                    DisconnectClient(_clientsInLobby[i]);
+                    i--;
+                }
             }
         }
 
         private void OnMatchEnded(int winnerIndex)
         {
-            string winnerName = "empty";
+            Debug.Log("NetworkServer, OnMatchEnded called");
+            string winnerName = "AI " + winnerIndex.ToString();
 
             for (int i = 0; i < _clientsInLobby.Count; i++)
             {
-                if(_clientsInLobby[i].shipIndex == winnerIndex)
+                if (_clientsInLobby[i].shipIndex == winnerIndex)
                 {
                     winnerName = _clientsInLobby[i].clientName;
                 }
@@ -286,7 +334,15 @@ namespace Server
 
             foreach (ClientData client in _clientsInLobby)
             {
-                client.clientSocket.Send(p.ToBytes());
+                try
+                {
+                    client.clientSocket.Send(p.ToBytes());
+                    Debug.Log("NetworkServer, OnMatchEnded packet sent to client");
+                }
+                catch
+                {
+                    DisconnectClient(client);
+                }
             }
         }
         #endregion
@@ -339,9 +395,17 @@ namespace Server
                         Packet p2 = new Packet(PacketType.LOBBYEVENT, "Server");
                         p2.GdataInts.Add(1);
                         p2.GdataInts.Add(_clientsInLobby.Count);
-                        foreach (ClientData client in _clients)
+                        for (int j = 0; j < _clients.Count; j++)
                         {
-                            client.clientSocket.Send(p2.ToBytes());
+                            try
+                            {
+                                _clients[j].clientSocket.Send(p2.ToBytes());
+                            }
+                            catch
+                            {
+                                DisconnectClient(_clients[j]);
+                                j--;
+                            }
                         }
                     }
                     else
@@ -444,7 +508,7 @@ namespace Server
             }
             #endregion
 
-            #region Starting a match
+            #region Starting and restarting a match
             if (requestMatchStart)
             {
                 requestMatchStart = false;
@@ -455,6 +519,59 @@ namespace Server
             {
                 matchBeginTimerStarted = false;
                 em.BroadcastMatchStartTimerStart();
+            }
+
+            if (requestMatchRestart)
+            {
+                requestMatchRestart = false;
+                em.BroadcastRequestMatchRestart();
+                clientsDoneWithInitializingMatch = 0;
+                inGame = true;
+
+                Packet p = new Packet(PacketType.GAMESTART, "Server");
+                p.GdataInts.Add(0);
+                p.GdataInts.Add(numberOfShips);
+
+                for (int i = 0; i < _clientsInLobby.Count; i++)
+                {
+                    try
+                    {
+                        _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                    }
+                    catch (SocketException ex)
+                    {
+                        Debug.Log("SocketException: " + ex);
+                        DisconnectClient(_clientsInLobby[i]);
+                    }
+                }
+
+            }
+            #endregion
+
+            #region Returning to lobby from match
+            if (requestReturnToLobbyFromMatch)
+            {
+                requestReturnToLobbyFromMatch = false;
+
+                clientsDoneWithInitializingMatch = 0;
+                inGame = false;
+                em.BroadcastRequestReturnToLobbyFromMatch();
+
+                Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
+                p.GdataInts.Add(3);
+                p.GdataInts.Add(_clientsInLobby.Count);
+                for (int i = 0; i < _clients.Count; i++)
+                {
+                    try
+                    {
+                        _clients[i].clientSocket.Send(p.ToBytes());
+                    }
+                    catch
+                    {
+                        DisconnectClient(_clients[i]);
+                        i--;
+                    }
+                }
             }
             #endregion
             #endregion
@@ -472,29 +589,31 @@ namespace Server
                     {
                         foreach (ShipInfo shipInfo in shipInfoManager.shipInfoList)
                         {
-                            Packet p = new Packet(PacketType.SHIPINFO, "Server");
-                            p.GdataInts.Add(shipInfo.shipIndex);
-                            p.GdataStrings.Add(shipInfo.ownerID);
-                            p.GdataVectors.Add(new Vector_3(shipInfo.shipPosition));
-                            p.GdataVectors.Add(new Vector_3(shipInfo.hullRotation));
-                            p.GdataVectors.Add(new Vector_3(shipInfo.turretRotation));
-
-                            for (int i = 0; i < _clientsInLobby.Count; i++)
+                            if (!shipInfo.isDead)
                             {
-                                if (_clientsInLobby[i].id != shipInfo.ownerID)
+                                Packet p = new Packet(PacketType.SHIPINFO, "Server");
+                                p.GdataInts.Add(shipInfo.shipIndex);
+                                p.GdataStrings.Add(shipInfo.ownerID);
+                                p.GdataVectors.Add(new Vector_3(shipInfo.shipPosition));
+                                p.GdataVectors.Add(new Vector_3(shipInfo.hullRotation));
+                                p.GdataVectors.Add(new Vector_3(shipInfo.turretRotation));
+
+                                for (int i = 0; i < _clientsInLobby.Count; i++)
                                 {
-                                    try
+                                    if (_clientsInLobby[i].id != shipInfo.ownerID)
                                     {
-                                        _clientsInLobby[i].clientSocket.Send(p.ToBytes());
-                                    }
-                                    catch (SocketException ex)
-                                    {
-                                        Debug.Log("SocketException: " + ex);
-                                        DisconnectClient(_clientsInLobby[i]);
+                                        try
+                                        {
+                                            _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                                        }
+                                        catch (SocketException ex)
+                                        {
+                                            Debug.Log("SocketException: " + ex);
+                                            DisconnectClient(_clientsInLobby[i]);
+                                        }
                                     }
                                 }
                             }
-                            Debug.Log("ShipInfo sent to all clients");
                         }
                     }
                 }
@@ -690,7 +809,7 @@ namespace Server
 
                     if (readBytes > 0)
                     {
-                        Debug.Log("Before calling DataManager, readBytes: " + readBytes);
+                        //Debug.Log("Before calling DataManager, readBytes: " + readBytes);
                         Packet packet = new Packet(Buffer);
                         if (!packet.errorEncountered)
                         {
@@ -775,6 +894,8 @@ namespace Server
         #region DataManager
         static void DataManager(Packet p, Socket clientSocket)
         {
+            if (p.packetType == PacketType.GAMESTART)
+                Debug.Log("DataManager called, packetType: " + p.packetType);
             #region Finding clientData corresponding to senderID
             if (p.senderID == null)
             {
@@ -909,21 +1030,39 @@ namespace Server
                         }
                     }
                     #endregion
+
+                    #region Returning to lobby from match
+                    else if (tmp1 == 4)
+                    {
+                        requestReturnToLobbyFromMatch = true;
+                        Debug.Log("Requesting return to lobby from match");
+                    }
+                    #endregion
                     #endregion
                     break;
 
                 case PacketType.GAMESTART:
                     #region GameStart
-                    clientsDoneWithInitializingMatch++;
-                    if (clientsDoneWithInitializingMatch == _clientsInLobby.Count)
+                    int tmp = p.GdataInts[0];
+                    if (tmp == 1)
                     {
-                        foreach (ClientData client in _clientsInLobby)
+                        clientsDoneWithInitializingMatch++;
+                        if (clientsDoneWithInitializingMatch >= _clientsInLobby.Count)
                         {
                             Packet p1 = new Packet(PacketType.GAMESTART, "Server");
                             p1.GdataInts.Add(1);
-                            client.clientSocket.Send(p1.ToBytes());
+                            foreach (ClientData client in _clientsInLobby)
+                            {
+                                client.clientSocket.Send(p1.ToBytes());
+                            }
+                            matchBeginTimerStarted = true;
                         }
-                        matchBeginTimerStarted = true;
+                    }
+                    else if (tmp == 2)
+                    {
+                        //Restarting game
+                        requestMatchRestart = true;
+                        Debug.LogWarning("Match restart request received from a client");
                     }
                     #endregion
                     break;

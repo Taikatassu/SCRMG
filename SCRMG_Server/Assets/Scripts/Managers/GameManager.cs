@@ -77,6 +77,8 @@ public class GameManager : MonoBehaviour
         em.OnMatchStarted += OnMatchStarted;
         em.OnMatchEnded += OnMatchEnded;
         em.OnShipDead += OnShipDead;
+        em.OnRequestMatchRestart += OnRequestMatchRestart;
+        em.OnRequestReturnToLobbyFromMatch += OnRequestReturnToLobbyFromMatch;
     }
 
     private void OnDisable()
@@ -91,6 +93,8 @@ public class GameManager : MonoBehaviour
         em.OnMatchStarted -= OnMatchStarted;
         em.OnMatchEnded -= OnMatchEnded;
         em.OnShipDead -= OnShipDead;
+        em.OnRequestMatchRestart += OnRequestMatchRestart;
+        em.OnRequestReturnToLobbyFromMatch -= OnRequestReturnToLobbyFromMatch;
     }
     #endregion
     #endregion
@@ -226,37 +230,83 @@ public class GameManager : MonoBehaviour
 
     private void OnShipDead(int shipIndex, int killerIndex)
     {
-        if (currentlyAliveShips.Count > 1)
+        if (matchStarted)
         {
-            for (int i = 0; i < currentlyAliveShips.Count; i++)
+            if (currentlyAliveShips.Count > 1)
             {
-                if (currentlyAliveShips[i] == null)
+                for (int i = 0; i < currentlyAliveShips.Count; i++)
                 {
-                    Debug.Log("GameManager: OnShipDead, removed null ship");
-                    currentlyAliveShips.RemoveAt(i);
+                    if (currentlyAliveShips[i] == null)
+                    {
+                        currentlyAliveShips.RemoveAt(i);
+                    }
+                    else if (currentlyAliveShips[i].GetComponent<ShipController>().GetIndex() == shipIndex)
+                    {
+                        currentlyAliveShips.RemoveAt(i);
+                    }
                 }
-                else if (currentlyAliveShips[i].GetComponent<ShipController>().GetIndex() == shipIndex)
+                if (currentlyAliveShips.Count <= 1)
                 {
-                    Debug.Log("GameManager: OnShipDead, removed ship with index");
-                    currentlyAliveShips.RemoveAt(i);
-                }
-            }
-            Debug.Log("GameManager: OnShipDead, currentlyAliveShips.Count: " + currentlyAliveShips.Count);
-            if (currentlyAliveShips.Count <= 1)
-            {
-                Debug.Log("GameManager: OnShipDead, currentlyAliveShips.Count <= 1");
-                if (currentlyAliveShips.Count > 0)
-                {
-                    Debug.Log("GameManager: OnShipDead, broadcasted winner index by the last item in currentlyAliveShips");
-                    em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
-                }
-                else
-                {
-                    Debug.Log("GameManager: OnShipDead, broadcasted winner index killerIndex");
-                    em.BroadcastMatchEnded(killerIndex);
+                    if (currentlyAliveShips.Count > 0)
+                    {
+                        em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
+                    }
+                    else
+                    {
+                        em.BroadcastMatchEnded(killerIndex);
+                    }
                 }
             }
         }
+    }
+
+    private void OnRequestMatchRestart()
+    {
+        //TODO:
+        //Destroy all ships
+        //Clear shipInfo
+        //Create new ships
+        //Reset match timer
+        matchStarted = false;
+        matchTimer = 0;
+
+        if (currentlyAliveShips.Count > 0)
+        {
+            for(int i = 0; i < currentlyAliveShips.Count; i++)
+            {
+                Destroy(currentlyAliveShips[i]);
+                currentlyAliveShips.RemoveAt(i);
+                i--;
+            }
+        }
+        currentlyAliveShips.Clear();
+
+        resetUsedSpawnPointsList = true;
+        resetUsedShipColors = true;
+
+        InitializeGame();
+    }
+
+    private void OnRequestReturnToLobbyFromMatch()
+    {
+        inGame = false;
+        matchStarted = false;
+        matchTimer = 0;
+
+        if (currentlyAliveShips.Count > 0)
+        {
+            for (int i = 0; i < currentlyAliveShips.Count; i++)
+            {
+                Destroy(currentlyAliveShips[i]);
+                currentlyAliveShips.RemoveAt(i);
+                i--;
+            }
+        }
+        currentlyAliveShips.Clear();
+        shipInfoManager.ClearShipInfoList();
+
+        resetUsedSpawnPointsList = true;
+        resetUsedShipColors = true;
     }
     #endregion
 
@@ -272,6 +322,9 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("GameManager: InitializeGame");
         shipInfoManager.ClearShipInfoList();
+        matchTimer = 0;
+        em.BroadcastMatchTimerValueChange(matchTimer);
+
         #region Instantiate ships
         for (int i = 0; i < numberOfShips; i++)
         {

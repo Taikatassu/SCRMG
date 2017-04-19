@@ -70,13 +70,16 @@ public class Projectile : MonoBehaviour
     void OnEnable()
     {
         em.OnProjectileDestroyedByClient += OnProjectileDestroyedByClient;
-        //em.OnGameRestart += OnGameRestart;
+        em.OnRequestMatchRestart += OnRequestMatchRestart;
+        em.OnRequestReturnToLobbyFromMatch += OnRequestReturnToLobbyFromMatch;
     }
 
     void OnDisable()
     {
         em.OnProjectileDestroyedByClient -= OnProjectileDestroyedByClient;
-        //em.OnGameRestart -= OnGameRestart;
+        em.OnRequestMatchRestart -= OnRequestMatchRestart;
+        em.OnRequestReturnToLobbyFromMatch -= OnRequestReturnToLobbyFromMatch;
+
         projectileType = EProjectileType.DEFAULT;
     }
     #endregion
@@ -86,7 +89,7 @@ public class Projectile : MonoBehaviour
     {
         if (!isControlledByServer)
         {
-            if(ownerIndex == projectileOwnerIndex && projectileIndex == this.projectileIndex)
+            if (ownerIndex == projectileOwnerIndex && projectileIndex == this.projectileIndex)
             {
                 GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
                     location, Quaternion.identity) as GameObject;
@@ -96,12 +99,12 @@ public class Projectile : MonoBehaviour
         }
     }
 
-    private void OnGameRestart()
+    private void OnRequestMatchRestart()
     {
         Destroy(gameObject);
     }
 
-    private void OnNewSceneLoading(int sceneIndex)
+    private void OnRequestReturnToLobbyFromMatch()
     {
         Destroy(gameObject);
     }

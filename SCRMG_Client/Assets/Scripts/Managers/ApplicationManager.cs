@@ -76,7 +76,7 @@ public class ApplicationManager : MonoBehaviour
 
     private void OnRequestSceneSingleMainMenu()
     {
-        Debug.Log("SceneManager: Received MainMenu load request!");
+        Debug.Log("ApplicationManager: Received MainMenu load request!");
         em.BroadcastNewSceneLoading(sceneIndexMainMenu);
         //Load scene "MainMenu" in single mode
         SceneManager.LoadScene(sceneIndexMainMenu, LoadSceneMode.Single);
@@ -85,7 +85,7 @@ public class ApplicationManager : MonoBehaviour
 
     private void OnRequestSceneSingleLevel01()
     {
-        Debug.Log("SceneManager: Received Level01 load request!");
+        Debug.Log("ApplicationManager: Received Level01 load request!");
         em.BroadcastNewSceneLoading(sceneIndexLevel01);
         //Load scene "Level01" in single mode
         SceneManager.LoadScene(sceneIndexLevel01, LoadSceneMode.Single);

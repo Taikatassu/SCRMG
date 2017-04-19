@@ -14,6 +14,7 @@ public class UIManager : MonoBehaviour {
     GameObject leftUIPanel;
     GameObject rightUIPanel;
     GameObject hudHolder;
+    GameObject gameplayOfflineScreen;
     GameObject gameEndPanel;
     Text matchStartTimerText; //TODO: Set this in Awake
     Text hudTimerText; //TODO: Set this in Awake
@@ -32,12 +33,14 @@ public class UIManager : MonoBehaviour {
 
         canvas = transform.GetComponentInChildren<Canvas>().gameObject;
 
-        clientInfoHolder = canvas.transform.GetChild(0).gameObject;
+        clientInfoHolder = canvas.transform.GetChild(1).gameObject;
         leftUIPanel = Instantiate(Resources.Load("UI/LeftPanel", typeof(GameObject)),
             clientInfoHolder.transform) as GameObject;
         rightUIPanel = Instantiate(Resources.Load("UI/RightPanel", typeof(GameObject)),
             clientInfoHolder.transform) as GameObject;
-        hudHolder = canvas.transform.GetChild(1).gameObject;
+        hudHolder = canvas.transform.GetChild(0).gameObject;
+        gameplayOfflineScreen = Instantiate(Resources.Load("UI/GameplayOfflineScreen", typeof(GameObject)),
+            hudHolder.transform) as GameObject;
         GameObject matchStartTimer = Instantiate(Resources.Load("UI/MatchStartTimer", typeof(GameObject)),
             hudHolder.transform) as GameObject;
         matchStartTimerText = matchStartTimer.GetComponent<Text>();
@@ -61,6 +64,8 @@ public class UIManager : MonoBehaviour {
         em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
         em.OnMatchTimerValueChange += OnMatchTimerValueChange;
         em.OnMatchEnded += OnMatchEnded;
+        em.OnRequestMatchRestart += OnRequestMatchRestart;
+        em.OnRequestReturnToLobbyFromMatch += OnRequestReturnToLobbyFromMatch;
     }
 
     private void OnDisable()
@@ -72,6 +77,8 @@ public class UIManager : MonoBehaviour {
         em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
         em.OnMatchTimerValueChange -= OnMatchTimerValueChange;
         em.OnMatchEnded -= OnMatchEnded;
+        em.OnRequestMatchRestart -= OnRequestMatchRestart;
+        em.OnRequestReturnToLobbyFromMatch -= OnRequestReturnToLobbyFromMatch;
     }
     #endregion
 
@@ -124,6 +131,11 @@ public class UIManager : MonoBehaviour {
 
     private void OnMatchStartTimerValueChange(int currentTimerValue)
     {
+        if (gameplayOfflineScreen.activeSelf)
+        {
+            gameplayOfflineScreen.SetActive(false);
+        }
+
         UpdateMatchStartTimer(currentTimerValue);
     }
 
@@ -150,8 +162,25 @@ public class UIManager : MonoBehaviour {
 
     private void OnMatchEnded(int winnerIndex)
     {
-        gameEndPanel.SetActive(true);
         gameEndPanel.transform.GetChild(1).GetComponent<Text>().text = "ShipIndex " + winnerIndex + " wins!";
+        gameEndPanel.SetActive(true);
+    }
+
+    private void OnRequestMatchRestart()
+    {
+        gameEndPanel.SetActive(false);
+        matchStartTimerText.gameObject.SetActive(false);
+    }
+
+    private void OnRequestReturnToLobbyFromMatch()
+    {
+        gameEndPanel.SetActive(false);
+        matchStartTimerText.gameObject.SetActive(false);
+
+        if (!gameplayOfflineScreen.activeSelf)
+        {
+            gameplayOfflineScreen.SetActive(true);
+        }
     }
     #endregion
 

@@ -354,11 +354,10 @@ public class ShipController : MonoBehaviour
         if (currentProjectileIndices.Contains(destroyedProjectileIndex))
         {
             currentProjectileIndices.Remove(destroyedProjectileIndex);
-            Debug.Log("DestroyedProjectileIndex found and removed from list. destroyedProjectileIndex: " + destroyedProjectileIndex);
         }
         else
         {
-            Debug.LogError("DestroyedProjectileIndex NOT found in list. destroyedProjectileIndex: " + destroyedProjectileIndex);
+            Debug.LogWarning("DestroyedProjectileIndex NOT found in list. destroyedProjectileIndex: " + destroyedProjectileIndex);
         }
     }
 
@@ -368,7 +367,6 @@ public class ShipController : MonoBehaviour
         if (currentProjectileIndices.Count == 0)
         {
             availableIndex = 1;
-            Debug.Log("Projectile index list empty, creating new projectile index: " + availableIndex);
             currentProjectileIndices.Add(availableIndex);
             return availableIndex;
         }
@@ -379,13 +377,11 @@ public class ShipController : MonoBehaviour
                 if (!currentProjectileIndices.Contains(i))
                 {
                     availableIndex = i;
-                    Debug.Log("Available projectile index found: " + availableIndex);
                     currentProjectileIndices.Add(availableIndex);
                     return availableIndex;
                 }
             }
             availableIndex = currentProjectileIndices.Count + 1;
-            Debug.Log("Creating new projectile index: " + availableIndex);
             currentProjectileIndices.Add(availableIndex);
             return availableIndex;
         }
@@ -450,12 +446,10 @@ public class ShipController : MonoBehaviour
     #region Health adjustments
     public void TakeDamage(float amount, int damageDealerIndex)
     {
-        Debug.Log("TakeDamage, amount: " + amount);
         if (!isDead && isVulnerable)
         {
             //Debug.Log("I'm taking damage.");
             currentHealth -= amount * damageTakenModifier;
-            Debug.Log("TakeDamage, currentHealth: " + currentHealth);
             if (currentHealth <= 0)
             {
                 currentHealth = 0;
@@ -484,7 +478,6 @@ public class ShipController : MonoBehaviour
     #region Die, Resurrect
     private void Die(int killerIndex)
     {
-        Debug.Log("ShipController: Die");
         isDead = true;
         isVulnerable = false;
         isMovable = false;

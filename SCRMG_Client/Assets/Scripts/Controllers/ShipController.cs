@@ -498,7 +498,6 @@ public class ShipController : MonoBehaviour {
         if (currentProjectileIndices.Contains(destroyedProjectileIndex))
         {
             currentProjectileIndices.Remove(destroyedProjectileIndex);
-            Debug.Log("DestroyedProjectileIndex found and removed from list: " + destroyedProjectileIndex);
         }
         else
         {
@@ -512,7 +511,6 @@ public class ShipController : MonoBehaviour {
         if (currentProjectileIndices.Count == 0)
         {
             availableIndex = 1;
-            Debug.Log("Projectile index list empty, creating new projectile index: " + availableIndex);
             currentProjectileIndices.Add(availableIndex);
             return availableIndex;
         }
@@ -523,13 +521,11 @@ public class ShipController : MonoBehaviour {
                 if (!currentProjectileIndices.Contains(i))
                 {
                     availableIndex = i;
-                    Debug.Log("Available projectile index found: " + availableIndex);
                     currentProjectileIndices.Add(availableIndex);
                     return availableIndex;
                 }
             }
             availableIndex = currentProjectileIndices.Count + 1;
-            Debug.Log("Creating new projectile index: " + availableIndex);
             currentProjectileIndices.Add(availableIndex);
             return availableIndex;
         }

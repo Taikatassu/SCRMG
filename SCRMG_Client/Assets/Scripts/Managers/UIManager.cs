@@ -118,6 +118,7 @@ public class UIManager : MonoBehaviour
     float offscreenIndicatorSidebufferPC = -1;
     float offscreenIndicatorSidebufferAndroid = -1;
     bool networkFunctionalityDisabled = false;
+    bool returningToLobby = false;
     #endregion
 
     #region Initialization
@@ -270,6 +271,7 @@ public class UIManager : MonoBehaviour
         em.OnRequestLoadingIconOff += OnRequestLoadingIconOff;
         em.OnNetworkMultiplayerStartMatchStartTimer += OnNetworkMultiplayerStartMatchStartTimer;
         em.OnMatchEndedByServer += OnMatchEndedByServer;
+        em.OnReturnToLobbyFromMatch += OnReturnToLobbyFromMatch;
     }
 
     private void OnDisable()
@@ -296,13 +298,30 @@ public class UIManager : MonoBehaviour
         em.OnRequestLoadingIconOff -= OnRequestLoadingIconOff;
         em.OnNetworkMultiplayerStartMatchStartTimer -= OnNetworkMultiplayerStartMatchStartTimer;
         em.OnMatchEndedByServer -= OnMatchEndedByServer;
+        em.OnReturnToLobbyFromMatch -= OnReturnToLobbyFromMatch;
     }
     #endregion
 
     #region Subscribers
     #region Network event subscribers
+    private void OnReturnToLobbyFromMatch()
+    {
+        if(uiState != UIState.MAINMENUONLINELOBBY)
+        {
+            if(uiState == UIState.MAINMENUDEFAULT)
+            {
+                OpenMainMenuOnlineLobbyView();
+            }
+            else
+            {
+                returningToLobby = true;
+            }
+        }
+    }
+
     private void OnNetworkMultiplayerStartMatchStartTimer()
     {
+        Debug.LogWarning("UIManager: OnNetworkMultiplayerStartMatchStartTimer");
         CloseLoadingIcon();
         StartFadeFromLoadingScreen();
     }
@@ -372,7 +391,6 @@ public class UIManager : MonoBehaviour
 
     private void OnMatchEndedByServer(string winnerName, bool localPlayerWins)
     {
-        Debug.LogWarning("UIManager: OnMatchEndedByServer");
         if (localPlayerWins)
         {
             pauseMenuText.GetComponentInChildren<Text>().text = "Victory!";
@@ -435,6 +453,13 @@ public class UIManager : MonoBehaviour
         {
             CloseInGameUI();
             OpenMainMenuUI();
+            
+            if (returningToLobby)
+            {
+                CloseMainMenuDefaultView();
+                OpenMainMenuOnlineLobbyView();
+            }
+
             CloseLoadingIcon();
             CloseLoadingScreen();
         }
@@ -638,14 +663,12 @@ public class UIManager : MonoBehaviour
 
     private void OpenLoadingIcon()
     {
-        Debug.Log("OpenLoadingIcon");
         loadingIcon.SetActive(true);
         loading = true;
     }
 
     private void CloseLoadingIcon()
     {
-        Debug.Log("CloseLoadingIcon");
         loadingIcon.SetActive(false);
         loading = false;
     }
@@ -1313,6 +1336,7 @@ public class UIManager : MonoBehaviour
         if (!loading)
         {
             ClosePauseMenu();
+            Debug.Log("Closing pause menu");
         }
     }
 
@@ -1320,34 +1344,40 @@ public class UIManager : MonoBehaviour
     {
         if (!loading)
         {
-            OpenLoadingScreen();
-            ClosePauseMenu();
-            ResetOffscreenTargetFollowing();
-            DestroyOffscreenIndicators();
             if(currentGameModeIndex != gameModeNetworkMultiplayerIndex)
             {
+                OpenLoadingScreen();
+                ClosePauseMenu();
+                ResetOffscreenTargetFollowing();
+                DestroyOffscreenIndicators();
                 em.BroadcastGameRestart();
             }
             else
             {
-                //TODO: Broadcast restart game request to the server
+                OpenLoadingScreen();
+                ClosePauseMenu();
+                ResetOffscreenTargetFollowing();
+                DestroyOffscreenIndicators();
+                em.BroadcastRequestRestartFromServer();
             }
         }
     }
 
     private void PauseMenuMainMenuButtonPressed()
     {
-        OpenLoadingScreen();
-        ClosePauseMenu();
-        ResetOffscreenTargetFollowing();
-        DestroyOffscreenIndicators();
         if(currentGameModeIndex != gameModeNetworkMultiplayerIndex)
         {
+            OpenLoadingScreen();
+            ClosePauseMenu();
+            ResetOffscreenTargetFollowing();
+            DestroyOffscreenIndicators();
             em.BroadcastRequestSceneSingleMainMenu();
         }
         else
         {
             //TODO: Broadcast lobby exit to the server
+            Debug.Log("Exiting to lobby");
+            em.BroadcastExitNetworkMultiplayerMidGame();
         }
     }
     #endregion
