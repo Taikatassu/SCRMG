@@ -494,7 +494,7 @@ public class UIManager : MonoBehaviour
         matchStarted = true;
     }
 
-    private void OnMatchEnded(int newWinnerIndex)
+    private void OnMatchEnded(int newWinnerIndex, float matchLength)
     {
         matchStarted = false;
         ResetOffscreenTargetFollowing();

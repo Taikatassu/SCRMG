@@ -273,7 +273,7 @@ public class GameManager : MonoBehaviour
         matchStarted = true;
     }
 
-    private void OnMatchEnded(int winnerIndex)
+    private void OnMatchEnded(int winnerIndex, float matchLength)
     {
         matchStarted = false;
         shipInfoManager.ClearShipInfoList();
@@ -370,7 +370,7 @@ public class GameManager : MonoBehaviour
         matchStarted = false;
     }
 
-    private void OnShipDead(int shipIndex, int killerIndex)
+    private void OnShipDead(int shipIndex, int killerIndex, float lifetime)
     {
         if (currentlyAliveShips.Count > 1)
         {
@@ -390,7 +390,7 @@ public class GameManager : MonoBehaviour
                 if (currentlyAliveShips.Count == 1)
                 {
                     //em.BroadcastMatchEnded(currentlyAliveShips[0].GetComponent<ShipController>().GetIndex());
-                    em.BroadcastMatchEnded(killerIndex);
+                    em.BroadcastMatchEnded(killerIndex, matchTimer);
                 }
             }
         }

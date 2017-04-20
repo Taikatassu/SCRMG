@@ -67,7 +67,7 @@ public class CameraController : MonoBehaviour {
     #endregion
 
     #region Subscribers
-    private void OnShipDead(int shipIndex, int killerIndex)
+    private void OnShipDead(int shipIndex, int killerIndex, float lifetime)
     {
         if (shipIndex == myShipIndex)
         {

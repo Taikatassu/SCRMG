@@ -15,7 +15,7 @@ public class PowerUpController : MonoBehaviour {
 
     //Values coming from within the script
     List<int> availablePowerUps = new List<int>();
-    int powerUpPlatformIndex = -1;
+    public int powerUpPlatformIndex = -1;
     int powerUpCooldownTimer = -1;
     int powerUpType = -1;
     int powerUpProjectileType = -1;
@@ -136,7 +136,7 @@ public class PowerUpController : MonoBehaviour {
         matchStarted = true;
     }
 
-    private void OnMatchEnded(int winnerIndex)
+    private void OnMatchEnded(int winnerIndex, float matchLength)
     {
         SetPowerUpState(false);
         matchStarted = false;

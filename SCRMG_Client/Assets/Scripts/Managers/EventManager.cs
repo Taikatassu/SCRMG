@@ -34,9 +34,12 @@ public class EventManager : MonoBehaviour
     public delegate void IntIntIntVoid(int integer1, int integer2, int integer3);
     public delegate void IntIntIntFloatVoid(int integer1, int integer2, int integer3, float floatingPoint);
     public delegate void IntIntVector3Void(int integer1, int integer2, Vector3 vec31);
+    public delegate void IntIntVector3BoolVoid(int integer1, int integer2, Vector3 vec3, bool boolean);
     public delegate void IntIntVector3Vector3Void(int integer1, int integer2, Vector3 vec31, Vector3 vec32);
     public delegate void IntIntVector3Vector3BoolVoid(int integer1, int integer2, Vector3 vec31, Vector3 vec32, bool boolean);
+    public delegate void IntIntIntVector3Vector3BoolVoid(int integer1, int integer2, int integer3, Vector3 vec31, Vector3 vec32, bool boolean);
     public delegate void Vector2Void(Vector2 vec2);
+    public delegate void IntIntFloatVoid(int integer1, int integer2, float floatinPoint);
     public delegate void IntVector2Void(int integer, Vector2 vec2);
     public delegate void IntVector3Void(int integer, Vector3 vec3);
     public delegate void GameObjectVoid(GameObject gameObject);
@@ -359,12 +362,12 @@ public class EventManager : MonoBehaviour
         }
     }
 
-    public event IntVoid OnMatchEnded;
-    public void BroadcastMatchEnded(int winnerIndex)
+    public event IntFloatVoid OnMatchEnded;
+    public void BroadcastMatchEnded(int winnerIndex, float matchDuration)
     {
         if (OnMatchEnded != null)
         {
-            OnMatchEnded(winnerIndex);
+            OnMatchEnded(winnerIndex, matchDuration);
         }
     }
 
@@ -377,12 +380,12 @@ public class EventManager : MonoBehaviour
         }
     }
 
-    public event IntIntVoid OnShipDead;
-    public void BroadcastShipDead(int shipIndex, int killerIndex)
+    public event IntIntFloatVoid OnShipDead;
+    public void BroadcastShipDead(int shipIndex, int killerIndex, float lifetime)
     {
         if (OnShipDead != null)
         {
-            OnShipDead(shipIndex, killerIndex);
+            OnShipDead(shipIndex, killerIndex, lifetime);
         }
     }
 
@@ -491,12 +494,12 @@ public class EventManager : MonoBehaviour
         }
     }
 
-    public event IntIntVector3Vector3BoolVoid OnProjectileSpawned;
-    public void BroadcastProjectileSpawned(int projectileOwnerIndex, int projectileIndex, Vector3 spawnPosition, Vector3 spawnRotation, bool isControlledByServer)
+    public event IntIntIntVector3Vector3BoolVoid OnProjectileSpawned;
+    public void BroadcastProjectileSpawned(int projectileOwnerIndex, int projectileIndex, int projectileType, Vector3 spawnPosition, Vector3 spawnRotation, bool isControlledByServer)
     {
         if (OnProjectileSpawned != null)
         {
-            OnProjectileSpawned(projectileOwnerIndex, projectileIndex, spawnPosition, spawnRotation, isControlledByServer);
+            OnProjectileSpawned(projectileOwnerIndex, projectileIndex, projectileType, spawnPosition, spawnRotation, isControlledByServer);
         }
     }
 
@@ -527,12 +530,12 @@ public class EventManager : MonoBehaviour
         }
     }
 
-    public event IntIntVector3Void OnProjectileDestroyed;
-    public void BroadcastProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, Vector3 location)
+    public event IntIntVector3BoolVoid OnProjectileDestroyed;
+    public void BroadcastProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, Vector3 location, bool hitShip)
     {
         if (OnProjectileDestroyed != null)
         {
-            OnProjectileDestroyed(projectileOwnerIndex, projectileIndex, location);
+            OnProjectileDestroyed(projectileOwnerIndex, projectileIndex, location, hitShip);
         }
     }
 

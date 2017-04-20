@@ -146,23 +146,9 @@ namespace Client
         #region OnEnable & OnDisable
         void OnEnable()
         {
-            em.OnNewSceneLoaded += OnNewSceneLoaded;
-            em.OnSetGameMode += OnSetGameMode;
             em.OnRequestConnectToNetwork += OnRequestConnectToNetwork;
-            em.OnRequestServerIPAddress += Packet.GetIP4Address;
             em.OnRequestDisconnectFromNetwork += OnRequestDisconnectFromNetwork;
-            em.OnRequestLobbyEnter += OnRequestLobbyEnter;
-            em.OnRequestLobbyExit += OnRequestLobbyExit;
-            em.OnLobbyReadyStateChange += OnLobbyReadyStateChange;
-            em.OnRequestOnlineMatchStart += OnRequestOnlineMatchStart;
-            em.OnRequestMyNetworkID += OnRequestMyNetworkID;
-            em.OnNetworkMultiplayerMatchInitialized += OnNetworkMultiplayerMatchInitialized;
-            em.OnProjectileHitShip += OnProjectileHitShip;
-            em.OnProjectileSpawned += OnProjectileSpawned;
-            em.OnProjectileDestroyed += OnProjectileDestroyed;
-            em.OnShipDead += OnShipDead;
-            em.OnRequestRestartFromServer += OnRequestRestartFromServer;
-            em.OnExitNetworkMultiplayerMidGame += OnExitNetworkMultiplayerMidGame;
+            em.OnRequestServerIPAddress += Packet.GetIP4Address;
 
             inGame = false;
             shipInfoUpdateTimer = 0;
@@ -170,23 +156,9 @@ namespace Client
 
         void OnDisable()
         {
-            em.OnNewSceneLoaded -= OnNewSceneLoaded;
-            em.OnSetGameMode -= OnSetGameMode;
             em.OnRequestConnectToNetwork -= OnRequestConnectToNetwork;
-            em.OnRequestServerIPAddress -= Packet.GetIP4Address;
             em.OnRequestDisconnectFromNetwork -= OnRequestDisconnectFromNetwork;
-            em.OnRequestLobbyEnter -= OnRequestLobbyEnter;
-            em.OnRequestLobbyExit -= OnRequestLobbyExit;
-            em.OnLobbyReadyStateChange -= OnLobbyReadyStateChange;
-            em.OnRequestOnlineMatchStart -= OnRequestOnlineMatchStart;
-            em.OnRequestMyNetworkID -= OnRequestMyNetworkID;
-            em.OnNetworkMultiplayerMatchInitialized -= OnNetworkMultiplayerMatchInitialized;
-            em.OnProjectileHitShip -= OnProjectileHitShip;
-            em.OnProjectileSpawned -= OnProjectileSpawned;
-            em.OnProjectileDestroyed -= OnProjectileDestroyed;
-            em.OnShipDead -= OnShipDead;
-            em.OnRequestRestartFromServer -= OnRequestRestartFromServer;
-            em.OnExitNetworkMultiplayerMidGame -= OnExitNetworkMultiplayerMidGame;
+            em.OnRequestServerIPAddress -= Packet.GetIP4Address;
 
             if (incomingDataThread != null)
             {
@@ -204,7 +176,69 @@ namespace Client
         }
         #endregion
 
+        #region Subscribing to and unsubscribing from networkEvents
+        private void SubscribeToNetworkEvents()
+        {
+            em.OnNewSceneLoaded += OnNewSceneLoaded;
+            em.OnSetGameMode += OnSetGameMode;
+            em.OnRequestLobbyEnter += OnRequestLobbyEnter;
+            em.OnRequestLobbyExit += OnRequestLobbyExit;
+            em.OnLobbyReadyStateChange += OnLobbyReadyStateChange;
+            em.OnRequestOnlineMatchStart += OnRequestOnlineMatchStart;
+            em.OnRequestMyNetworkID += OnRequestMyNetworkID;
+            em.OnNetworkMultiplayerMatchInitialized += OnNetworkMultiplayerMatchInitialized;
+            em.OnProjectileHitShip += OnProjectileHitShip;
+            em.OnProjectileSpawned += OnProjectileSpawned;
+            em.OnProjectileDestroyed += OnProjectileDestroyed;
+            em.OnShipDead += OnShipDead;
+            em.OnRequestRestartFromServer += OnRequestRestartFromServer;
+            em.OnExitNetworkMultiplayerMidGame += OnExitNetworkMultiplayerMidGame;
+        }
+
+        private void UnsubscribeFromNetworkEvents()
+        {
+            em.OnNewSceneLoaded -= OnNewSceneLoaded;
+            em.OnSetGameMode -= OnSetGameMode;
+            em.OnRequestLobbyEnter -= OnRequestLobbyEnter;
+            em.OnRequestLobbyExit -= OnRequestLobbyExit;
+            em.OnLobbyReadyStateChange -= OnLobbyReadyStateChange;
+            em.OnRequestOnlineMatchStart -= OnRequestOnlineMatchStart;
+            em.OnRequestMyNetworkID -= OnRequestMyNetworkID;
+            em.OnNetworkMultiplayerMatchInitialized -= OnNetworkMultiplayerMatchInitialized;
+            em.OnProjectileHitShip -= OnProjectileHitShip;
+            em.OnProjectileSpawned -= OnProjectileSpawned;
+            em.OnProjectileDestroyed -= OnProjectileDestroyed;
+            em.OnShipDead -= OnShipDead;
+            em.OnRequestRestartFromServer -= OnRequestRestartFromServer;
+            em.OnExitNetworkMultiplayerMidGame -= OnExitNetworkMultiplayerMidGame;
+        }
+        #endregion
+
         #region Subscribers
+        private void OnRequestConnectToNetwork(string ip)
+        {
+            if (!connected)
+            {
+                TryConnectingToHost(ip);
+            }
+            else
+            {
+                Debug.LogError("NetworkClient, OnRequestConnectToNetwork: Already connected!!");
+            }
+        }
+
+        private void OnRequestDisconnectFromNetwork()
+        {
+            if (connected)
+            {
+                Disconnect();
+            }
+            else
+            {
+                Debug.LogError("NetworkClient, OnRequestDisconnectFromNetwork: Not connected!!");
+            }
+        }
+
         private void OnRequestLobbyEnter()
         {
             lobbyJoinedResponse = 2;
@@ -255,30 +289,6 @@ namespace Client
             else if (sceneIndex == 1)
             {
                 inGame = true;
-            }
-        }
-
-        private void OnRequestConnectToNetwork(string ip)
-        {
-            if (!connected)
-            {
-                TryConnectingToHost(ip);
-            }
-            else
-            {
-                Debug.LogError("NetworkClient, OnRequestConnectToNetwork: Already connected!!");
-            }
-        }
-
-        private void OnRequestDisconnectFromNetwork()
-        {
-            if (connected)
-            {
-                Disconnect();
-            }
-            else
-            {
-                Debug.LogError("NetworkClient, OnRequestDisconnectFromNetwork: Not connected!!");
             }
         }
 
@@ -352,8 +362,9 @@ namespace Client
             }
         }
 
-        private void OnProjectileSpawned(int projectileOwnerIndex, int projectileIndex,
-            Vector3 spawnPosition, Vector3 spawnRotation, bool isControlledByServer)
+        private void OnProjectileSpawned(int projectileOwnerIndex, int projectileIndex, 
+            int projectileType, Vector3 spawnPosition, Vector3 spawnRotation, 
+            bool isControlledByServer)
         {
             if (!isControlledByServer)
             {
@@ -401,7 +412,8 @@ namespace Client
             }
         }
 
-        private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, Vector3 location)
+        private void OnProjectileDestroyed(int projectileOwnerIndex, int projectileIndex, 
+            Vector3 location, bool hitShip)
         {
             if (projectileOwnerIndex == myShipIndex)
             {
@@ -424,7 +436,7 @@ namespace Client
             }
         }
 
-        private void OnShipDead(int shipIndex, int killerIndex)
+        private void OnShipDead(int shipIndex, int killerIndex, float lifetime)
         {
             Packet p = new Packet(PacketType.DEATH, clientID);
             p.GdataInts.Add(0);
@@ -524,6 +536,8 @@ namespace Client
                 Debug.Log("Disconnected");
                 em.BroadcastConnectionToNetworkLost();
                 em.BroadcastRequestUINotification(lib.networkingVariables.unintentionalDisconnectUINotificationContent);
+
+                UnsubscribeFromNetworkEvents();
             }
         }
         #endregion
@@ -639,6 +653,8 @@ namespace Client
                         em.BroadcastConnectingToNetworkSucceeded(serverIP);
                         registrationResponse = -1;
                         em.BroadcastRequestLoadingIconOff();
+
+                        SubscribeToNetworkEvents();
                     }
                 }
 

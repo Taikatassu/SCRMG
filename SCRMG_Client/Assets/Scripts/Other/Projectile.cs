@@ -32,6 +32,8 @@ public class Projectile : MonoBehaviour
     bool isPersistingProjectile = false;
     bool isInitialized = false;
     bool isControlledByServer = false;
+    bool hitShip = false;
+    bool alreadyDestroying = false;
     float projectileDamage = -1;
     float projectileSpeed = -1;
     float projectileRicochetCooldown = -1;
@@ -81,6 +83,8 @@ public class Projectile : MonoBehaviour
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnProjectileDestroyedByServer += OnProjectileDestroyedByServer;
+
+        hitShip = false;
     }
 
     void OnDisable()
@@ -142,7 +146,7 @@ public class Projectile : MonoBehaviour
         projectileColor = newProjectileColor;
         SetProjectileType(newProjectileType);
         isInitialized = true;
-        em.BroadcastProjectileSpawned(ownerIndex, projectileIndex, transform.position, transform.eulerAngles, isControlledByServer);
+        em.BroadcastProjectileSpawned(ownerIndex, projectileIndex, newProjectileType, transform.position, transform.eulerAngles, isControlledByServer);
 
         currentGameModeIndex = em.BroadcastRequestCurrentGameModeIndex();
     }
@@ -464,25 +468,38 @@ public class Projectile : MonoBehaviour
     #region Projectile destruction
     public void OnPersistingProjectileDestruction()
     {
-        DestroyThisProjectile();
+        if (!alreadyDestroying)
+        {
+            alreadyDestroying = true;
+            DestroyThisProjectile();
+        }
     }
 
     private void OnProjectileLifetimeEnded()
     {
-        DestroyThisProjectile();
+        if (!alreadyDestroying)
+        {
+            alreadyDestroying = true;
+            DestroyThisProjectile();
+        }
     }
-
+    
     private void DestroyOnHit()
     {
-        DestroyThisProjectile();
-        GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
-            transform.position, Quaternion.identity) as GameObject;
-        bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+        if (!alreadyDestroying)
+        {
+            alreadyDestroying = true;
+            DestroyThisProjectile();
+            GameObject bulletHitEffect = Instantiate(Resources.Load("Effects/BulletHitEffect"),
+                transform.position, Quaternion.identity) as GameObject;
+            bulletHitEffect.GetComponentInChildren<Renderer>().material.SetColor("_TintColor", projectileColor);
+        }
     }
 
     private void DestroyThisProjectile()
     {
-        em.BroadcastProjectileDestroyed(ownerIndex, projectileIndex, transform.position);
+        Debug.LogWarning("Projectile.DestroyThisProjectile, projectileIndex: " + projectileIndex + ", ownerIndex: " + ownerIndex);
+        em.BroadcastProjectileDestroyed(ownerIndex, projectileIndex, transform.position, hitShip);
         Destroy(gameObject);
         //gameObject.SetActive(false);
     }
@@ -517,6 +534,7 @@ public class Projectile : MonoBehaviour
             #region Collision with ships
             if (collidedObjectTag == shipTag)
             {
+                hitShip = true;
                 if (currentGameModeIndex == gameModeSingleplayerIndex)
                 {
                     collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage, ownerIndex);
@@ -582,6 +600,7 @@ public class Projectile : MonoBehaviour
             #region Collision with ships
             if (collidedObjectTag == shipTag)
             {
+                hitShip = true;
                 if (currentGameModeIndex == gameModeSingleplayerIndex)
                 {
                     collidedObject.GetComponentInParent<ShipController>().TakeDamage(projectileDamage, ownerIndex);

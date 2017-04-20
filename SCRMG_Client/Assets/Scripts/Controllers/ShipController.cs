@@ -39,6 +39,7 @@ public class ShipController : MonoBehaviour {
     float speedModifier = -1;
     float damageTakenModifier = -1;
     float shootCooldownModifier = -1;
+    float matchTimer = -1;
     public int currentGameModeIndex = -1;
     int shootCooldownFrameTimer = -1;
     int powerUpType = -1;
@@ -52,6 +53,7 @@ public class ShipController : MonoBehaviour {
     bool updatingHealthBar = false;
     bool isPaused = false;
     bool isPoweredUp = false;
+    bool matchTimerRunning = false;
     protected bool rotatingTurret = false;
     protected bool isControllerByServer = false;
     //Values coming from GlobalVariableLibrary
@@ -158,7 +160,7 @@ public class ShipController : MonoBehaviour {
     }
 
     private void OnProjectileDestroyed(int projectileOwnerIndex, 
-        int projectileIndex, Vector3 location)
+        int projectileIndex, Vector3 location, bool hitShip)
     {
         if (projectileOwnerIndex == index)
         {
@@ -186,9 +188,10 @@ public class ShipController : MonoBehaviour {
         SetIsMoveable(true);
         SetIsVulnerable(true);
         SetCanShoot(true);
+        matchTimerRunning = true;
     }
 
-    private void OnMatchEnded(int winnerIndex)
+    private void OnMatchEnded(int winnerIndex, float matchLenght)
     {
         powerUpType = 0;
         SetIsVulnerable(false);
@@ -238,6 +241,11 @@ public class ShipController : MonoBehaviour {
     #region Update & FixedUpdate
     protected virtual void Update()
     {
+        if (matchTimerRunning)
+        {
+            matchTimer += Time.deltaTime;
+        }
+
         #region Circular health bar updating
         if (updatingHealthBar)
         {
@@ -497,11 +505,16 @@ public class ShipController : MonoBehaviour {
     {
         if (currentProjectileIndices.Contains(destroyedProjectileIndex))
         {
+            Debug.LogWarning("DestroyedProjectileIndex found in list: " + destroyedProjectileIndex + "shipIndex: " + index);
             currentProjectileIndices.Remove(destroyedProjectileIndex);
         }
         else
         {
-            Debug.LogWarning("DestroyedProjectileIndex NOT found in list: " + destroyedProjectileIndex);
+            Debug.LogWarning("DestroyedProjectileIndex NOT found in list: " + destroyedProjectileIndex + ", currentProjectileIndices.Count: " + currentProjectileIndices.Count + "shipIndex: " + index);
+            foreach(int projectileIndex in currentProjectileIndices)
+            {
+                Debug.LogWarning("currentProjectileIndices: " + projectileIndex);
+            }
         }
     }
 
@@ -665,7 +678,7 @@ public class ShipController : MonoBehaviour {
         canShoot = false;
         //Broadcast ship death
         //Start spectator mode if player
-        em.BroadcastShipDead(index, killerIndex);
+        em.BroadcastShipDead(index, killerIndex, matchTimer);
         
         GameObject shipDeathEffect = Instantiate(Resources.Load("Effects/ShipDeathEffect"),
             transform.position, Quaternion.identity) as GameObject;
