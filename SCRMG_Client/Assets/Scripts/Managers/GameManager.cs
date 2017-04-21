@@ -34,6 +34,8 @@ public class GameManager : MonoBehaviour
     bool matchStarted = false;
     bool inGame = false;
     bool readyToSpawnShips = false;
+    bool nextFrame = false;
+    bool waitingTillNextFrame = false;
     int fixedUpdateLoopCounter = -1;
     int fixedUpdateLoopsPerSecond = -1;
     int matchStartTimerValue = -1;
@@ -111,7 +113,7 @@ public class GameManager : MonoBehaviour
         em.OnSetGameMode += OnSetGameMode;
         em.OnPauseOn += OnPauseOn;
         em.OnPauseOff += OnPauseOff;
-        em.OnPowerUpPickedUp += OnPowerUpPickedUp;
+        //em.OnPowerUpPickedUp += OnPowerUpPickedUp;
         em.OnPowerUpOnline += OnPowerUpOnline;
         em.OnConnectionToNetworkLost += OnConnectionToNetworkLost;
         em.OnShipSpawnByServer += OnShipSpawnByServer;
@@ -136,7 +138,7 @@ public class GameManager : MonoBehaviour
         em.OnSetGameMode -= OnSetGameMode;
         em.OnPauseOn -= OnPauseOn;
         em.OnPauseOff -= OnPauseOff;
-        em.OnPowerUpPickedUp -= OnPowerUpPickedUp;
+        //em.OnPowerUpPickedUp -= OnPowerUpPickedUp;
         em.OnPowerUpOnline -= OnPowerUpOnline;
         em.OnConnectionToNetworkLost -= OnConnectionToNetworkLost;
         em.OnShipSpawnByServer -= OnShipSpawnByServer;
@@ -364,10 +366,7 @@ public class GameManager : MonoBehaviour
         resetUsedShipColors = true;
         resetUsedSpawnPointsList = true;
         shipInfoManager.ClearShipInfoList();
-        //Respawn everything
-        InitializeGame();
-        StartMatchStartTimer();
-        matchStarted = false;
+        waitingTillNextFrame = true;
     }
 
     private void OnShipDead(int shipIndex, int killerIndex, float lifetime)
@@ -413,8 +412,7 @@ public class GameManager : MonoBehaviour
 
     private void OnPowerUpPickedUp(int shipIndex, int powerUpBaseIndex, int powerUpType)
     {
-        //TODO: Do something with this
-        Debug.Log("GameManager: PowerUp index: " + powerUpBaseIndex + " (Type: " + powerUpType + ") picked up by ship " + shipIndex);
+        //Debug.Log("GameManager: PowerUp index: " + powerUpBaseIndex + " (Type: " + powerUpType + ") picked up by ship " + shipIndex);
     }
 
     private void OnPowerUpOnline(int powerUpBaseIndex, int powerUpType)
@@ -821,6 +819,33 @@ public class GameManager : MonoBehaviour
                 }
             }
             #endregion
+        }
+
+        if (waitingTillNextFrame)
+        {
+            WaitRestartingTillNextFrame();
+        }
+    }
+    #endregion
+
+    #region Waiting a frame to restart match
+    private void WaitRestartingTillNextFrame()
+    {
+        if (nextFrame)
+        {
+            Debug.Log("Next frame; restarting");
+            waitingTillNextFrame = false;
+            nextFrame = false;
+
+            //Respawn everything
+            InitializeGame();
+            StartMatchStartTimer();
+            matchStarted = false;
+        }
+        else
+        {
+            Debug.Log("Waiting till next frame to restart");
+            nextFrame = true;
         }
     }
     #endregion

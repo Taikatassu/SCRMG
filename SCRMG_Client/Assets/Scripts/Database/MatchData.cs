@@ -5,14 +5,15 @@ using UnityEngine;
 
 public class MatchData
 {
-    public MatchData(int newMatchID, int gameMode)
+    public MatchData(int newMatchID, int newGameMode)
     {
         matchID = newMatchID;
-        Debug.Log("Creating new matchData on " + DateTime.Now.ToLongDateString() 
+        Debug.Log("Creating new matchData (ID: " + newMatchID + ") on " + DateTime.Now.ToLongDateString() 
             + ", at " + DateTime.Now.ToLongTimeString());
         startDate = DateTime.Now.ToLongDateString();
         startTime = DateTime.Now.ToLongTimeString();
         matchLength = -1;
+        gameMode = newGameMode;
 
         powerUpsPickedUpOverall = 0;
         powerUpPlatformOneUsed = 0;
@@ -25,8 +26,8 @@ public class MatchData
     public string startDate = "NA";
     public string startTime = "NA";
     public float matchLength = -1;
-    public bool humanPlayerWon = false;
     public int gameMode = -1;
+    public bool humanPlayerWon = false;
 
     public List<bool> playersAndIfHumanControlled = new List<bool>();
 

@@ -498,7 +498,7 @@ public class Projectile : MonoBehaviour
 
     private void DestroyThisProjectile()
     {
-        Debug.LogWarning("Projectile.DestroyThisProjectile, projectileIndex: " + projectileIndex + ", ownerIndex: " + ownerIndex);
+        //Debug.LogWarning("Projectile.DestroyThisProjectile, projectileIndex: " + projectileIndex + ", ownerIndex: " + ownerIndex);
         em.BroadcastProjectileDestroyed(ownerIndex, projectileIndex, transform.position, hitShip);
         Destroy(gameObject);
         //gameObject.SetActive(false);

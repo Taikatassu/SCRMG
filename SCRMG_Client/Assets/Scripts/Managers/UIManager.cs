@@ -1277,7 +1277,6 @@ public class UIManager : MonoBehaviour
 
     private void OpenGameEndMenu()
     {
-        Debug.LogWarning("UIManager: OpenGameEndMenu");
         ClosePauseMenu();
 
         HUDOffline();

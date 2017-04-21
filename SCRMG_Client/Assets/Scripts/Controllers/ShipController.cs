@@ -113,7 +113,6 @@ public class ShipController : MonoBehaviour {
     #region OnEnable & OnDisable
     protected virtual void OnEnable()
     {
-        Debug.Log("ShipController OnEnable");
         em.OnGameRestart += OnGameRestart;
         em.OnMatchStartTimerValueChange += OnMatchStartTimerValueChange;
         em.OnMatchStarted += OnMatchStarted;
@@ -138,7 +137,6 @@ public class ShipController : MonoBehaviour {
 
     protected virtual void OnDisable()
     {
-        Debug.Log("ShipController OnDisable");
         em.OnGameRestart -= OnGameRestart;
         em.OnMatchStartTimerValueChange -= OnMatchStartTimerValueChange;
         em.OnMatchStarted -= OnMatchStarted;
@@ -505,16 +503,16 @@ public class ShipController : MonoBehaviour {
     {
         if (currentProjectileIndices.Contains(destroyedProjectileIndex))
         {
-            Debug.LogWarning("DestroyedProjectileIndex found in list: " + destroyedProjectileIndex + "shipIndex: " + index);
+            //Debug.LogWarning("DestroyedProjectileIndex found in list: " + destroyedProjectileIndex + "shipIndex: " + index);
             currentProjectileIndices.Remove(destroyedProjectileIndex);
         }
         else
         {
-            Debug.LogWarning("DestroyedProjectileIndex NOT found in list: " + destroyedProjectileIndex + ", currentProjectileIndices.Count: " + currentProjectileIndices.Count + "shipIndex: " + index);
-            foreach(int projectileIndex in currentProjectileIndices)
-            {
-                Debug.LogWarning("currentProjectileIndices: " + projectileIndex);
-            }
+            //Debug.LogWarning("DestroyedProjectileIndex NOT found in list: " + destroyedProjectileIndex + ", currentProjectileIndices.Count: " + currentProjectileIndices.Count + "shipIndex: " + index);
+            //foreach(int projectileIndex in currentProjectileIndices)
+            //{
+            //    Debug.LogWarning("currentProjectileIndices: " + projectileIndex);
+            //}
         }
     }
 
