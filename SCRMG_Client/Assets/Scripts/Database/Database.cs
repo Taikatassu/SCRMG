@@ -13,6 +13,7 @@ public class Database : MonoBehaviour
     //      - Last match stats (winner, powerUps used, match length, etc.)
     //      - Overall match stats (playerWins / AIWins, powerUp platform frequency, average match length, etc.)
 
+    #region References & variables
     Toolbox toolbox;
     EventManager em;
     GlobalVariableLibrary lib;
@@ -22,13 +23,13 @@ public class Database : MonoBehaviour
     MatchData lastMatchData;
     int currentMatchID = -1;
     int currentGameModeIndex = -1;
-
+    //Variables coming from GlobalVariableLibrary
     int sceneIndexMainMenu = -1;
     int sceneIndexLevel01 = -1;
     int gameModeSingleplayerIndex = 0;
-    //int gameModeNetworkMultiplayerIndex = 1;
-    //int gameModeLocalMultiplayerIndex = 2;
+    #endregion
 
+    #region Awake & GetStats
     private void Awake()
     {
         toolbox = FindObjectOfType<Toolbox>();
@@ -36,206 +37,29 @@ public class Database : MonoBehaviour
         lib = toolbox.GetComponent<GlobalVariableLibrary>();
     }
 
-    private void StoreDataInDatabase()
-    {
-        string conn = "URI=file:" + Application.dataPath + "/SCRMG_Database.db";
-
-        IDbConnection dbconn;
-        dbconn = (IDbConnection)new SqliteConnection(conn);
-        IDbCommand dbcmd = dbconn.CreateCommand();
-        IDataReader reader;
-        string sqlQuery;
-        dbconn.Open();
-
-        #region Storing matchData
-        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='MatchData' ";
-        dbcmd.CommandText = sqlQuery;
-        reader = dbcmd.ExecuteReader();
-
-        if (!reader.Read())
-        {
-            try
-            {
-                reader.Close();
-                reader = null;
-                sqlQuery = "CREATE TABLE MatchData (PK INTEGER PRIMARY KEY, matchID INT, startDate CHAR,"
-                    + " startTime CHAR, matchLength REAL, gameMode INT, humanPlayerWon INT, powerUpsOverall INT,"
-                    + " powerUpBase1 INT, powerUpBase2 INT, powerUpBase3 INT, powerUpBase4 INT)";
-                dbcmd.CommandText = sqlQuery;
-                dbcmd.ExecuteNonQuery();
-            }
-            catch
-            {
-                Debug.LogWarning("Error while trying to create new table");
-            }
-        }
-
-        if (reader != null)
-        {
-            reader.Close();
-            reader = null;
-        }
-
-        int myMatchID = lastMatchData.matchID;
-        string myStartDate = lastMatchData.startDate;
-        string myStartTime = lastMatchData.startTime;
-        float myMatchLength = lastMatchData.matchLength;
-        int myGameMode = lastMatchData.gameMode;
-        int myHumanPlayerWon = 0;
-        if (lastMatchData.humanPlayerWon)
-        {
-            myHumanPlayerWon = 1;
-        }
-
-        int myPowerUpsPickedUpOverall = lastMatchData.powerUpsPickedUpOverall;
-        int myPowerUpPlatformOneUsed = lastMatchData.powerUpPlatformOneUsed;
-        int myPowerUpPlatformTwoUsed = lastMatchData.powerUpPlatformTwoUsed;
-        int myPowerUpPlatformThreeUsed = lastMatchData.powerUpPlatformThreeUsed;
-        int myPowerUpPlatformFourUsed = lastMatchData.powerUpPlatformFourUsed;
-
-        try
-        {
-            sqlQuery = "INSERT INTO MatchData (matchID, startDate, startTime, matchLength, gameMode, humanPlayerWon, powerUpsOverall, "
-                        + "powerUpBase1, powerUpBase2, powerUpBase3, powerUpBase4) "
-                        + "VALUES (" + myMatchID + ", '" + myStartDate + "', '" + myStartTime + "', " + myMatchLength + ", " + myGameMode + ", "
-                        + myHumanPlayerWon + ", " + myPowerUpsPickedUpOverall + ", " + myPowerUpPlatformOneUsed + ", " + myPowerUpPlatformTwoUsed
-                        + ", " + myPowerUpPlatformThreeUsed + ", " + myPowerUpPlatformFourUsed + ")";
-
-            dbcmd.CommandText = sqlQuery;
-            dbcmd.ExecuteNonQuery();
-        }
-        catch
-        {
-            Debug.LogWarning("Error while writing to database");
-        }
-
-        if (reader != null)
-        {
-            reader.Close();
-            reader = null;
-        }
-        
-        #endregion
-
-        #region Storing PlayerData
-        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='PlayerData' ";
-        dbcmd.CommandText = sqlQuery;
-        reader = dbcmd.ExecuteReader();
-
-        if (!reader.Read())
-        {
-            Debug.Log("PlayerData table not found, creating table");
-
-            reader.Close();
-            reader = null;
-            sqlQuery = "CREATE TABLE PlayerData (PK INTEGER PRIMARY KEY, shipIndex INT, matchID INT, lifetime REAL,"
-                + " victory INT, projectileType1Spawns INT, projectileType2Spawns INT, projectileType3Spawns INT,"
-                + " projectileType4Spawns INT, projectileType1Hits INT, projectileType2Hits INT, projectileType3Hits INT,"
-                + " projectileType4Hits INT, powerUp1PickUps INT, powerUp2PickUps INT, powerUp3PickUps INT)";
-            dbcmd.CommandText = sqlQuery;
-            dbcmd.ExecuteNonQuery();
-
-            //try
-            //{
-            //}
-            //catch
-            //{
-            //    Debug.Log("Error while trying to create new PlayerData table");
-            //}
-        }
-
-        if (reader != null)
-        {
-            reader.Close();
-            reader = null;
-        }
-        
-        foreach (PlayerData playerData in lastPlayers)
-        {
-            int myShipIndex = playerData.playerShipIndex;
-            int myPlayerMatchID = playerData.matchID;
-            float myLifetime = playerData.lifetime;
-
-            int myVictory = 0;
-            if (playerData.victory)
-            {
-                myVictory = 1;
-            }
-
-            int myProjectileTypeZeroSpawns = playerData.projectileTypeZeroSpawns;
-            int myProjectileTypeOneSpawns = playerData.projectileTypeOneSpawns;
-            int myProjectileTypeTwopawns = playerData.projectileTypeTwopawns;
-            int myProjectileTypeThreeSpawns = playerData.projectileTypeThreeSpawns;
-
-            int myProjectileTypeZeroHits = playerData.projectileTypeZeroHits;
-            int myProjectileTypeOneHits = playerData.projectileTypeOneHits;
-            int myProjectileTypeTwoHits = playerData.projectileTypeTwoHits;
-            int myProjectileTypeThreeHits = playerData.projectileTypeThreeHits;
-
-            int myTimesPickedUpPowerUpOne = playerData.timesPickedUpPowerUpOne;
-            int myTimesPickedUpPowerUpTwo = playerData.timesPickedUpPowerUpTwo;
-            int myTimesPickedUpPowerUpThree = playerData.timesPickedUpPowerUpThree;
-
-            try
-            {
-                sqlQuery = "INSERT INTO PlayerData (shipIndex, matchID, lifetime, victory, projectileType1Spawns,"
-                    + " projectileType2Spawns, projectileType3Spawns, projectileType4Spawns, projectileType1Hits,"
-                    + " projectileType2Hits, projectileType3Hits, projectileType4Hits, powerUp1PickUps,"
-                    + " powerUp2PickUps, powerUp3PickUps) VALUES (" + myShipIndex + ", " + myPlayerMatchID
-                    + ", " + myLifetime + ", " + myVictory + ", " + myProjectileTypeZeroSpawns + ", " + myProjectileTypeOneSpawns
-                    + ", " + myProjectileTypeTwopawns + ", " + myProjectileTypeThreeSpawns + ", " + myProjectileTypeZeroHits
-                    + ", " + myProjectileTypeOneHits + ", " + myProjectileTypeTwoHits + ", " + myProjectileTypeThreeHits
-                    + ", " + myTimesPickedUpPowerUpOne + ", " + myTimesPickedUpPowerUpTwo + ", " + myTimesPickedUpPowerUpThree + ")";
-
-                dbcmd.CommandText = sqlQuery;
-                dbcmd.ExecuteNonQuery();
-            }
-            catch
-            {
-                Debug.LogWarning("Error while writing to database");
-            }
-
-            if (reader != null)
-            {
-                reader.Close();
-                reader = null;
-            }
-        }
-        #endregion
-
-        if (reader != null)
-        {
-            reader.Close();
-            reader = null;
-        }
-        dbcmd.Dispose();
-        dbcmd = null;
-        dbconn.Dispose();
-        dbconn = null;
-
-        lastMatchData = null;
-        lastPlayers.Clear();
-    }
-
     private void GetStats()
     {
         sceneIndexMainMenu = lib.sceneVariables.sceneIndexMainMenu;
         sceneIndexLevel01 = lib.sceneVariables.sceneIndexLevel01;
         gameModeSingleplayerIndex = lib.gameSettingVariables.gameModeSingleplayerIndex;
-        //gameModeNetworkMultiplayerIndex = lib.gameSettingVariables.gameModeNetworkMultiplayerIndex;
-        //gameModeLocalMultiplayerIndex = lib.gameSettingVariables.gameModeLocalMultiplayerIndex;
     }
+    #endregion
 
+    #region OnEnable & OnDisable
     private void OnEnable()
     {
         em.OnSetGameMode += OnSetGameMode;
+        em.OnRequestDataFromDatabase += OnRequestDataFromDatabase;
     }
 
     private void OnDisable()
     {
         em.OnSetGameMode -= OnSetGameMode;
+        em.OnRequestDataFromDatabase -= OnRequestDataFromDatabase;
     }
+    #endregion
 
+    #region Subscribing and unsubscribing to data events
     private void SubscribeToDataEvents()
     {
         em.OnNewSceneLoading += OnNewSceneLoading;
@@ -259,99 +83,32 @@ public class Database : MonoBehaviour
         em.OnMatchEnded -= OnMatchEnded;
         em.OnGameRestart -= OnGameRestart;
     }
-
-    #region Creating new MatchIndex
-    private int CreateNewMatchIndex()
-    {
-        int newMatchIndex = -1;
-
-        string conn = "URI=file:" + Application.dataPath + "/SCRMG_Database.db";
-
-        IDbConnection dbconn;
-        dbconn = (IDbConnection)new SqliteConnection(conn);
-        IDbCommand dbcmd = dbconn.CreateCommand();
-        string sqlQuery;
-        dbconn.Open();
-
-        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='MatchData' ";
-        dbcmd.CommandText = sqlQuery;
-        IDataReader reader = dbcmd.ExecuteReader();
-
-        if (!reader.Read())
-        {
-            Debug.Log("Table not found, starting MatchIndices from one");
-            reader.Close();
-            reader = null;
-            newMatchIndex = 1;
-        }
-        else
-        {
-            reader.Close();
-            reader = null;
-            sqlQuery = "SELECT matchID FROM MatchData ORDER BY matchID DESC LIMIT 1;";
-            dbcmd.CommandText = sqlQuery;
-            reader = dbcmd.ExecuteReader();
-
-            if (!reader.Read())
-            {
-                reader.Close();
-                reader = null;
-                newMatchIndex = 1;
-            }
-            else if (reader.GetInt32(0) == 0)
-            {
-                reader.Close();
-                reader = null;
-                newMatchIndex = 1;
-            }
-            else
-            {
-                newMatchIndex = reader.GetInt32(0) + 1;
-                reader.Close();
-                reader = null;
-            }
-        }
-
-        if (reader != null)
-        {
-            reader.Close();
-            reader = null;
-        }
-        dbcmd.Dispose();
-        dbcmd = null;
-        dbconn.Dispose();
-        dbconn = null;
-        
-        return newMatchIndex;
-    }
     #endregion
-    
-    private PlayerData FindPlayerDataWithShipIndex(int shipIndex)
-    {
-        PlayerData myPlayerData;
-        if (currentPlayers.Count > 0)
-        {
-            if (currentPlayers[shipIndex - 1].playerShipIndex == shipIndex)
-            {
-                myPlayerData = currentPlayers[shipIndex - 1];
-                return myPlayerData;
-            }
-            else
-            {
-                for (int i = 0; i < currentPlayers.Count; i++)
-                {
-                    if (currentPlayers[i].playerShipIndex == shipIndex)
-                    {
-                        myPlayerData = currentPlayers[i];
-                        return myPlayerData;
-                    }
-                }
-            }
-        }
-        return new PlayerData(-1, -1);
-    }
 
     #region Subscribers
+    private void OnRequestDataFromDatabase(int requestType)
+    {
+        Debug.Log("Database: OnRequestDataFromDatabase");
+        switch (requestType)
+        {
+            case 0:
+                ReadGameOverallDataFromDatabase();
+                break;
+            case 1:
+                ReadPlayerLastMatchDataFromDatabase();
+                break;
+            case 2:
+                ReadPlayerOverallDataFromDatabase();
+                break;
+            case 3:
+                ReadMatchLastMatchDataFromDatabase();
+                break;
+            case 4:
+                ReadMatchOverallDataFromDatabase();
+                break;
+        }
+    }
+
     private void OnSetGameMode(int newGameModeIndex)
     {
         currentGameModeIndex = newGameModeIndex;
@@ -588,4 +345,328 @@ public class Database : MonoBehaviour
         currentMatchData = new MatchData(currentMatchID, currentGameModeIndex);
     }
     #endregion
+
+    #region Storing data in database
+    private void StoreDataInDatabase()
+    {
+        string conn = "URI=file:" + Application.dataPath + "/SCRMG_Database.db";
+
+        IDbConnection dbconn;
+        dbconn = (IDbConnection)new SqliteConnection(conn);
+        IDbCommand dbcmd = dbconn.CreateCommand();
+        IDataReader reader;
+        string sqlQuery;
+        dbconn.Open();
+
+        #region Storing matchData
+        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='MatchData' ";
+        dbcmd.CommandText = sqlQuery;
+        reader = dbcmd.ExecuteReader();
+
+        if (!reader.Read())
+        {
+            try
+            {
+                reader.Close();
+                reader = null;
+                sqlQuery = "CREATE TABLE MatchData (PK INTEGER PRIMARY KEY, matchID INT, startDate CHAR,"
+                    + " startTime CHAR, matchLength REAL, gameMode INT, humanPlayerWon INT, powerUpsOverall INT,"
+                    + " powerUpBase1 INT, powerUpBase2 INT, powerUpBase3 INT, powerUpBase4 INT)";
+                dbcmd.CommandText = sqlQuery;
+                dbcmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                Debug.LogWarning("Error while trying to create new table");
+            }
+        }
+
+        if (reader != null)
+        {
+            reader.Close();
+            reader = null;
+        }
+
+        int myMatchID = lastMatchData.matchID;
+        string myStartDate = lastMatchData.startDate;
+        string myStartTime = lastMatchData.startTime;
+        float myMatchLength = lastMatchData.matchLength;
+        int myGameMode = lastMatchData.gameMode;
+        int myHumanPlayerWon = 0;
+        if (lastMatchData.humanPlayerWon)
+        {
+            myHumanPlayerWon = 1;
+        }
+
+        int myPowerUpsPickedUpOverall = lastMatchData.powerUpsPickedUpOverall;
+        int myPowerUpPlatformOneUsed = lastMatchData.powerUpPlatformOneUsed;
+        int myPowerUpPlatformTwoUsed = lastMatchData.powerUpPlatformTwoUsed;
+        int myPowerUpPlatformThreeUsed = lastMatchData.powerUpPlatformThreeUsed;
+        int myPowerUpPlatformFourUsed = lastMatchData.powerUpPlatformFourUsed;
+
+        try
+        {
+            sqlQuery = "INSERT INTO MatchData (matchID, startDate, startTime, matchLength, gameMode, humanPlayerWon, powerUpsOverall, "
+                        + "powerUpBase1, powerUpBase2, powerUpBase3, powerUpBase4) "
+                        + "VALUES (" + myMatchID + ", '" + myStartDate + "', '" + myStartTime + "', " + myMatchLength + ", " + myGameMode + ", "
+                        + myHumanPlayerWon + ", " + myPowerUpsPickedUpOverall + ", " + myPowerUpPlatformOneUsed + ", " + myPowerUpPlatformTwoUsed
+                        + ", " + myPowerUpPlatformThreeUsed + ", " + myPowerUpPlatformFourUsed + ")";
+
+            dbcmd.CommandText = sqlQuery;
+            dbcmd.ExecuteNonQuery();
+        }
+        catch
+        {
+            Debug.LogWarning("Error while writing to database");
+        }
+
+        if (reader != null)
+        {
+            reader.Close();
+            reader = null;
+        }
+
+        #endregion
+
+        #region Storing PlayerData
+        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='PlayerData' ";
+        dbcmd.CommandText = sqlQuery;
+        reader = dbcmd.ExecuteReader();
+
+        if (!reader.Read())
+        {
+            Debug.Log("PlayerData table not found, creating table");
+            try
+            {
+                reader.Close();
+                reader = null;
+                sqlQuery = "CREATE TABLE PlayerData (PK INTEGER PRIMARY KEY, shipIndex INT, matchID INT, lifetime REAL,"
+                    + " victory INT, projectileType1Spawns INT, projectileType2Spawns INT, projectileType3Spawns INT,"
+                    + " projectileType4Spawns INT, projectileType1Hits INT, projectileType2Hits INT, projectileType3Hits INT,"
+                    + " projectileType4Hits INT, powerUp1PickUps INT, powerUp2PickUps INT, powerUp3PickUps INT)";
+                dbcmd.CommandText = sqlQuery;
+                dbcmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                Debug.Log("Error while trying to create new PlayerData table");
+            }
+        }
+
+        if (reader != null)
+        {
+            reader.Close();
+            reader = null;
+        }
+
+        foreach (PlayerData playerData in lastPlayers)
+        {
+            int myShipIndex = playerData.playerShipIndex;
+            int myPlayerMatchID = playerData.matchID;
+            float myLifetime = playerData.lifetime;
+
+            int myVictory = 0;
+            if (playerData.victory)
+            {
+                myVictory = 1;
+            }
+
+            int myProjectileTypeZeroSpawns = playerData.projectileTypeZeroSpawns;
+            int myProjectileTypeOneSpawns = playerData.projectileTypeOneSpawns;
+            int myProjectileTypeTwopawns = playerData.projectileTypeTwopawns;
+            int myProjectileTypeThreeSpawns = playerData.projectileTypeThreeSpawns;
+
+            int myProjectileTypeZeroHits = playerData.projectileTypeZeroHits;
+            int myProjectileTypeOneHits = playerData.projectileTypeOneHits;
+            int myProjectileTypeTwoHits = playerData.projectileTypeTwoHits;
+            int myProjectileTypeThreeHits = playerData.projectileTypeThreeHits;
+
+            int myTimesPickedUpPowerUpOne = playerData.timesPickedUpPowerUpOne;
+            int myTimesPickedUpPowerUpTwo = playerData.timesPickedUpPowerUpTwo;
+            int myTimesPickedUpPowerUpThree = playerData.timesPickedUpPowerUpThree;
+
+            try
+            {
+                sqlQuery = "INSERT INTO PlayerData (shipIndex, matchID, lifetime, victory, projectileType1Spawns,"
+                    + " projectileType2Spawns, projectileType3Spawns, projectileType4Spawns, projectileType1Hits,"
+                    + " projectileType2Hits, projectileType3Hits, projectileType4Hits, powerUp1PickUps,"
+                    + " powerUp2PickUps, powerUp3PickUps) VALUES (" + myShipIndex + ", " + myPlayerMatchID
+                    + ", " + myLifetime + ", " + myVictory + ", " + myProjectileTypeZeroSpawns + ", " + myProjectileTypeOneSpawns
+                    + ", " + myProjectileTypeTwopawns + ", " + myProjectileTypeThreeSpawns + ", " + myProjectileTypeZeroHits
+                    + ", " + myProjectileTypeOneHits + ", " + myProjectileTypeTwoHits + ", " + myProjectileTypeThreeHits
+                    + ", " + myTimesPickedUpPowerUpOne + ", " + myTimesPickedUpPowerUpTwo + ", " + myTimesPickedUpPowerUpThree + ")";
+
+                dbcmd.CommandText = sqlQuery;
+                dbcmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                Debug.LogWarning("Error while writing to database");
+            }
+
+            if (reader != null)
+            {
+                reader.Close();
+                reader = null;
+            }
+        }
+        #endregion
+
+        if (reader != null)
+        {
+            reader.Close();
+            reader = null;
+        }
+        dbcmd.Dispose();
+        dbcmd = null;
+        dbconn.Dispose();
+        dbconn = null;
+
+        lastMatchData = null;
+        lastPlayers.Clear();
+    }
+    #endregion
+
+    #region Creating new MatchIndex
+    private int CreateNewMatchIndex()
+    {
+        int newMatchIndex = -1;
+
+        string conn = "URI=file:" + Application.dataPath + "/SCRMG_Database.db";
+
+        IDbConnection dbconn;
+        dbconn = (IDbConnection)new SqliteConnection(conn);
+        IDbCommand dbcmd = dbconn.CreateCommand();
+        string sqlQuery;
+        dbconn.Open();
+
+        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='MatchData' ";
+        dbcmd.CommandText = sqlQuery;
+        IDataReader reader = dbcmd.ExecuteReader();
+
+        if (!reader.Read())
+        {
+            Debug.Log("Table not found, starting MatchIndices from one");
+            reader.Close();
+            reader = null;
+            newMatchIndex = 1;
+        }
+        else
+        {
+            reader.Close();
+            reader = null;
+            sqlQuery = "SELECT matchID FROM MatchData ORDER BY matchID DESC LIMIT 1;";
+            dbcmd.CommandText = sqlQuery;
+            reader = dbcmd.ExecuteReader();
+
+            if (!reader.Read())
+            {
+                reader.Close();
+                reader = null;
+                newMatchIndex = 1;
+            }
+            else if (reader.GetInt32(0) == 0)
+            {
+                reader.Close();
+                reader = null;
+                newMatchIndex = 1;
+            }
+            else
+            {
+                newMatchIndex = reader.GetInt32(0) + 1;
+                reader.Close();
+                reader = null;
+            }
+        }
+
+        if (reader != null)
+        {
+            reader.Close();
+            reader = null;
+        }
+        dbcmd.Dispose();
+        dbcmd = null;
+        dbconn.Dispose();
+        dbconn = null;
+
+        return newMatchIndex;
+    }
+    #endregion
+
+    #region Finding playerData with ship index
+    private PlayerData FindPlayerDataWithShipIndex(int shipIndex)
+    {
+        PlayerData myPlayerData;
+        if (currentPlayers.Count > 0)
+        {
+            if (currentPlayers[shipIndex - 1].playerShipIndex == shipIndex)
+            {
+                myPlayerData = currentPlayers[shipIndex - 1];
+                return myPlayerData;
+            }
+            else
+            {
+                for (int i = 0; i < currentPlayers.Count; i++)
+                {
+                    if (currentPlayers[i].playerShipIndex == shipIndex)
+                    {
+                        myPlayerData = currentPlayers[i];
+                        return myPlayerData;
+                    }
+                }
+            }
+        }
+        return new PlayerData(-1, -1);
+    }
+    #endregion
+
+    //TODO: Read and broadcast desired data from database
+    //If database is empty (= no requested data found) set dataType to -1
+    #region Reading requested data from database
+    private void ReadGameOverallDataFromDatabase()
+    {
+        Debug.Log("Database: ReadGameOverallDataFromDatabase");
+        DatabaseData databaseData = new DatabaseData();
+        databaseData.dataType = 0;
+
+        em.BroadcastReturnDataFromDatabase(databaseData);
+    }
+
+    private void ReadPlayerLastMatchDataFromDatabase()
+    {
+        Debug.Log("Database: ReadPlayerLastMatchDataFromDatabase");
+        DatabaseData databaseData = new DatabaseData();
+        databaseData.dataType = 1;
+
+        em.BroadcastReturnDataFromDatabase(databaseData);
+    }
+
+    private void ReadPlayerOverallDataFromDatabase()
+    {
+        Debug.Log("Database: ReadPlayerOverallDataFromDatabase");
+        DatabaseData databaseData = new DatabaseData();
+        databaseData.dataType = 2;
+
+        em.BroadcastReturnDataFromDatabase(databaseData);
+    }
+
+    private void ReadMatchLastMatchDataFromDatabase()
+    {
+        Debug.Log("Database: ReadMatchLastMatchDataFromDatabase");
+        DatabaseData databaseData = new DatabaseData();
+        databaseData.dataType = 3;
+
+        em.BroadcastReturnDataFromDatabase(databaseData);
+    }
+
+    private void ReadMatchOverallDataFromDatabase()
+    {
+        Debug.Log("Database: ReadMatchOverallDataFromDatabase");
+        DatabaseData databaseData = new DatabaseData();
+        databaseData.dataType = 4;
+
+        em.BroadcastReturnDataFromDatabase(databaseData);
+    }
+    #endregion
+
 }

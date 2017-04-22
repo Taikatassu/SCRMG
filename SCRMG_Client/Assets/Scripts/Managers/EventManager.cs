@@ -50,6 +50,7 @@ public class EventManager : MonoBehaviour
     public delegate int EmptyInt();
     public delegate void IntIntIntStringVoid(int integer1, int integer2, int integer3, string string1);
     public delegate void StringBoolVoid(string string1, bool boolean);
+    public delegate void DatabaseDataVoid(DatabaseData databaseData);
     #endregion
 
     #region Events
@@ -772,6 +773,26 @@ public class EventManager : MonoBehaviour
         }
     }
     #endregion
+
+    #region Database events
+    public event IntVoid OnRequestDataFromDatabase;
+    public void BroadcastRequestDataFromDatabase(int requestType)
+    {
+        if (OnRequestDataFromDatabase != null)
+        {
+            OnRequestDataFromDatabase(requestType);
+        }
+    }
+
+    public event DatabaseDataVoid OnReturnDataFromDatabase;
+    public void BroadcastReturnDataFromDatabase(DatabaseData databaseData)
+    {
+        if (OnReturnDataFromDatabase != null)
+        {
+            OnReturnDataFromDatabase(databaseData);
+        }
+    }
+    #endregion
     #endregion
 
-}
+    }

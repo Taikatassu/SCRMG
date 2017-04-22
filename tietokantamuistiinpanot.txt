@@ -1,3 +1,58 @@
+***Statistics***
+
+Player:
+Last Match:
+ - Win or loss
+ - Lifetime divided by match length
+ - Accuracy of all projectiles combined
+ - Accuracy projectile 1
+ - Accuracy projectile 2
+ - Accuracy projectile 3
+ - Accuracy projectile 4
+ 
+Overall:
+ - Win / loss ratio
+ - Average lifetime divided by match length
+ - Accuracy of all projectiles combined
+ - Accuracy projectile 1
+ - Accuracy projectile 2
+ - Accuracy projectile 3
+ - Accuracy projectile 4
+
+---------------------------------
+Match:
+Last Match:
+ - Winner (Human or AI)
+ - Match length
+ - PowerUps picked up overall
+ - Percentage of powerUps picked up from platform 1
+ - Percentage of powerUps picked up from platform 2
+ - Percentage of powerUps picked up from platform 3
+ - Percentage of powerUps picked up from platform 4
+ 
+Overall:
+ - Human / AI win ratio
+ - Average match length
+ - Average powerUps picked up per match
+ - Percentage of powerUps picked up from platform 1 divided by match count
+ - Percentage of powerUps picked up from platform 2 divided by match count
+ - Percentage of powerUps picked up from platform 3 divided by match count
+ - Percentage of powerUps picked up from platform 4 divided by match count
+
+--------------------------------
+Game:
+- Overall time spent in matches
+- Overall match count
+- Overall powerUps picked up
+- Overall projectiles spawned
+
+
+
+
+
+
+
+
 match stats:
 -match id				1
 -date&time			11.11.2017-14:28
@@ -36,6 +91,21 @@ game stats:
 -longest match
 -shortest match
 -client session time
+
+
+--------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

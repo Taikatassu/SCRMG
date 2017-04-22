@@ -26,10 +26,18 @@ public class UIManager : MonoBehaviour
     GameObject mainMenuPlayButton;
     GameObject mainMenuExitButton;
     GameObject mainMenuSettingsButton;
+    GameObject mainMenuStatisticsButton;
     GameObject mainMenuConnectButton;
     GameObject mainMenuReturnButton;
     GameObject settingsInvertedHUDButtonHolder;
     GameObject settingsInvertHUDToggleMarkOnImage;
+    GameObject statisticsPanel;
+    GameObject statisticsGameOverallButton;
+    GameObject statisticsPlayerLastMatchButton;
+    GameObject statisticsPlayerOverallButton;
+    GameObject statisticsMatchLastMatchButton;
+    GameObject statisticsMatchOverallButton;
+    GameObject statisticstHelpDisplay;
     GameObject gameModeSinglePlayerButton;
     GameObject gameModeNetworkMultiplayerButton;
     GameObject gameModeLocalMultiplayerButton;
@@ -59,6 +67,7 @@ public class UIManager : MonoBehaviour
     GameObject pauseMenuRestartButton;
     GameObject pauseMenuMainMenuButton;
 
+    Transform statisticsTopNavBar;
     Transform pauseMenuPanel;
     Transform offscreenIndicatorHolder;
     Transform hudHolder;
@@ -78,6 +87,7 @@ public class UIManager : MonoBehaviour
     {
         MAINMENUDEFAULT,
         MAINMENUSETTINGS,
+        MAINMENUSTATISTICS,
         MAINMENUGAMEMODE,
         MAINMENUONLINELOBBY,
         INGAMEDEFAULT,
@@ -272,6 +282,7 @@ public class UIManager : MonoBehaviour
         em.OnNetworkMultiplayerStartMatchStartTimer += OnNetworkMultiplayerStartMatchStartTimer;
         em.OnMatchEndedByServer += OnMatchEndedByServer;
         em.OnReturnToLobbyFromMatch += OnReturnToLobbyFromMatch;
+        em.OnReturnDataFromDatabase += OnReturnDataFromDatabase;
     }
 
     private void OnDisable()
@@ -299,6 +310,7 @@ public class UIManager : MonoBehaviour
         em.OnNetworkMultiplayerStartMatchStartTimer -= OnNetworkMultiplayerStartMatchStartTimer;
         em.OnMatchEndedByServer -= OnMatchEndedByServer;
         em.OnReturnToLobbyFromMatch -= OnReturnToLobbyFromMatch;
+        em.OnReturnDataFromDatabase -= OnReturnDataFromDatabase;
     }
     #endregion
 
@@ -378,6 +390,7 @@ public class UIManager : MonoBehaviour
         em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
         CloseMainMenuDefaultView();
         CloseMainMenuSettingsView();
+        CloseMainMenuStatisticsView();
         CloseMainMenuGameModeView();
         OpenMainMenuOnlineLobbyView();
         CloseLoadingIcon();
@@ -570,6 +583,11 @@ public class UIManager : MonoBehaviour
             CloseMainMenuSettingsView();
             OpenMainMenuDefaultView();
         }
+        else if (uiState == UIState.MAINMENUSTATISTICS)
+        {
+            CloseMainMenuStatisticsView();
+            OpenMainMenuDefaultView();
+        }
         else if (uiState == UIState.MAINMENUGAMEMODE)
         {
             CloseMainMenuGameModeView();
@@ -578,6 +596,41 @@ public class UIManager : MonoBehaviour
         else if (buildPlatform == 1 && uiState == UIState.MAINMENUDEFAULT)
         {
             em.BroadcastRequestApplicationExit();
+        }
+    }
+    #endregion
+
+    #region Database event subscribers
+    private void OnReturnDataFromDatabase(DatabaseData databaseData)
+    {
+        int dataType = databaseData.dataType;
+
+        switch (dataType)
+        {
+            case -1:
+                //TODO: If dataType is -1, database was empty
+                //Display a disclaimer to notify the user "No data available. Play a complete match to collect statistics."
+                break;
+            case 0:
+                DisplayGameOverallStatistics(databaseData);
+                break;
+
+            case 1:
+                DisplayPlayerLastMatchStatistics(databaseData);
+                break;
+
+            case 2:
+                DisplayPlayerOverallStatistics(databaseData);
+                break;
+
+            case 3:
+                DisplayMatchLastMatchStatistics(databaseData);
+                break;
+
+            case 4:
+                DisplayMatchOverallStatistics(databaseData);
+                break;
+
         }
     }
     #endregion
@@ -685,6 +738,7 @@ public class UIManager : MonoBehaviour
     private void CloseMainMenuUI()
     {
         CloseMainMenuSettingsView();
+        CloseMainMenuStatisticsView();
         CloseMainMenuGameModeView();
         CloseMainMenuDefaultView();
         CloseMainMenuOnlineLobbyView();
@@ -706,6 +760,9 @@ public class UIManager : MonoBehaviour
         mainMenuSettingsButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuSettingsButton", typeof(GameObject)),
             mainMenuRightSlotBot) as GameObject;
         mainMenuSettingsButton.GetComponent<Button>().onClick.AddListener(OnMainMenuSettingsButtonPressed);
+        mainMenuStatisticsButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuStatisticsButton", typeof(GameObject)),
+            mainMenuRightSlotTop) as GameObject;
+        mainMenuStatisticsButton.GetComponent<Button>().onClick.AddListener(OnMainMenuStatisticsButtonPressed);
 
         if (!networkFunctionalityDisabled)
         {
@@ -744,6 +801,12 @@ public class UIManager : MonoBehaviour
             Destroy(mainMenuSettingsButton);
         }
 
+        if (mainMenuStatisticsButton != null)
+        {
+            mainMenuStatisticsButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(mainMenuStatisticsButton);
+        }
+
         if (mainMenuConnectButton != null)
         {
             mainMenuConnectButton.GetComponent<Button>().onClick.RemoveAllListeners();
@@ -779,11 +842,174 @@ public class UIManager : MonoBehaviour
             settingsInvertedHUDButtonHolder.GetComponentInChildren<Button>().onClick.RemoveAllListeners();
             Destroy(settingsInvertedHUDButtonHolder);
         }
+
         if (mainMenuReturnButton != null)
         {
             mainMenuReturnButton.GetComponent<Button>().onClick.RemoveAllListeners();
             Destroy(mainMenuReturnButton);
         }
+    }
+    //TODO: Implemente statistics UI and buttons to call for data from database
+    //Find out why the delegate listener assigning does not work
+    //https://forum.unity3d.com/threads/how-to-addlistener-featuring-an-argument.266934/
+    private void OpenMainMenuStatisticsView()
+    {
+        uiState = UIState.MAINMENUSTATISTICS;
+        
+        statisticsPanel = Instantiate(Resources.Load("UI/MainMenu/MainMenuStatisticsPanel", typeof(GameObject)),
+                mainMenuCenter.transform) as GameObject;
+        statisticsTopNavBar = statisticsPanel.transform.GetChild(0);
+
+        string buttonText;
+        statisticsGameOverallButton = Instantiate(Resources.Load("UI/MainMenu/StatisticsTypeButton", typeof(GameObject)),
+                statisticsTopNavBar) as GameObject;
+        buttonText = "Game<br>(Overall)";
+        buttonText = buttonText.Replace("<br>", "\n");
+        statisticsGameOverallButton.transform.GetChild(0).GetComponent<Text>().text = buttonText;
+        statisticsGameOverallButton.GetComponent<Button>().onClick.AddListener(delegate { OnMainMenuStatisticsTypeButtonPressed(0); });
+
+        statisticsPlayerLastMatchButton = Instantiate(Resources.Load("UI/MainMenu/StatisticsTypeButton", typeof(GameObject)),
+                statisticsTopNavBar) as GameObject;
+        buttonText = "Player<br>(Last match)";
+        buttonText = buttonText.Replace("<br>", "\n");
+        statisticsPlayerLastMatchButton.transform.GetChild(0).GetComponent<Text>().text = buttonText;
+        statisticsPlayerLastMatchButton.GetComponent<Button>().onClick.AddListener(delegate { OnMainMenuStatisticsTypeButtonPressed(1); });
+
+        statisticsPlayerOverallButton = Instantiate(Resources.Load("UI/MainMenu/StatisticsTypeButton", typeof(GameObject)),
+                statisticsTopNavBar) as GameObject;
+        buttonText = "Player<br>(Overall)";
+        buttonText = buttonText.Replace("<br>", "\n");
+        statisticsPlayerOverallButton.transform.GetChild(0).GetComponent<Text>().text = buttonText;
+        statisticsPlayerOverallButton.GetComponent<Button>().onClick.AddListener(delegate { OnMainMenuStatisticsTypeButtonPressed(2); });
+
+        statisticsMatchLastMatchButton = Instantiate(Resources.Load("UI/MainMenu/StatisticsTypeButton", typeof(GameObject)),
+                statisticsTopNavBar) as GameObject;
+        buttonText = "Match<br>(Last match)";
+        buttonText = buttonText.Replace("<br>", "\n");
+        statisticsMatchLastMatchButton.transform.GetChild(0).GetComponent<Text>().text = buttonText;
+        statisticsMatchLastMatchButton.GetComponent<Button>().onClick.AddListener(delegate { OnMainMenuStatisticsTypeButtonPressed(3); });
+
+        statisticsMatchOverallButton = Instantiate(Resources.Load("UI/MainMenu/StatisticsTypeButton", typeof(GameObject)),
+                statisticsTopNavBar) as GameObject;
+        buttonText = "Match<br>(Overall)";
+        buttonText = buttonText.Replace("<br>", "\n");
+        statisticsMatchOverallButton.transform.GetChild(0).GetComponent<Text>().text = buttonText;
+        statisticsMatchOverallButton.GetComponent<Button>().onClick.AddListener(delegate { OnMainMenuStatisticsTypeButtonPressed(4); });
+
+        OpenStatisticsHelpDisplay();
+
+        mainMenuReturnButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuReturnButton", typeof(GameObject)),
+                mainMenuRightSlotBot.transform) as GameObject;
+        mainMenuReturnButton.GetComponent<Button>().onClick.AddListener(OnMainMenuReturnButtonPressed);
+    }
+
+    private void CloseMainMenuStatisticsView()
+    {
+        if(statisticsGameOverallButton != null)
+        {
+            statisticsGameOverallButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(statisticsGameOverallButton);
+            statisticsGameOverallButton = null;
+        }
+
+        if (statisticsPlayerLastMatchButton != null)
+        {
+            statisticsPlayerLastMatchButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(statisticsPlayerLastMatchButton);
+            statisticsPlayerLastMatchButton = null;
+        }
+
+        if (statisticsPlayerOverallButton != null)
+        {
+            statisticsPlayerOverallButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(statisticsPlayerOverallButton);
+            statisticsPlayerOverallButton = null;
+        }
+
+        if (statisticsMatchLastMatchButton != null)
+        {
+            statisticsMatchLastMatchButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(statisticsMatchLastMatchButton);
+            statisticsMatchLastMatchButton = null;
+        }
+
+        if (statisticsMatchOverallButton != null)
+        {
+            statisticsMatchOverallButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(statisticsMatchOverallButton);
+            statisticsMatchOverallButton = null;
+        }
+
+        if (statisticsPanel != null)
+        {
+            statisticsTopNavBar = null;
+            Destroy(statisticsPanel);
+            statisticsPanel = null;
+        }
+
+        if (mainMenuReturnButton != null)
+        {
+            mainMenuReturnButton.GetComponent<Button>().onClick.RemoveAllListeners();
+            Destroy(mainMenuReturnButton);
+        }
+    }
+
+    private void OpenStatisticsHelpDisplay()
+    {
+        if(statisticstHelpDisplay == null)
+        {
+            statisticstHelpDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsHelpDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+        }
+    }
+
+    private void CloseStatisticsDisplays()
+    {
+        if (statisticstHelpDisplay != null)
+        {
+            Destroy(statisticstHelpDisplay);
+            statisticstHelpDisplay = null;
+        }
+
+        int childCount = statisticsPanel.transform.childCount;
+        for (int i = 1; i < childCount; i++)
+        {
+            if(i > 0)
+            {
+                Destroy(statisticsPanel.transform.GetChild(i));
+                i--;
+            }
+        }
+    }
+    //TODO: Implement statistic reading from databaseData and displaying in statisticsDisplay UI slots
+    private void DisplayGameOverallStatistics(DatabaseData databaseData)
+    {
+        CloseStatisticsDisplays();
+
+    }
+
+    private void DisplayPlayerLastMatchStatistics(DatabaseData databaseData)
+    {
+        CloseStatisticsDisplays();
+
+    }
+
+    private void DisplayPlayerOverallStatistics(DatabaseData databaseData)
+    {
+        CloseStatisticsDisplays();
+
+    }
+
+    private void DisplayMatchLastMatchStatistics(DatabaseData databaseData)
+    {
+        CloseStatisticsDisplays();
+
+    }
+
+    private void DisplayMatchOverallStatistics(DatabaseData databaseData)
+    {
+        CloseStatisticsDisplays();
+
     }
 
     private void OpenMainMenuGameModeView()
@@ -975,6 +1201,21 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    private void OnMainMenuStatisticsButtonPressed()
+    {
+        if (!loading)
+        {
+            CloseMainMenuDefaultView();
+            OpenMainMenuStatisticsView();
+        }
+    }
+
+    private void OnMainMenuStatisticsTypeButtonPressed(int buttonIndex)
+    {
+        Debug.Log("UIManager: OnMainMenuStatisticsTypeButtonPressed");
+        em.BroadcastRequestDataFromDatabase(buttonIndex);
+    }
+
     private void OnMainMenuConnectButtonPressed()
     {
         if (!loading)
@@ -1014,9 +1255,14 @@ public class UIManager : MonoBehaviour
             CloseMainMenuSettingsView();
             OpenMainMenuDefaultView();
         }
-        else if (uiState == UIState.MAINMENUGAMEMODE)
+        else if (uiState == UIState.MAINMENUSTATISTICS)
         {
             CloseMainMenuGameModeView();
+            OpenMainMenuDefaultView();
+        }
+        else if (uiState == UIState.MAINMENUGAMEMODE)
+        {
+            CloseMainMenuStatisticsView();
             OpenMainMenuDefaultView();
         }
         else if (uiState == UIState.MAINMENUONLINELOBBY)
