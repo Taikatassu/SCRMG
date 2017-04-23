@@ -318,9 +318,9 @@ public class UIManager : MonoBehaviour
     #region Network event subscribers
     private void OnReturnToLobbyFromMatch()
     {
-        if(uiState != UIState.MAINMENUONLINELOBBY)
+        if (uiState != UIState.MAINMENUONLINELOBBY)
         {
-            if(uiState == UIState.MAINMENUDEFAULT)
+            if (uiState == UIState.MAINMENUDEFAULT)
             {
                 OpenMainMenuOnlineLobbyView();
             }
@@ -333,14 +333,12 @@ public class UIManager : MonoBehaviour
 
     private void OnNetworkMultiplayerStartMatchStartTimer()
     {
-        Debug.LogWarning("UIManager: OnNetworkMultiplayerStartMatchStartTimer");
         CloseLoadingIcon();
         StartFadeFromLoadingScreen();
     }
 
     private void OnConnectingToNetworkSucceeded(string ip)
     {
-        Debug.Log("OnConnectingToNetworkSucceeded");
         connectedToNetwork = true;
 
         if (mainMenuConnectButton != null)
@@ -348,12 +346,7 @@ public class UIManager : MonoBehaviour
             mainMenuConnectButton.transform.GetChild(1).gameObject.SetActive(false);
         }
     }
-
-    private void OnConnectingToNetworkFailed(string ip)
-    {
-        //TODO: Remove if deemed permanently obsolete
-    }
-
+    
     private void OnConnectionToNetworkLost()
     {
         connectedToNetwork = false;
@@ -372,21 +365,18 @@ public class UIManager : MonoBehaviour
 
     private void OnClientCountInLobbyChange(int newCount)
     {
-        Debug.Log("OnClientCountInLobbyChange");
         numberOfPlayersInLobby = newCount;
         UpdateParticipantCountDisplay();
     }
 
     private void OnReadyCountInLobbyChange(int newCount)
     {
-        Debug.Log("OnReadyCountInLobbyChange");
         numberOfLobbyParticipantsReady = newCount;
         UpdateParticipantCountDisplay();
     }
 
     private void OnLobbyEnterSuccessful()
     {
-        Debug.Log("OnLobbyEnterSuccessful: Opening online lobby, Game mode changed to Network Multiplayer");
         em.BroadcastSetGameMode(gameModeNetworkMultiplayerIndex);
         CloseMainMenuDefaultView();
         CloseMainMenuSettingsView();
@@ -398,7 +388,6 @@ public class UIManager : MonoBehaviour
 
     private void OnLobbyEnterDenied()
     {
-        Debug.Log("OnLobbyEnterDenied: Closing loading icon");
         CloseLoadingIcon();
     }
 
@@ -466,7 +455,7 @@ public class UIManager : MonoBehaviour
         {
             CloseInGameUI();
             OpenMainMenuUI();
-            
+
             if (returningToLobby)
             {
                 CloseMainMenuDefaultView();
@@ -507,7 +496,7 @@ public class UIManager : MonoBehaviour
         matchStarted = true;
     }
 
-    private void OnMatchEnded(int newWinnerIndex, float matchLength)
+    private void OnMatchEnded(int newWinnerIndex, float matchDuration)
     {
         matchStarted = false;
         ResetOffscreenTargetFollowing();
@@ -608,8 +597,7 @@ public class UIManager : MonoBehaviour
         switch (dataType)
         {
             case -1:
-                //TODO: If dataType is -1, database was empty
-                //Display a disclaimer to notify the user "No data available. Play a complete match to collect statistics."
+                DisplayNoStatisticsAvailableMessage();
                 break;
             case 0:
                 DisplayGameOverallStatistics(databaseData);
@@ -849,13 +837,11 @@ public class UIManager : MonoBehaviour
             Destroy(mainMenuReturnButton);
         }
     }
-    //TODO: Implemente statistics UI and buttons to call for data from database
-    //Find out why the delegate listener assigning does not work
-    //https://forum.unity3d.com/threads/how-to-addlistener-featuring-an-argument.266934/
+
     private void OpenMainMenuStatisticsView()
     {
         uiState = UIState.MAINMENUSTATISTICS;
-        
+
         statisticsPanel = Instantiate(Resources.Load("UI/MainMenu/MainMenuStatisticsPanel", typeof(GameObject)),
                 mainMenuCenter.transform) as GameObject;
         statisticsTopNavBar = statisticsPanel.transform.GetChild(0);
@@ -905,7 +891,7 @@ public class UIManager : MonoBehaviour
 
     private void CloseMainMenuStatisticsView()
     {
-        if(statisticsGameOverallButton != null)
+        if (statisticsGameOverallButton != null)
         {
             statisticsGameOverallButton.GetComponent<Button>().onClick.RemoveAllListeners();
             Destroy(statisticsGameOverallButton);
@@ -956,60 +942,535 @@ public class UIManager : MonoBehaviour
 
     private void OpenStatisticsHelpDisplay()
     {
-        if(statisticstHelpDisplay == null)
+        if (statisticstHelpDisplay == null)
         {
             statisticstHelpDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsHelpDisplay", typeof(GameObject)),
                     statisticsPanel.transform) as GameObject;
         }
     }
 
-    private void CloseStatisticsDisplays()
+    private void DisplayNoStatisticsAvailableMessage()
     {
         if (statisticstHelpDisplay != null)
         {
-            Destroy(statisticstHelpDisplay);
-            statisticstHelpDisplay = null;
+            statisticstHelpDisplay.transform.GetChild(1).GetComponent<Text>().text
+                = "No statistics available. Play a complete match to collect data.";
         }
-
-        int childCount = statisticsPanel.transform.childCount;
-        for (int i = 1; i < childCount; i++)
+        else
         {
-            if(i > 0)
+            CloseStatisticsDisplays();
+            OpenStatisticsHelpDisplay();
+            statisticstHelpDisplay.transform.GetChild(1).GetComponent<Text>().text
+                = "No statistics available. Play a complete match to collect data.";
+        }
+    }
+
+    private void CloseStatisticsDisplays()
+    {
+        int childCount = statisticsPanel.transform.childCount;
+        if (childCount > 1)
+        {
+            for (int i = childCount - 1; i > 0; i--)
             {
-                Destroy(statisticsPanel.transform.GetChild(i));
-                i--;
+                Destroy(statisticsPanel.transform.GetChild(i).gameObject);
             }
         }
     }
-    //TODO: Implement statistic reading from databaseData and displaying in statisticsDisplay UI slots
+
+    private string FloatTimeToString(float value)
+    {
+        int hours = Mathf.FloorToInt(value / 3600f);
+        int minutes = Mathf.FloorToInt((value - hours * 3600) / 60f);
+        int seconds = Mathf.FloorToInt(value - minutes * 60 - hours * 3600);
+        //int milliseconds = Mathf.FloorToInt((matchTimer - seconds - minutes * 60) * 100);
+
+        string t = "";
+
+        if (hours > 0)
+        {
+            if (hours > 999)
+            {
+                hours = 999;
+                minutes = 59;
+                seconds = 59;
+            }
+
+            t = string.Format("{0:00}h {1:00}min {2:00}sec", hours, minutes, seconds);
+        }
+        else if (minutes > 0)
+        {
+            t = string.Format("{0:00}min {1:00}sec", minutes, seconds);
+        }
+        else
+        {
+            t = string.Format("{0:00}sec", seconds);
+        }
+        return t;
+    }
+    
     private void DisplayGameOverallStatistics(DatabaseData databaseData)
     {
-        CloseStatisticsDisplays();
+        int dataType = databaseData.dataType;
+        if (dataType == -1)
+        {
+            DisplayNoStatisticsAvailableMessage();
+        }
+        else
+        {
+            CloseStatisticsDisplays();
+            string displayText;
 
+            GameObject newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            displayText = "Overall time spent in matches: " + FloatTimeToString(databaseData.dbDataFloats[0]);
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            displayText = "Overall matches finished: " + databaseData.dbDataInts[0].ToString();
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            displayText = "Overall PowerUps picked up: " + databaseData.dbDataInts[1].ToString();
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            displayText = "Overall projectiles spawned: " + databaseData.dbDataInts[2].ToString();
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+        }
     }
 
     private void DisplayPlayerLastMatchStatistics(DatabaseData databaseData)
     {
-        CloseStatisticsDisplays();
+        int dataType = databaseData.dataType;
+        if (dataType == -1)
+        {
+            DisplayNoStatisticsAvailableMessage();
+        }
+        else
+        {
+            CloseStatisticsDisplays();
+            string displayText;
 
+            GameObject newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (databaseData.dbDataInts[0] == 0)
+            {
+                displayText = "Defeat";
+            }
+            else if (databaseData.dbDataInts[0] == 1)
+            {
+                displayText = "Victory";
+            }
+            else
+            {
+                displayText = "DATA CORRUPTED";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            float lifetimePerMatchDuration = (databaseData.dbDataFloats[1] / databaseData.dbDataFloats[0]) * 100;
+            displayText = "Percentage of match duration alive: " + lifetimePerMatchDuration.ToString("###0.0") + "%";
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            int projectilesSpawned = databaseData.dbDataInts[1] + databaseData.dbDataInts[2]
+                + databaseData.dbDataInts[3] + databaseData.dbDataInts[4];
+            int projectilesHitWith = databaseData.dbDataInts[5] + databaseData.dbDataInts[6]
+                + databaseData.dbDataInts[7] + databaseData.dbDataInts[8];
+            float accuracy = ((float)projectilesHitWith / (float)projectilesSpawned) * 100;
+            displayText = "Accuracy: " + accuracy.ToString("###0.0") + "%";
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[1] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[5] / (float)databaseData.dbDataInts[1]) * 100;
+                displayText = "Bullets accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Bullets accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[2] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[6] / (float)databaseData.dbDataInts[2]) * 100;
+                displayText = "Rubber Bullets accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Rubber Bullets accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[3] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[7] / (float)databaseData.dbDataInts[3]) * 100;
+                displayText = "Blazing Ram accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Blazing Ram accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[4] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[8] / (float)databaseData.dbDataInts[4]) * 100;
+                displayText = "Beam Cannon accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Beam Cannon accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+        }
     }
 
     private void DisplayPlayerOverallStatistics(DatabaseData databaseData)
     {
-        CloseStatisticsDisplays();
+        int dataType = databaseData.dataType;
+        if (dataType == -1)
+        {
+            DisplayNoStatisticsAvailableMessage();
+        }
+        else
+        {
+            CloseStatisticsDisplays();
 
+            //The first half of dbDataFloats list is matchDurations, the second is player lifetimes
+            //Note that floatListHalfPoint is therefore also equal to the number of matches in the database
+            int floatListHalfPoint = databaseData.dbDataFloats.Count / 2;
+
+            string displayText = "";
+
+            GameObject newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            float winLossRatio = (float)databaseData.dbDataInts[0] / (float)floatListHalfPoint * 100;
+            displayText = "Win / Loss ratio: " + winLossRatio.ToString("###0.0") + "%";
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            List<float> lifetimePerMatchDurations = new List<float>();
+            for (int i = 0; i < floatListHalfPoint; i++)
+            {
+                lifetimePerMatchDurations.Add(databaseData.dbDataFloats[i + floatListHalfPoint] / databaseData.dbDataFloats[i]);
+            }
+            float averageLifetimePerMatchDuration = 0;
+            foreach(float value in lifetimePerMatchDurations)
+            {
+                averageLifetimePerMatchDuration += value;
+            }
+            averageLifetimePerMatchDuration = averageLifetimePerMatchDuration / floatListHalfPoint * 100;
+
+            displayText = "Average match percentage alive: " + averageLifetimePerMatchDuration.ToString("###0.00") + "%";
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            int projectilesSpawned = databaseData.dbDataInts[1] + databaseData.dbDataInts[2]
+                + databaseData.dbDataInts[3] + databaseData.dbDataInts[4];
+            int projectilesHitWith = databaseData.dbDataInts[5] + databaseData.dbDataInts[6]
+                + databaseData.dbDataInts[7] + databaseData.dbDataInts[8];
+            float accuracy = ((float)projectilesHitWith / (float)projectilesSpawned) * 100;
+            displayText = "Overall accuracy: " + accuracy.ToString("###0.0") + "%";
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[1] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[5] / (float)databaseData.dbDataInts[1]) * 100;
+                displayText = "Overall Bullets accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Overall Bullets accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[2] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[6] / (float)databaseData.dbDataInts[2]) * 100;
+                displayText = "Overall Rubber Bullets accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Overall Rubber Bullets accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[3] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[7] / (float)databaseData.dbDataInts[3]) * 100;
+                displayText = "Overall Blazing Ram accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Overall Blazing Ram accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            accuracy = 0;
+            if (databaseData.dbDataInts[4] != 0)
+            {
+                accuracy = ((float)databaseData.dbDataInts[8] / (float)databaseData.dbDataInts[4]) * 100;
+                displayText = "Overall Beam Cannon accuracy: " + accuracy.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Overall Beam Cannon accuracy: N/A";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+        }
     }
 
     private void DisplayMatchLastMatchStatistics(DatabaseData databaseData)
     {
-        CloseStatisticsDisplays();
+        int dataType = databaseData.dataType;
+        if (dataType == -1)
+        {
+            DisplayNoStatisticsAvailableMessage();
+        }
+        else
+        {
+            CloseStatisticsDisplays();
+            int overallPowerUpsPickedUp = databaseData.dbDataInts[1];
+            string displayText = "";
 
+            GameObject newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (databaseData.dbDataInts[0] == 0)
+            {
+                displayText = "Defeat";
+            }
+            else if (databaseData.dbDataInts[0] == 1)
+            {
+                displayText = "Victory";
+            }
+            else
+            {
+                displayText = "DATA CORRUPTED";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            displayText = "Match duration: " + FloatTimeToString(databaseData.dbDataFloats[0]);
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            displayText = "Number of PowerUps picked up: " + overallPowerUpsPickedUp;
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[2] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Left PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Left PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[3] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Right PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Right PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[4] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Top PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Top PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[5] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Bottom PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Bottom PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+        }
     }
 
     private void DisplayMatchOverallStatistics(DatabaseData databaseData)
     {
-        CloseStatisticsDisplays();
+        int dataType = databaseData.dataType;
+        if (dataType == -1)
+        {
+            DisplayNoStatisticsAvailableMessage();
+        }
+        else
+        {
+            CloseStatisticsDisplays();
+            int matchCount = databaseData.dbDataInts[0];
+            int overallPowerUpsPickedUp = databaseData.dbDataInts[2];
+            string displayText = "";
 
+            GameObject newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            float winLossRatio = (float)databaseData.dbDataInts[1] / (float)matchCount * 100;
+            displayText = "Player / AI win ratio: " + winLossRatio.ToString("###0.0") + "% / " + (100.0f - winLossRatio).ToString("###0.0") + "%";
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            float averageMatchDuration = databaseData.dbDataFloats[0] / (float)matchCount;
+            displayText = "Average match duration: " + FloatTimeToString(averageMatchDuration);
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            displayText = "Average PowerUps picked up per match: " + ((float)overallPowerUpsPickedUp / (float)matchCount).ToString("###0.#");
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[3] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Left PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Left PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[4] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Right PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Right PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[5] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Top PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Top PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+            newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+                    statisticsPanel.transform) as GameObject;
+            if (overallPowerUpsPickedUp != 0)
+            {
+                float value = ((float)databaseData.dbDataInts[6] / (float)overallPowerUpsPickedUp) * 100;
+                displayText = "Bottom PowerUp platform usage: " + value.ToString("###0.0") + "%";
+            }
+            else
+            {
+                displayText = "Bottom PowerUp platform usage: 0.0%";
+            }
+            newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            //GameObject newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+            //        statisticsPanel.transform) as GameObject;
+            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "Player / AI win ratio";
+
+            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+            //        statisticsPanel.transform) as GameObject;
+            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "Average match length (hours / minutes / seconds)";
+
+            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+            //        statisticsPanel.transform) as GameObject;
+            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "Number of PowerUps picked up: ";
+
+            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+            //        statisticsPanel.transform) as GameObject;
+            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 1 usage: " + "%";
+
+            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+            //        statisticsPanel.transform) as GameObject;
+            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 2 usage: " + "%";
+
+            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+            //        statisticsPanel.transform) as GameObject;
+            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 3 usage: " + "%";
+
+            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
+            //        statisticsPanel.transform) as GameObject;
+            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 4 usage: " + "%";
+        }
     }
 
     private void OpenMainMenuGameModeView()
@@ -1123,7 +1584,6 @@ public class UIManager : MonoBehaviour
             lobbyParticipantCountDisplay.GetComponentInChildren<Text>().text = "PARTICIPANTS READY: "
                 + numberOfLobbyParticipantsReady + "/" + numberOfPlayersInLobby;
         }
-        Debug.Log("LobbyParticipantCountDisplay updated");
     }
 
     private void CloseMainMenuOnlineLobbyView()
@@ -1212,7 +1672,6 @@ public class UIManager : MonoBehaviour
 
     private void OnMainMenuStatisticsTypeButtonPressed(int buttonIndex)
     {
-        Debug.Log("UIManager: OnMainMenuStatisticsTypeButtonPressed");
         em.BroadcastRequestDataFromDatabase(buttonIndex);
     }
 
@@ -1223,12 +1682,10 @@ public class UIManager : MonoBehaviour
             if (!connectedToNetwork)
             {
                 string serverIPAddress = em.BroadcastRequestServerIPAddress();
-                Debug.Log("UIManager, OnMainMenuConnectButtonPressed serverIPAddress: " + serverIPAddress);
                 em.BroadcastRequestConnectToNetwork(serverIPAddress);
             }
             else
             {
-                Debug.Log("connected to network, requesting disconnect");
                 em.BroadcastRequestDisconnectFromNetwork();
             }
         }
@@ -1257,7 +1714,7 @@ public class UIManager : MonoBehaviour
         }
         else if (uiState == UIState.MAINMENUSTATISTICS)
         {
-            CloseMainMenuGameModeView();
+            CloseMainMenuStatisticsView();
             OpenMainMenuDefaultView();
         }
         else if (uiState == UIState.MAINMENUGAMEMODE)
@@ -1278,7 +1735,6 @@ public class UIManager : MonoBehaviour
         if (!loading)
         {
             em.BroadcastSetGameMode(gameModeSingleplayerIndex);
-            Debug.Log("Game mode set to SinglePlayer");
             OpenLoadingScreen();
             em.BroadcastRequestSceneSingleLevel01();
         }
@@ -1292,7 +1748,6 @@ public class UIManager : MonoBehaviour
             {
                 if (connectedToNetwork)
                 {
-                    Debug.Log("Connected to network: Requesting lobby access");
                     em.BroadcastRequestLobbyEnter();
                     OpenLoadingIcon();
 
@@ -1345,7 +1800,6 @@ public class UIManager : MonoBehaviour
             {
                 if (connectedToNetwork)
                 {
-                    Debug.Log("Connected to network: Starting Network Multiplayer game");
                     //OpenLoadingScreen();
                     //em.BroadcastRequestSceneSingleLevel01();
                     em.BroadcastRequestOnlineMatchStart();
@@ -1581,7 +2035,6 @@ public class UIManager : MonoBehaviour
         if (!loading)
         {
             ClosePauseMenu();
-            Debug.Log("Closing pause menu");
         }
     }
 
@@ -1589,7 +2042,7 @@ public class UIManager : MonoBehaviour
     {
         if (!loading)
         {
-            if(currentGameModeIndex != gameModeNetworkMultiplayerIndex)
+            if (currentGameModeIndex != gameModeNetworkMultiplayerIndex)
             {
                 OpenLoadingScreen();
                 ClosePauseMenu();
@@ -1610,7 +2063,7 @@ public class UIManager : MonoBehaviour
 
     private void PauseMenuMainMenuButtonPressed()
     {
-        if(currentGameModeIndex != gameModeNetworkMultiplayerIndex)
+        if (currentGameModeIndex != gameModeNetworkMultiplayerIndex)
         {
             OpenLoadingScreen();
             ClosePauseMenu();
@@ -1620,8 +2073,6 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            //TODO: Broadcast lobby exit to the server
-            Debug.Log("Exiting to lobby");
             em.BroadcastExitNetworkMultiplayerMidGame();
         }
     }
@@ -1796,7 +2247,7 @@ public class UIManager : MonoBehaviour
                         Vector3 screenCenterInWorldSpace = Camera.main.ViewportToWorldPoint(new Vector3(0, 0, 0));
                         Vector3 cameraPositionOnArena = new Vector3(screenCenterInWorldSpace.x,
                             screenCenterInWorldSpace.y - 30, screenCenterInWorldSpace.z);
-                        Debug.DrawRay(cameraPositionOnArena, Vector3.up);
+                        //Debug.DrawRay(cameraPositionOnArena, Vector3.up);
 
                         float indicatorTargetDistance = Vector3.Distance(cameraPositionOnArena, target.position);
 

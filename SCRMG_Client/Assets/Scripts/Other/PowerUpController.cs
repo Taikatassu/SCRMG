@@ -15,7 +15,7 @@ public class PowerUpController : MonoBehaviour {
 
     //Values coming from within the script
     List<int> availablePowerUps = new List<int>();
-    public int powerUpPlatformIndex = -1;
+    int powerUpPlatformIndex = -1;
     int powerUpCooldownTimer = -1;
     int powerUpType = -1;
     int powerUpProjectileType = -1;

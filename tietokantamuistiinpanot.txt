@@ -1,5 +1,12 @@
 ***Statistics***
 
+Game:
+- Overall time spent in matches
+- Overall match count
+- Overall powerUps picked up
+- Overall projectiles spawned
+
+--------------------------------
 Player:
 Last Match:
  - Win or loss
@@ -34,73 +41,50 @@ Overall:
  - Human / AI win ratio
  - Average match length
  - Average powerUps picked up per match
- - Percentage of powerUps picked up from platform 1 divided by match count
- - Percentage of powerUps picked up from platform 2 divided by match count
- - Percentage of powerUps picked up from platform 3 divided by match count
- - Percentage of powerUps picked up from platform 4 divided by match count
+ - Percentage of all powerUps picked up from platform 1
+ - Percentage of all powerUps picked up from platform 2
+ - Percentage of all powerUps picked up from platform 3
+ - Percentage of all powerUps picked up from platform 4
+
+ 
+ 
+--------------------------------
+***Database data***
+
+Player Data
+
+PK [INT] (Primary Key)
+shipIndex [INT]
+matchID [INT]
+lifetime [FLOAT]
+victory [INT, BOOL]
+projectileType0Spawns [INT]
+projectileType1Spawns [INT]
+projectileType2Spawns [INT]
+projectileType3Spawns [INT]
+projectileType0Hits [INT]
+projectileType1Hits [INT]
+projectileType2Hits [INT]
+projectileType3Hits [INT]
+powerUp1PickUps [INT]
+powerUp2PickUps [INT]
+powerUp3PickUps [INT]
 
 --------------------------------
-Game:
-- Overall time spent in matches
-- Overall match count
-- Overall powerUps picked up
-- Overall projectiles spawned
+Match Data
 
-
-
-
-
-
-
-
-match stats:
--match id				1
--date&time			11.11.2017-14:28
--length				123:59:59
--winner (player or AI)		player
--power ups used (combined)	215	
--player id1			1
--player id2			2
--player id3			3
--player id4			4
-
-
-match player stats:
--player id
--match id
--power ups used
--accuracy
--damage done overall
--damage done by projectile type1
--damage done by projectile type2
--damage done by projectile type3
--damage done by projectile type4
-
-
-lifetime player stats:
--id
--power ups used
--accuracy
--damage done
-
-
-
---------------------------------
-game stats:
--human player winrate
--longest match
--shortest match
--client session time
-
-
---------------------------------
-
-
-
-
-
-
-
+PK [INT] (Primary Key)
+matchID [INT]
+startDate [string]
+startTime [string]
+matchLength [FLOAT]
+gameMode [INT]
+humanPlayerWon [INT, BOOL]
+powerUpsOverall [INT]
+powerUpBase1 [INT]
+powerUpBase2 [INT]
+powerUpBase3 [INT]
+powerUpBase4 [INT]
 
 
 

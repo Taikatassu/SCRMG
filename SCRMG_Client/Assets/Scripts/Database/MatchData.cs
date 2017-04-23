@@ -12,7 +12,7 @@ public class MatchData
             + ", at " + DateTime.Now.ToLongTimeString());
         startDate = DateTime.Now.ToLongDateString();
         startTime = DateTime.Now.ToLongTimeString();
-        matchLength = -1;
+        matchDuration = -1;
         gameMode = newGameMode;
 
         powerUpsPickedUpOverall = 0;
@@ -25,7 +25,7 @@ public class MatchData
     public int matchID = -1;
     public string startDate = "NA";
     public string startTime = "NA";
-    public float matchLength = -1;
+    public float matchDuration = -1;
     public int gameMode = -1;
     public bool humanPlayerWon = false;
 
