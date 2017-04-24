@@ -181,6 +181,7 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.Log("Cannot start match until all participants are ready");
+            em.BroadcastDeniedStartMatchByServer();
         }
     }
 

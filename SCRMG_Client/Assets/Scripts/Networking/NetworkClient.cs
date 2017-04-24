@@ -739,13 +739,7 @@ namespace Client
         {
             byte[] Buffer;
             int readBytes;
-
-            //TODO: Find out why the first packet is split in two parts 
-            //(1460 and 169 bytes, instead of the full message's 1629 bytes)
-            //Added two dummy receive calls to clear first split message from buffer
-            //Buffer = new byte[master.SendBufferSize];
-            //master.Receive(Buffer);
-            //master.Receive(Buffer);
+            
             bool running = true;
 
             while (running)
@@ -758,9 +752,6 @@ namespace Client
                     if (readBytes > 0)
                     {
                         //Debug.Log("Before calling DataManager, readBytes: " + readBytes);
-                        //DataManager(new Packet(Buffer));
-                        //Packet p = new Packet(Buffer);
-
                         try
                         {
                             Packet packet = new Packet(Buffer);

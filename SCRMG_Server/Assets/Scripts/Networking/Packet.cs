@@ -47,7 +47,7 @@ namespace ServerData
 
             string packetString = (string)bf.Deserialize(ms);
             ms.Close();
-
+            
             string[] types = packetString.Split(nextTypeDelimiter);
 
             #region Finding packetType
@@ -261,8 +261,7 @@ namespace ServerData
         public byte[] ToBytes()
         {
             #region Proto: Turning the packet to string
-            if (packetType == PacketType.GAMESTART)
-                Debug.Log("Sending packetType: " + packetType);
+            //Debug.Log("Sending packetType: " + packetType);
             int packetTypeIndex = -1;
             switch (packetType)
             {

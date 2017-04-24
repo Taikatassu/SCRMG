@@ -82,6 +82,7 @@ namespace Server
         static List<ProjectileInfo> newlyDestroyedProjectiles = new List<ProjectileInfo>();
         public static bool inGame = false;
         public static bool requestMatchStart = false;
+        public static bool alreadyRequestingMatchStart = false;
         public static bool matchBeginTimerStarted = false;
         public static bool requestMatchRestart = false;
         public static bool requestReturnToLobbyFromMatch = false;
@@ -177,6 +178,7 @@ namespace Server
 
             Debug.Log("Starting match from server!");
             inGame = true;
+            alreadyRequestingMatchStart = false;
 
             Packet p = new Packet(PacketType.GAMESTART, "Server");
             p.GdataInts.Add(0);
@@ -185,6 +187,11 @@ namespace Server
             {
                 _clientsInLobby[i].clientSocket.Send(p.ToBytes());
             }
+        }
+
+        private void OnDeniedStartMatchByServer()
+        {
+            alreadyRequestingMatchStart = false;
         }
 
         private void OnShipSpawnByServer(int shipIndex, int spawnPointIndex, int shipColorIndex, string ownerID)
@@ -810,14 +817,21 @@ namespace Server
                     if (readBytes > 0)
                     {
                         //Debug.Log("Before calling DataManager, readBytes: " + readBytes);
-                        Packet packet = new Packet(Buffer);
-                        if (!packet.errorEncountered)
+                        try
                         {
-                            DataManager(packet, clientSocket);
+                            Packet packet = new Packet(Buffer);
+                            if (!packet.errorEncountered)
+                            {
+                                DataManager(packet, clientSocket);
+                            }
+                            else
+                            {
+                                Debug.LogWarning("ErrorEncountered when creating packet from buffer, discarding packet");
+                            }
                         }
-                        else
+                        catch
                         {
-                            Debug.LogWarning("ErrorEncountered when creating packet from buffer, discarding packet");
+                            Debug.LogWarning("Unable to create packet from buffer bytes! readBytes: " + readBytes);
                         }
                     }
                 }
@@ -843,6 +857,7 @@ namespace Server
         #region Disconnecting clients
         public static void DisconnectClient(ClientData client)
         {
+            Debug.Log("DisconnectClient");
             if (client != null)
             {
                 newlyDisconnectedClients.Add(client);
@@ -1020,8 +1035,9 @@ namespace Server
                     #region Lobby start match request handling
                     else if (tmp1 == 3)
                     {
-                        if (!inGame && !requestMatchStart)
+                        if (!inGame && !requestMatchStart && !alreadyRequestingMatchStart)
                         {
+                            alreadyRequestingMatchStart = true;
                             requestMatchStart = true;
                         }
                         else
@@ -1060,9 +1076,13 @@ namespace Server
                     }
                     else if (tmp == 2)
                     {
-                        //Restarting game
-                        requestMatchRestart = true;
-                        Debug.LogWarning("Match restart request received from a client");
+                        if (!requestMatchRestart && !alreadyRequestingMatchStart)
+                        {
+                            //Restarting game
+                            requestMatchRestart = true;
+                            Debug.LogWarning("Match restart request received from a client");
+                            alreadyRequestingMatchStart = true;
+                        }
                     }
                     #endregion
                     break;

@@ -253,6 +253,7 @@ public class LocalPlayerController : ShipController
             shipInfoManager.shipInfoList[myShipInfoElement].shipPosition = transform.position;
             shipInfoManager.shipInfoList[myShipInfoElement].hullRotation = shipHull.eulerAngles;
             shipInfoManager.shipInfoList[myShipInfoElement].turretRotation = shipTurret.eulerAngles;
+            Debug.Log("LocalPlayerController, updating shipInfo. shipInfoManager.shipInfoList[myShipInfoElement].shipPosition " + shipInfoManager.shipInfoList[myShipInfoElement].shipPosition);
         }
     }
     #endregion
@@ -263,6 +264,5 @@ public class LocalPlayerController : ShipController
         return Vector3.Distance(transform.position, objectPosition);
     }
     #endregion
-
 
 }

@@ -237,6 +237,7 @@ public class GlobalVariableLibrary : MonoBehaviour {
     {
         public bool networkFunctionalityDisabled = false;
         public int maxNumberOfPlayerInOnlineMatch = 4;
+        public float shipInfoUpdatesPerSecond = 5f;
         public string unintentionalDisconnectUINotificationContent = "Connection to server lost";
         public string successfullyConnectedToServerUINotificationContent = "Connected to server";
     }

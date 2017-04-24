@@ -6,16 +6,29 @@ public class NetworkPlayerController : ShipController
 {
     Vector3 previousShipPosition = Vector3.zero;
     Vector3 previousTurretRotation = Vector3.zero;
-    Vector3 previousMovementDirection = Vector3.zero;
+    //Vector3 previousMovementDirection = Vector3.zero;
     Vector3 previousTurretTargetPosition = Vector3.zero;
+    Vector3 positionLerpStartPosition = Vector3.zero;
+    Vector3 positionLerpEndPosition = Vector3.zero;
+    float positionLerpingStartTime = -1;
+    bool isLerpingToPosition = false;
     bool gameEnded = false;
+
+    float positionLerpDuration = -1;
 
     #region Awake
     protected override void Awake()
     {
         base.Awake();
         GetStats();
-        Debug.Log("NetworkPlayerController awake");
+    }
+    #endregion
+
+    #region GetStats
+    protected override void GetStats()
+    {
+        positionLerpDuration = 1 / lib.networkingVariables.shipInfoUpdatesPerSecond;
+        base.GetStats();
     }
     #endregion
 
@@ -70,6 +83,14 @@ public class NetworkPlayerController : ShipController
     }
     #endregion
 
+    private void StartLerpingToPosition(Vector3 endPosition)
+    {
+        positionLerpStartPosition = transform.position;
+        positionLerpEndPosition = endPosition;
+        positionLerpingStartTime = Time.time;
+        isLerpingToPosition = true;
+    }
+
     #region FixedUpdate
     protected override void FixedUpdate()
     {
@@ -88,26 +109,36 @@ public class NetworkPlayerController : ShipController
                     //shipHull.eulerAngles = shipInfoManager.shipInfoList[myShipInfoElement].hullRotation;
                     //shipTurret.eulerAngles = shipInfoManager.shipInfoList[myShipInfoElement].turretRotation;
 
-
+                    Vector3 currentPosition = transform.position;
                     Vector3 newPosition = shipInfoManager.shipInfoList[myShipInfoElement].shipPosition;
-                    Vector3 newRotation = shipInfoManager.shipInfoList[myShipInfoElement].turretRotation;
-
                     if (previousShipPosition != newPosition)
                     {
-                        previousMovementDirection = newPosition - transform.position;
-                        movementDirection = previousMovementDirection;
+                        StartLerpingToPosition(newPosition);
+                        previousShipPosition = newPosition;
                     }
-                    movementDirection = previousMovementDirection;
 
+                    Vector3 newRotation = shipInfoManager.shipInfoList[myShipInfoElement].turretRotation;
                     if (previousTurretRotation != newRotation)
                     {
                         previousTurretTargetPosition = Quaternion.Euler(newRotation) * Vector3.forward;
                     }
-                    SetLookTargetPosition(transform.position + new Vector3(previousTurretTargetPosition.x, 0, previousTurretTargetPosition.y));
+                    SetLookTargetPosition(currentPosition + new Vector3(previousTurretTargetPosition.x, 0, previousTurretTargetPosition.y));
 
-                    previousShipPosition = newPosition;
                     previousTurretRotation = newRotation;
                 }
+            }
+
+            if (isLerpingToPosition)
+            {
+                float timeSinceStarted = Time.time - positionLerpingStartTime;
+                float percentageComplete = timeSinceStarted / positionLerpDuration;
+
+                if(percentageComplete > 1.0f)
+                {
+                    percentageComplete = 1.0f;
+                }
+
+                transform.position = Vector3.Lerp(positionLerpStartPosition, positionLerpEndPosition, percentageComplete);
             }
 
             base.FixedUpdate();

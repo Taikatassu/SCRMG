@@ -101,6 +101,15 @@ public class EventManager : MonoBehaviour {
         }
     }
 
+    public event EmptyVoid OnDeniedStartMatchByServer;
+    public void BroadcastDeniedStartMatchByServer()
+    {
+        if (OnDeniedStartMatchByServer != null)
+        {
+            OnDeniedStartMatchByServer();
+        }
+    }
+
     public event StringIntVoid OnClientVote;
     public void BroadcastClientVote(string clientID, int vote)
     {

@@ -27,7 +27,7 @@ public class ShipController : MonoBehaviour
     protected List<int> currentProjectileIndices = new List<int>();
     protected int index = -1;
     protected int myShipInfoElement = -1;
-    float currentHealth = -1;
+    public float currentHealth = -1;
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
     float healthBarLerpStartTime = -1;
@@ -181,6 +181,24 @@ public class ShipController : MonoBehaviour
 
     protected virtual void FixedUpdate()
     {
+        if (myShipInfoElement == -1)
+        {
+            myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+        }
+
+        if (myShipInfoElement != -1)
+        {
+            if (shipInfoManager.shipInfoList[myShipInfoElement].isDead)
+            {
+                Die(shipInfoManager.shipInfoList[myShipInfoElement].killerIndex);
+            }
+            else
+            {
+                currentHealth = shipInfoManager.shipInfoList[myShipInfoElement].currentHealth;
+                UpdateHealthBar();
+            }
+        }
+
         if (isControllerByServer)
         {
             #region Movement
@@ -450,6 +468,17 @@ public class ShipController : MonoBehaviour
         {
             //Debug.Log("I'm taking damage.");
             currentHealth -= amount * damageTakenModifier;
+
+            if (myShipInfoElement == -1)
+            {
+                myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+            }
+
+            if (myShipInfoElement != -1)
+            {
+                shipInfoManager.shipInfoList[myShipInfoElement].currentHealth = currentHealth;
+            }
+
             if (currentHealth <= 0)
             {
                 currentHealth = 0;
@@ -469,6 +498,16 @@ public class ShipController : MonoBehaviour
             {
                 currentHealth = maxHealth;
             }
+
+            if (myShipInfoElement == -1)
+            {
+                myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+            }
+
+            if (myShipInfoElement != -1)
+            {
+                shipInfoManager.shipInfoList[myShipInfoElement].currentHealth = currentHealth;
+            }
             //Update UI
             UpdateHealthBar();
         }
@@ -482,6 +521,15 @@ public class ShipController : MonoBehaviour
         isVulnerable = false;
         isMovable = false;
         canShoot = false;
+
+        myShipInfoElement = shipInfoManager.GetMyShipInfoElement(index);
+
+        if (myShipInfoElement != -1)
+        {
+            Debug.LogWarning("I am now dead (shipIndex "+ index + "), setting shipInfo.isDead to true");
+            shipInfoManager.shipInfoList[myShipInfoElement].isDead = true;
+        }
+
         //Broadcast ship death
         //Start spectator mode if player
         em.BroadcastShipDead(index, killerIndex);

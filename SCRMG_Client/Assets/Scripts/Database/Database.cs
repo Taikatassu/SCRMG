@@ -7,12 +7,6 @@ using Mono.Data.Sqlite;
 
 public class Database : MonoBehaviour
 {
-    //TODO: 
-    // - Create event for calling various sql queries 
-    //      - Player lifetime stats (accuracy per projectile type and combined, lifetime, win/loss ratio etc.)
-    //      - Last match stats (winner, powerUps used, match duration, etc.)
-    //      - Overall match stats (playerWins / AIWins, powerUp platform frequency, average match duration, etc.)
-
     #region References & variables
     Toolbox toolbox;
     EventManager em;
@@ -346,6 +340,99 @@ public class Database : MonoBehaviour
     }
     #endregion
 
+    #region Creating new MatchIndex
+    private int CreateNewMatchIndex()
+    {
+        int newMatchIndex = -1;
+
+        string conn = "URI=file:" + Application.dataPath + "/SCRMG_Database.db";
+
+        IDbConnection dbconn;
+        dbconn = (IDbConnection)new SqliteConnection(conn);
+        IDbCommand dbcmd = dbconn.CreateCommand();
+        string sqlQuery;
+        dbconn.Open();
+
+        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='MatchData' ";
+        dbcmd.CommandText = sqlQuery;
+        IDataReader reader = dbcmd.ExecuteReader();
+
+        if (!reader.Read())
+        {
+            Debug.Log("Table not found, starting MatchIndices from one");
+            reader.Close();
+            reader = null;
+            newMatchIndex = 1;
+        }
+        else
+        {
+            reader.Close();
+            reader = null;
+            sqlQuery = "SELECT matchID FROM MatchData ORDER BY matchID DESC LIMIT 1;";
+            dbcmd.CommandText = sqlQuery;
+            reader = dbcmd.ExecuteReader();
+
+            if (!reader.Read())
+            {
+                reader.Close();
+                reader = null;
+                newMatchIndex = 1;
+            }
+            else if (reader.GetInt32(0) == 0)
+            {
+                reader.Close();
+                reader = null;
+                newMatchIndex = 1;
+            }
+            else
+            {
+                newMatchIndex = reader.GetInt32(0) + 1;
+                reader.Close();
+                reader = null;
+            }
+        }
+
+        if (reader != null)
+        {
+            reader.Close();
+            reader = null;
+        }
+        dbcmd.Dispose();
+        dbcmd = null;
+        dbconn.Dispose();
+        dbconn = null;
+
+        return newMatchIndex;
+    }
+    #endregion
+
+    #region Finding playerData with ship index
+    private PlayerData FindPlayerDataWithShipIndex(int shipIndex)
+    {
+        PlayerData myPlayerData;
+        if (currentPlayers.Count > 0)
+        {
+            if (currentPlayers[shipIndex - 1].playerShipIndex == shipIndex)
+            {
+                myPlayerData = currentPlayers[shipIndex - 1];
+                return myPlayerData;
+            }
+            else
+            {
+                for (int i = 0; i < currentPlayers.Count; i++)
+                {
+                    if (currentPlayers[i].playerShipIndex == shipIndex)
+                    {
+                        myPlayerData = currentPlayers[i];
+                        return myPlayerData;
+                    }
+                }
+            }
+        }
+        return new PlayerData(-1, -1);
+    }
+    #endregion
+
     #region Storing data in database
     private void StoreDataInDatabase()
     {
@@ -527,101 +614,6 @@ public class Database : MonoBehaviour
     }
     #endregion
 
-    #region Creating new MatchIndex
-    private int CreateNewMatchIndex()
-    {
-        int newMatchIndex = -1;
-
-        string conn = "URI=file:" + Application.dataPath + "/SCRMG_Database.db";
-
-        IDbConnection dbconn;
-        dbconn = (IDbConnection)new SqliteConnection(conn);
-        IDbCommand dbcmd = dbconn.CreateCommand();
-        string sqlQuery;
-        dbconn.Open();
-
-        sqlQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='MatchData' ";
-        dbcmd.CommandText = sqlQuery;
-        IDataReader reader = dbcmd.ExecuteReader();
-
-        if (!reader.Read())
-        {
-            Debug.Log("Table not found, starting MatchIndices from one");
-            reader.Close();
-            reader = null;
-            newMatchIndex = 1;
-        }
-        else
-        {
-            reader.Close();
-            reader = null;
-            sqlQuery = "SELECT matchID FROM MatchData ORDER BY matchID DESC LIMIT 1;";
-            dbcmd.CommandText = sqlQuery;
-            reader = dbcmd.ExecuteReader();
-
-            if (!reader.Read())
-            {
-                reader.Close();
-                reader = null;
-                newMatchIndex = 1;
-            }
-            else if (reader.GetInt32(0) == 0)
-            {
-                reader.Close();
-                reader = null;
-                newMatchIndex = 1;
-            }
-            else
-            {
-                newMatchIndex = reader.GetInt32(0) + 1;
-                reader.Close();
-                reader = null;
-            }
-        }
-
-        if (reader != null)
-        {
-            reader.Close();
-            reader = null;
-        }
-        dbcmd.Dispose();
-        dbcmd = null;
-        dbconn.Dispose();
-        dbconn = null;
-
-        return newMatchIndex;
-    }
-    #endregion
-
-    #region Finding playerData with ship index
-    private PlayerData FindPlayerDataWithShipIndex(int shipIndex)
-    {
-        PlayerData myPlayerData;
-        if (currentPlayers.Count > 0)
-        {
-            if (currentPlayers[shipIndex - 1].playerShipIndex == shipIndex)
-            {
-                myPlayerData = currentPlayers[shipIndex - 1];
-                return myPlayerData;
-            }
-            else
-            {
-                for (int i = 0; i < currentPlayers.Count; i++)
-                {
-                    if (currentPlayers[i].playerShipIndex == shipIndex)
-                    {
-                        myPlayerData = currentPlayers[i];
-                        return myPlayerData;
-                    }
-                }
-            }
-        }
-        return new PlayerData(-1, -1);
-    }
-    #endregion
-
-    //TODO: Read and broadcast desired data from database
-    //If database is empty (= no requested data found) set dataType to -1
     #region Reading requested data from database
     private void ReadGameOverallDataFromDatabase()
     {
@@ -1165,7 +1157,6 @@ public class Database : MonoBehaviour
 
     private void ReadMatchOverallDataFromDatabase()
     {
-        Debug.Log("ReadMatchLastMatchDataFromDatabase");
         DatabaseData databaseData = new DatabaseData();
         databaseData.dataType = 4;
 
@@ -1223,8 +1214,6 @@ public class Database : MonoBehaviour
             }
             reader.Close();
             reader = null;
-            Debug.Log("matchCount: " + matchCount);
-            Debug.Log("playerVictories: " + playerVictories);
 
             databaseData.dbDataFloats.Add(totalTimeSpentInMatches);
             databaseData.dbDataInts.Add(matchCount);

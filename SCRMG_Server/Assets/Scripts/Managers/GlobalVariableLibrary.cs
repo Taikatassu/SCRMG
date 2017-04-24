@@ -36,6 +36,7 @@ public class GlobalVariableLibrary : MonoBehaviour {
     {
         public int matchStartTimerLength = 3;
         public int maxNumberOfClientsInLobby = 4;
+        public float shipInfoUpdatesPerSecond = 5f;
         public List<Color> shipColorOptions = new List<Color>();
 
         public string shipTag = "Ship";

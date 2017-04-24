@@ -9,6 +9,7 @@ public class ShipInfo
     public Vector3 shipPosition;
     public Vector3 hullRotation;
     public Vector3 turretRotation;
+    public float currentHealth;
     public int shipIndex;
     public int shipColorIndex;
     public int spawnPointIndex;
