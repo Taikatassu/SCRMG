@@ -27,7 +27,7 @@ public class ShipController : MonoBehaviour
     protected List<int> currentProjectileIndices = new List<int>();
     protected int index = -1;
     protected int myShipInfoElement = -1;
-    public float currentHealth = -1;
+    float currentHealth = -1;
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
     float healthBarLerpStartTime = -1;
@@ -98,6 +98,7 @@ public class ShipController : MonoBehaviour
         em.OnMatchEnded += OnMatchEnded;
         em.OnProjectileDestroyed += OnProjectileDestroyed;
         em.OnProjectileHitShipByClient += OnProjectileHitShipByClient;
+        em.OnRequestMatchRestart += OnRequestMatchRestart;
 
         speedModifier = 1;
         damageTakenModifier = 1;
@@ -115,6 +116,7 @@ public class ShipController : MonoBehaviour
         em.OnMatchEnded -= OnMatchEnded;
         em.OnProjectileDestroyed -= OnProjectileDestroyed;
         em.OnProjectileHitShipByClient -= OnProjectileHitShipByClient;
+        em.OnRequestMatchRestart -= OnRequestMatchRestart;
     }
     #endregion
 
@@ -155,6 +157,16 @@ public class ShipController : MonoBehaviour
         SetIsVulnerable(false);
         SetIsMoveable(false);
         SetCanShoot(false);
+    }
+
+    private void OnRequestMatchRestart()
+    {
+        Destroy(gameObject);
+    }
+
+    private void OnRequestReturnToLobbyFromMatch()
+    {
+        Destroy(gameObject);
     }
     #endregion
     #endregion
@@ -340,9 +352,12 @@ public class ShipController : MonoBehaviour
             #region Turret rotation
             lookTargetPosition.y = shipTurret.position.y;
             Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-            Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
-            shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
-                Time.fixedDeltaTime * shipTurretRotationSpeed);
+            if (lookDirection != Vector3.zero)
+            {
+                Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+                shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                    Time.fixedDeltaTime * shipTurretRotationSpeed);
+            }
             #endregion
         }
     }
@@ -526,7 +541,6 @@ public class ShipController : MonoBehaviour
 
         if (myShipInfoElement != -1)
         {
-            Debug.LogWarning("I am now dead (shipIndex "+ index + "), setting shipInfo.isDead to true");
             shipInfoManager.shipInfoList[myShipInfoElement].isDead = true;
         }
 

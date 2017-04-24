@@ -83,6 +83,7 @@ public class Projectile : MonoBehaviour
         em.OnGameRestart += OnGameRestart;
         em.OnNewSceneLoading += OnNewSceneLoading;
         em.OnProjectileDestroyedByServer += OnProjectileDestroyedByServer;
+        em.OnRestartingMatchByServer += OnRestartingMatchByServer;
 
         hitShip = false;
     }
@@ -93,6 +94,9 @@ public class Projectile : MonoBehaviour
         em.OnPauseOff -= OnPauseOff;
         em.OnGameRestart -= OnGameRestart;
         em.OnNewSceneLoading -= OnNewSceneLoading;
+        em.OnProjectileDestroyedByServer -= OnProjectileDestroyedByServer;
+        em.OnRestartingMatchByServer -= OnRestartingMatchByServer;
+
         projectileType = EProjectileType.DEFAULT;
     }
     #endregion
@@ -110,6 +114,11 @@ public class Projectile : MonoBehaviour
                 DestroyThisProjectile();
             }
         }
+    }
+
+    private void OnRestartingMatchByServer(int numberOfShips)
+    {
+        Destroy(gameObject);
     }
 
     private void OnPauseOn()

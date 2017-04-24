@@ -179,6 +179,7 @@ public class GameManager : MonoBehaviour
         resetUsedShipColors = true;
         resetUsedSpawnPointsList = true;
         readyToSpawnShips = true;
+        shipInfoManager.ClearShipInfoList();
 
         if (shipsToSpawn.Count > 0)
         {

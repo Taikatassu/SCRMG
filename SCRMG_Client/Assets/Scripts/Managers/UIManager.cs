@@ -371,6 +371,7 @@ public class UIManager : MonoBehaviour
 
     private void OnReadyCountInLobbyChange(int newCount)
     {
+        Debug.LogWarning("OnReadyCountInLobbyChange");
         numberOfLobbyParticipantsReady = newCount;
         UpdateParticipantCountDisplay();
     }
@@ -735,6 +736,8 @@ public class UIManager : MonoBehaviour
 
     private void OpenMainMenuDefaultView()
     {
+        CloseMainMenuDefaultView();
+
         uiState = UIState.MAINMENUDEFAULT;
 
         mainMenuPlayButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
@@ -804,6 +807,8 @@ public class UIManager : MonoBehaviour
 
     private void OpenMainMenuSettingsView()
     {
+        CloseMainMenuSettingsView();
+
         uiState = UIState.MAINMENUSETTINGS;
 
         //InvertedHUD button
@@ -840,6 +845,8 @@ public class UIManager : MonoBehaviour
 
     private void OpenMainMenuStatisticsView()
     {
+        CloseMainMenuStatisticsView();
+
         uiState = UIState.MAINMENUSTATISTICS;
 
         statisticsPanel = Instantiate(Resources.Load("UI/MainMenu/MainMenuStatisticsPanel", typeof(GameObject)),
@@ -1427,54 +1434,13 @@ public class UIManager : MonoBehaviour
                 displayText = "Bottom PowerUp platform usage: 0.0%";
             }
             newDisplay.transform.GetChild(0).GetComponent<Text>().text = displayText;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            //GameObject newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
-            //        statisticsPanel.transform) as GameObject;
-            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "Player / AI win ratio";
-
-            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
-            //        statisticsPanel.transform) as GameObject;
-            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "Average match length (hours / minutes / seconds)";
-
-            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
-            //        statisticsPanel.transform) as GameObject;
-            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "Number of PowerUps picked up: ";
-
-            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
-            //        statisticsPanel.transform) as GameObject;
-            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 1 usage: " + "%";
-
-            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
-            //        statisticsPanel.transform) as GameObject;
-            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 2 usage: " + "%";
-
-            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
-            //        statisticsPanel.transform) as GameObject;
-            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 3 usage: " + "%";
-
-            //newDisplay = Instantiate(Resources.Load("UI/MainMenu/StatisticsDisplay", typeof(GameObject)),
-            //        statisticsPanel.transform) as GameObject;
-            //newDisplay.transform.GetChild(0).GetComponent<Text>().text = "PowerUp platform 4 usage: " + "%";
         }
     }
 
     private void OpenMainMenuGameModeView()
     {
+        CloseMainMenuGameModeView();
+
         uiState = UIState.MAINMENUGAMEMODE;
 
         gameModeSinglePlayerButton = Instantiate(Resources.Load("UI/MainMenu/MainMenuButton", typeof(GameObject)),
@@ -1548,6 +1514,8 @@ public class UIManager : MonoBehaviour
 
     private void OpenMainMenuOnlineLobbyView()
     {
+        CloseMainMenuOnlineLobbyView();
+
         uiState = UIState.MAINMENUONLINELOBBY;
 
         numberOfPlayersInLobby = Mathf.Clamp(numberOfPlayersInLobby, 1, maxNumberOfPlayersInLobby);
@@ -1719,7 +1687,7 @@ public class UIManager : MonoBehaviour
         }
         else if (uiState == UIState.MAINMENUGAMEMODE)
         {
-            CloseMainMenuStatisticsView();
+            CloseMainMenuGameModeView();
             OpenMainMenuDefaultView();
         }
         else if (uiState == UIState.MAINMENUONLINELOBBY)
@@ -2052,6 +2020,7 @@ public class UIManager : MonoBehaviour
             }
             else
             {
+                Debug.Log("Restart button pressed");
                 OpenLoadingScreen();
                 ClosePauseMenu();
                 ResetOffscreenTargetFollowing();

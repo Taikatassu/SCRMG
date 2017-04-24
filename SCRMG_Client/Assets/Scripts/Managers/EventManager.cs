@@ -488,7 +488,6 @@ public class EventManager : MonoBehaviour
     public event StringBoolVoid OnMatchEndedByServer;
     public void BroadcastMatchEndedByServer(string winnerName, bool localPlayerWins)
     {
-        Debug.LogWarning("EventManager: BroadcastMatchEndedByServer");
         if (OnMatchEndedByServer != null)
         {
             OnMatchEndedByServer(winnerName, localPlayerWins);
@@ -582,6 +581,7 @@ public class EventManager : MonoBehaviour
     public event EmptyVoid OnRequestRestartFromServer;
     public void BroadcastRequestRestartFromServer()
     {
+        Debug.Log("BroadcastRequestRestartFromServer");
         if (OnRequestRestartFromServer != null)
         {
             OnRequestRestartFromServer();

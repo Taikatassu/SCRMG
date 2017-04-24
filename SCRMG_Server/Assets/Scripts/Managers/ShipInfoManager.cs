@@ -6,16 +6,11 @@ public class ShipInfoManager : MonoBehaviour {
 
     public List<ShipInfo> shipInfoList = new List<ShipInfo>();
 
-    //void FixedUpdate()
-    //{
-    //    foreach (ShipInfo shipInfo in shipInfoList)
-    //    {
-    //        if(shipInfo.shipIndex == 1)
-    //        {
-    //            Debug.Log("ShipInfoManager shipInfo with index 1: shipInfo.shipPosition: " + shipInfo.shipPosition);
-    //        }
-    //    }
-    //}
+    public int shipInfoListCount = -1;
+    private void FixedUpdate()
+    {
+        shipInfoListCount = shipInfoList.Count;
+    }
 
     public int GetMyShipInfoElement(int shipIndex)
     {
@@ -32,5 +27,6 @@ public class ShipInfoManager : MonoBehaviour {
     public void ClearShipInfoList()
     {
         shipInfoList.Clear();
+        shipInfoList = new List<ShipInfo>();
     }
 }

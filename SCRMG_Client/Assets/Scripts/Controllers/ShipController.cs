@@ -29,9 +29,9 @@ public class ShipController : MonoBehaviour {
 
     //Variables coming from within the script
     protected List<int> currentProjectileIndices = new List<int>();
-    protected int index = -1;
+    public int index = -1;
     protected int myShipInfoElement = -1;
-    public float currentHealth = -1;
+    float currentHealth = -1;
     float healthBarTargetValue = -1;
     float healthBarStartValue = -1;
     float healthBarLerpStartTime = -1;
@@ -40,7 +40,7 @@ public class ShipController : MonoBehaviour {
     float damageTakenModifier = -1;
     float shootCooldownModifier = -1;
     float matchTimer = -1;
-    public int currentGameModeIndex = -1;
+    protected int currentGameModeIndex = -1;
     int shootCooldownFrameTimer = -1;
     int powerUpType = -1;
     bool isPersistingProjectile = false;
@@ -69,7 +69,7 @@ public class ShipController : MonoBehaviour {
     int projectileType = -1;
     int powerUpTimer = -1;
     int gameModeSingleplayerIndex = -1;
-    int gameModeNetworkMultiplayerIndex = -1;
+    protected int gameModeNetworkMultiplayerIndex = -1;
     int gameModeLocalMultiplayerIndex = -1;
     #endregion
 
@@ -269,10 +269,8 @@ public class ShipController : MonoBehaviour {
 
             if (myShipInfoElement != -1)
             {
-                //Debug.LogWarning("ShipController, index " + index + ", Checking if I am dead or not");
                 if (shipInfoManager.shipInfoList[myShipInfoElement].isDead)
                 {
-                    Debug.LogWarning("ShipController, index " + index + ", I AM DEAD!");
                     Die(shipInfoManager.shipInfoList[myShipInfoElement].killerIndex);
                 }
                 else
@@ -439,9 +437,12 @@ public class ShipController : MonoBehaviour {
             #region Turret rotation
             lookTargetPosition.y = shipTurret.position.y;
             Vector3 lookDirection = lookTargetPosition - shipTurret.position;
-            Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
-            shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
-                Time.fixedDeltaTime * shipTurretRotationSpeed);
+            if (lookDirection != Vector3.zero)
+            {
+                Quaternion newTurretRotation = Quaternion.LookRotation(lookDirection);
+                shipTurret.rotation = Quaternion.Slerp(shipTurret.rotation, newTurretRotation,
+                    Time.fixedDeltaTime * shipTurretRotationSpeed);
+            }
             #endregion
         }
     }

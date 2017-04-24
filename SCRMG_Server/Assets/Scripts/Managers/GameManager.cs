@@ -107,7 +107,7 @@ public class GameManager : MonoBehaviour
 
     private int OnRequestReadyClientCount()
     {
-        Debug.Log("OnRequestReadyClientCount, clientsReadyInLobby.Count: " 
+        Debug.Log("OnRequestReadyClientCount, clientsReadyInLobby.Count: "
             + clientsReadyInLobby.Count + "clientsInLobby.Count: " + clientsInLobby.Count);
         return clientsReadyInLobby.Count;
     }
@@ -134,7 +134,7 @@ public class GameManager : MonoBehaviour
         bool clientAlreadyInLobby = false;
         foreach (ClientData client in clientsInLobby)
         {
-            if(client.id == newClientData.id)
+            if (client.id == newClientData.id)
             {
                 clientAlreadyInLobby = true;
             }
@@ -156,6 +156,11 @@ public class GameManager : MonoBehaviour
         if (clientsInLobby.Count == 0)
         {
             serverState = ServerState.DEFAULT;
+        }
+
+        if (clientsReadyInLobby.Contains(disconnectedClientData.id))
+        {
+            clientsReadyInLobby.Remove(disconnectedClientData.id);
         }
 
         for (int i = 0; i < clientsInLobby.Count; i++)
@@ -187,16 +192,19 @@ public class GameManager : MonoBehaviour
 
     private void OnClientVote(string clientID, int vote)
     {
+        Debug.LogWarning("OnClientVote: " + vote);
         if (serverState == ServerState.LOBBY)
         {
             if (vote == 0 || vote == 1)
             {
                 if (vote == 0 && clientsReadyInLobby.Contains(clientID))
                 {
+                    Debug.LogWarning("Removing client from clientsReadyInLobby list");
                     clientsReadyInLobby.Remove(clientID);
                 }
                 else if (vote == 1 && !clientsReadyInLobby.Contains(clientID))
                 {
+                    Debug.LogWarning("Adding client to clientsReadyInLobby list");
                     clientsReadyInLobby.Add(clientID);
                 }
                 else
@@ -219,7 +227,7 @@ public class GameManager : MonoBehaviour
     private void OnMatchEnded(int winnerIndex)
     {
         matchStarted = false;
-        for(int i = 0; i < currentlyAliveShips.Count; i++)
+        for (int i = 0; i < currentlyAliveShips.Count; i++)
         {
             Destroy(currentlyAliveShips[i]);
             currentlyAliveShips.RemoveAt(i);
@@ -273,9 +281,10 @@ public class GameManager : MonoBehaviour
 
         if (currentlyAliveShips.Count > 0)
         {
-            for(int i = 0; i < currentlyAliveShips.Count; i++)
+            for (int i = 0; i < currentlyAliveShips.Count; i++)
             {
-                Destroy(currentlyAliveShips[i]);
+                if (currentlyAliveShips[i] != null)
+                    Destroy(currentlyAliveShips[i]);
                 currentlyAliveShips.RemoveAt(i);
                 i--;
             }
@@ -298,7 +307,8 @@ public class GameManager : MonoBehaviour
         {
             for (int i = 0; i < currentlyAliveShips.Count; i++)
             {
-                Destroy(currentlyAliveShips[i]);
+                if (currentlyAliveShips[i] != null)
+                    Destroy(currentlyAliveShips[i]);
                 currentlyAliveShips.RemoveAt(i);
                 i--;
             }

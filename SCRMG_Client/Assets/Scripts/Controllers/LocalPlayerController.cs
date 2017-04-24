@@ -7,7 +7,6 @@ public class LocalPlayerController : ShipController
     Transform closestTarget;
     //List<Transform> shipList = new List<Transform>();
     LayerMask mouseRayCollisionLayer = -1;
-    Vector3 previousPosition;
     Vector2 turretJoystickValue = Vector2.zero;
     bool isShooting = false;
 
@@ -84,7 +83,7 @@ public class LocalPlayerController : ShipController
     {
         if (buildPlatform == 0)
         {
-            if (controllerIndex == index)
+            if (controllerIndex == index || (currentGameModeIndex == gameModeNetworkMultiplayerIndex && controllerIndex == 1))
             {
                 movementDirection.x = movementInputVector.x;
                 movementDirection.z = movementInputVector.y;
@@ -97,7 +96,7 @@ public class LocalPlayerController : ShipController
     {
         if (buildPlatform == 0)
         {
-            if (controllerIndex == index)
+            if (controllerIndex == index || (currentGameModeIndex == gameModeNetworkMultiplayerIndex && controllerIndex == 1))
             {
                 Ray ray = Camera.main.ScreenPointToRay(mousePosition);
 
@@ -116,23 +115,35 @@ public class LocalPlayerController : ShipController
 
     private void OnMouseButtonLeftDown(int controllerIndex)
     {
-        isShooting = true;
+        if (controllerIndex == index || (currentGameModeIndex == gameModeNetworkMultiplayerIndex && controllerIndex == 1))
+        {
+            isShooting = true;
+        }
     }
 
     private void OnMouseButtonLeftUp(int controllerIndex)
     {
-        isShooting = false;
-        EndPersistingProjectile();
+        if (controllerIndex == index || (currentGameModeIndex == gameModeNetworkMultiplayerIndex && controllerIndex == 1))
+        {
+            isShooting = false;
+            EndPersistingProjectile();
+        }
     }
 
     private void OnMouseButtonRightDown(int controllerIndex)
     {
-        //Debug.Log("OnMouseButtonRightDown");
+        if (controllerIndex == index || (currentGameModeIndex == gameModeNetworkMultiplayerIndex && controllerIndex == 1))
+        {
+            //Debug.Log("OnMouseButtonRightDown");
+        }
     }
 
     private void OnMouseButtonRightUp(int controllerIndex)
     {
-        //Debug.Log("OnMouseButtonRightUp");
+        if (controllerIndex == index || (currentGameModeIndex == gameModeNetworkMultiplayerIndex && controllerIndex == 1))
+        {
+            //Debug.Log("OnMouseButtonRightUp");
+        }
     }
 
     private void OnVirtualJoystickPressed(int joystickIndex)
@@ -253,7 +264,6 @@ public class LocalPlayerController : ShipController
             shipInfoManager.shipInfoList[myShipInfoElement].shipPosition = transform.position;
             shipInfoManager.shipInfoList[myShipInfoElement].hullRotation = shipHull.eulerAngles;
             shipInfoManager.shipInfoList[myShipInfoElement].turretRotation = shipTurret.eulerAngles;
-            Debug.Log("LocalPlayerController, updating shipInfo. shipInfoManager.shipInfoList[myShipInfoElement].shipPosition " + shipInfoManager.shipInfoList[myShipInfoElement].shipPosition);
         }
     }
     #endregion

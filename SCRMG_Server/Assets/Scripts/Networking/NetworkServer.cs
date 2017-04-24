@@ -178,7 +178,6 @@ namespace Server
 
             Debug.Log("Starting match from server!");
             inGame = true;
-            alreadyRequestingMatchStart = false;
 
             Packet p = new Packet(PacketType.GAMESTART, "Server");
             p.GdataInts.Add(0);
@@ -431,6 +430,7 @@ namespace Server
             #region Exiting lobby
             if (clientsExitingLobby.Count > 0)
             {
+                Debug.Log("clientsExitingLobby.Count > 0");
                 for (int i = 0; i < clientsExitingLobby.Count; i++)
                 {
                     Debug.Log("Client exiting lobby");
@@ -559,26 +559,7 @@ namespace Server
             if (requestReturnToLobbyFromMatch)
             {
                 requestReturnToLobbyFromMatch = false;
-
-                clientsDoneWithInitializingMatch = 0;
-                inGame = false;
-                em.BroadcastRequestReturnToLobbyFromMatch();
-
-                Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
-                p.GdataInts.Add(3);
-                p.GdataInts.Add(_clientsInLobby.Count);
-                for (int i = 0; i < _clients.Count; i++)
-                {
-                    try
-                    {
-                        _clients[i].clientSocket.Send(p.ToBytes());
-                    }
-                    catch
-                    {
-                        DisconnectClient(_clients[i]);
-                        i--;
-                    }
-                }
+                ReturnToLobby();
             }
             #endregion
             #endregion
@@ -596,28 +577,39 @@ namespace Server
                     {
                         foreach (ShipInfo shipInfo in shipInfoManager.shipInfoList)
                         {
-                            if (!shipInfo.isDead)
-                            {
-                                Packet p = new Packet(PacketType.SHIPINFO, "Server");
-                                p.GdataInts.Add(shipInfo.shipIndex);
-                                p.GdataStrings.Add(shipInfo.ownerID);
-                                p.GdataVectors.Add(new Vector_3(shipInfo.shipPosition));
-                                p.GdataVectors.Add(new Vector_3(shipInfo.hullRotation));
-                                p.GdataVectors.Add(new Vector_3(shipInfo.turretRotation));
+                            //if (!shipInfo.isDead)
+                            //{
 
-                                for (int i = 0; i < _clientsInLobby.Count; i++)
+                            //}
+                            Packet p = new Packet(PacketType.SHIPINFO, "Server");
+                            p.GdataInts.Add(shipInfo.shipIndex);
+                            Debug.Log("Sending ship " + shipInfo.shipIndex + " info to clients");
+                            if (shipInfo.isDead)
+                            {
+                                p.GdataInts.Add(1);
+                            }
+                            else
+                            {
+                                p.GdataInts.Add(0);
+                            }
+                            p.GdataStrings.Add(shipInfo.ownerID);
+                            p.GdataFloats.Add(shipInfo.currentHealth);
+                            p.GdataVectors.Add(new Vector_3(shipInfo.shipPosition));
+                            p.GdataVectors.Add(new Vector_3(shipInfo.hullRotation));
+                            p.GdataVectors.Add(new Vector_3(shipInfo.turretRotation));
+
+                            for (int i = 0; i < _clientsInLobby.Count; i++)
+                            {
+                                if (_clientsInLobby[i].id != shipInfo.ownerID)
                                 {
-                                    if (_clientsInLobby[i].id != shipInfo.ownerID)
+                                    try
                                     {
-                                        try
-                                        {
-                                            _clientsInLobby[i].clientSocket.Send(p.ToBytes());
-                                        }
-                                        catch (SocketException ex)
-                                        {
-                                            Debug.Log("SocketException: " + ex);
-                                            DisconnectClient(_clientsInLobby[i]);
-                                        }
+                                        _clientsInLobby[i].clientSocket.Send(p.ToBytes());
+                                    }
+                                    catch (SocketException ex)
+                                    {
+                                        Debug.Log("SocketException: " + ex);
+                                        DisconnectClient(_clientsInLobby[i]);
                                     }
                                 }
                             }
@@ -744,6 +736,31 @@ namespace Server
         }
         #endregion
 
+        #region Return clients back to lobby
+        private void ReturnToLobby()
+        {
+            clientsDoneWithInitializingMatch = 0;
+            inGame = false;
+            em.BroadcastRequestReturnToLobbyFromMatch();
+
+            Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
+            p.GdataInts.Add(3);
+            p.GdataInts.Add(_clientsInLobby.Count);
+            for (int i = 0; i < _clients.Count; i++)
+            {
+                try
+                {
+                    _clients[i].clientSocket.Send(p.ToBytes());
+                }
+                catch
+                {
+                    DisconnectClient(_clients[i]);
+                    i--;
+                }
+            }
+        }
+        #endregion
+
         #region Lobby access
         private bool RequestLobbyAccess(ClientData newClientData)
         {
@@ -831,7 +848,7 @@ namespace Server
                         }
                         catch
                         {
-                            Debug.LogWarning("Unable to create packet from buffer bytes! readBytes: " + readBytes);
+                            //Debug.LogWarning("Unable to create packet from buffer bytes! readBytes: " + readBytes);
                         }
                     }
                 }
@@ -857,7 +874,7 @@ namespace Server
         #region Disconnecting clients
         public static void DisconnectClient(ClientData client)
         {
-            Debug.Log("DisconnectClient");
+            Debug.LogWarning("DisconnectClient");
             if (client != null)
             {
                 newlyDisconnectedClients.Add(client);
@@ -868,12 +885,17 @@ namespace Server
                 client.isReady = false;
                 client.inLobby = false;
                 client.disconnected = true;
-                _clientsInLobby.Remove(client);
+                //_clientsInLobby.Remove(client);
                 clientsExitingLobby.Add(client);
                 _clients.Remove(client);
                 Debug.Log("Client disconnected. _clients.Count: " + _clients.Count);
 
                 clientThread.Abort();
+            }
+
+            if (inGame)
+            {
+                requestReturnToLobbyFromMatch = true;
             }
         }
 
@@ -1072,6 +1094,7 @@ namespace Server
                                 client.clientSocket.Send(p1.ToBytes());
                             }
                             matchBeginTimerStarted = true;
+                            alreadyRequestingMatchStart = false;
                         }
                     }
                     else if (tmp == 2)
@@ -1126,6 +1149,11 @@ namespace Server
                     int shipInfoListElement1 = shipInfoManager.GetMyShipInfoElement(p.GdataInts[0]);
                     if (shipInfoListElement1 != -1)
                     {
+                        if(p.GdataInts[1] == 1)
+                        {
+                            shipInfoManager.shipInfoList[shipInfoListElement1].isDead = true;
+                        }
+                        shipInfoManager.shipInfoList[shipInfoListElement1].currentHealth = p.GdataFloats[0];
                         shipInfoManager.shipInfoList[shipInfoListElement1].shipPosition = p.GdataVectors[0].ToVector3();
                         shipInfoManager.shipInfoList[shipInfoListElement1].hullRotation = p.GdataVectors[1].ToVector3();
                         shipInfoManager.shipInfoList[shipInfoListElement1].turretRotation = p.GdataVectors[2].ToVector3();
@@ -1134,12 +1162,14 @@ namespace Server
                     break;
 
                 case PacketType.DEATH:
+                    #region Death
                     int shipInfoListElement2 = shipInfoManager.GetMyShipInfoElement(p.GdataInts[0]);
                     if (shipInfoListElement2 != -1)
                     {
                         shipInfoManager.shipInfoList[shipInfoListElement2].killerIndex = p.GdataInts[1];
                         shipInfoManager.shipInfoList[shipInfoListElement2].isDead = true;
                     }
+                    #endregion
                     break;
 
             }
@@ -1161,12 +1191,7 @@ namespace Server
 
         public ClientData()
         {
-            //This is only used for empty ClientData variable
             id = "empty";
-            //id = Guid.NewGuid().ToString();
-            //clientThread = new Thread(NetworkServer.Data_IN);
-            //clientThread.Start(clientSocket);
-            //SendRegistrationPacket();
         }
 
         public ClientData(Socket clientSocket)
@@ -1177,22 +1202,17 @@ namespace Server
             clientThread.Start(clientSocket);
             NetworkServer.newlyConnectedClients.Add(this);
             SendRegistrationPacket();
-            Thread.Sleep(1000);
 
-            try
-            {
-                SendRegistrationPacket();
-            }
-            catch
-            {
-                NetworkServer.DisconnectClient(this);
-            }
-
-            //TODO: Find out why the first packet is split in two parts 
-            //(1460 and 169 bytes, instead of the full message's 1629 bytes)
-            //Until then, sending two registration packets with a sleep timer
-            //in between is necessary
-
+            //No longer neccessary?
+            //Thread.Sleep(1000);
+            //try
+            //{
+            //    SendRegistrationPacket();
+            //}
+            //catch
+            //{
+            //    NetworkServer.DisconnectClient(this);
+            //}
         }
 
         public void SendRegistrationPacket()
