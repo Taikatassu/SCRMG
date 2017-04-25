@@ -459,6 +459,7 @@ public class UIManager : MonoBehaviour
 
             if (returningToLobby)
             {
+                returningToLobby = false;
                 CloseMainMenuDefaultView();
                 OpenMainMenuOnlineLobbyView();
             }
