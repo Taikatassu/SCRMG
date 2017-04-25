@@ -940,7 +940,7 @@ namespace Client
                     int shipInfoListElement = shipInfoManager.GetMyShipInfoElement(p.GdataInts[0]);
                     if (shipInfoListElement != -1)
                     {
-                        if (p.GdataInts[1] == 1)
+                        if (p.GdataInts[3] == 1)
                         {
                             shipInfoManager.shipInfoList[shipInfoListElement].isDead = true;
                         }
@@ -948,6 +948,21 @@ namespace Client
                         shipInfoManager.shipInfoList[shipInfoListElement].shipPosition = p.GdataVectors[0].ToVector3();
                         shipInfoManager.shipInfoList[shipInfoListElement].hullRotation = p.GdataVectors[1].ToVector3();
                         shipInfoManager.shipInfoList[shipInfoListElement].turretRotation = p.GdataVectors[2].ToVector3();
+                    }
+                    else
+                    {
+                        ShipInfo newShipInfo2 = new ShipInfo();
+                        shipIndex = p.GdataInts[0];
+                        string ownerID2 = p.GdataStrings[0];
+                        if (ownerID2 == clientID)
+                        {
+                            myShipIndex = shipIndex;
+                        }
+                        newShipInfo2.shipIndex = shipIndex;
+                        newShipInfo2.ownerID = ownerID2;
+                        newShipInfo2.spawnPointIndex = p.GdataInts[1];
+                        newShipInfo2.shipColorIndex = p.GdataInts[2];
+                        newlySpawnedShips.Add(newShipInfo2);
                     }
                     #endregion
                     break;

@@ -583,7 +583,9 @@ namespace Server
                             //}
                             Packet p = new Packet(PacketType.SHIPINFO, "Server");
                             p.GdataInts.Add(shipInfo.shipIndex);
-                            Debug.Log("Sending ship " + shipInfo.shipIndex + " info to clients");
+                            Debug.Log("Sending ship " + shipInfo.shipIndex + " info to clients " + Time.time);
+                            p.GdataInts.Add(shipInfo.spawnPointIndex);
+                            p.GdataInts.Add(shipInfo.shipColorIndex);
                             if (shipInfo.isDead)
                             {
                                 p.GdataInts.Add(1);
@@ -741,6 +743,8 @@ namespace Server
         {
             clientsDoneWithInitializingMatch = 0;
             inGame = false;
+            alreadyRequestingMatchStart = false;
+            requestMatchStart = false;
             em.BroadcastRequestReturnToLobbyFromMatch();
 
             Packet p = new Packet(PacketType.LOBBYEVENT, "Server");
