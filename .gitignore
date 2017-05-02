@@ -39,4 +39,5 @@ SCRMG_Server/Library/
 *.sln
 
 
-!/ServerBuild/scrmg_server_02_Data/Managed/
+!/ServerBuild/scrmg_server_02_Data/Managed/mscorlib.dll
+!/ServerBuild/scrmg_server_02_Data/Managed/mono/2.0/mscorlib.dll
