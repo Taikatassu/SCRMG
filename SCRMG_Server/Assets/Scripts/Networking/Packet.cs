@@ -415,15 +415,17 @@ namespace ServerData
 
         public static string GetIP4Address()
         {
-            IPAddress[] ips = Dns.GetHostAddresses(Dns.GetHostName());
+            //IPAddress[] ips = Dns.GetHostAddresses(Dns.GetHostName());
 
-            foreach (IPAddress i in ips)
-            {
-                if (i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    return i.ToString();
-            }
+            //foreach (IPAddress i in ips)
+            //{
+            //    if (i.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            //        return i.ToString();
+            //}
 
-            return "172.31.16.131";
+            //return "172.31.16.131";
+
+            return "195.148.70.122";
         }
     }
 
