@@ -37,3 +37,6 @@ SCRMG_Client/Library/
 SCRMG_Server/Library/
 *.csproj
 *.sln
+
+
+!/ServerBuild/scrmg_server_02_Data/Managed/
